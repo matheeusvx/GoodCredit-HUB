@@ -1,14 +1,14 @@
 import { BarChart3, CheckSquare, FileClock, Home, Lock, PiggyBank, WalletCards } from "lucide-react";
 import { useState } from "react";
 
-export type HubView = "amortization" | "simulation";
+export type HubView = "home" | "amortization" | "simulation" | "checklist";
 
 const modules = [
-  { label: "Início", icon: Home, enabled: false },
+  { label: "Início", icon: Home, enabled: true, view: "home" as const },
   { label: "Planilha de Amortização", icon: BarChart3, enabled: true, view: "amortization" as const },
   { label: "Simulação de Financiamento", icon: WalletCards, enabled: true, view: "simulation" as const },
   { label: "Apuração de Renda", icon: FileClock, enabled: false },
-  { label: "Checklist Documental", icon: CheckSquare, enabled: false },
+  { label: "Checklist Documental", icon: CheckSquare, enabled: true, view: "checklist" as const },
   { label: "Uso de FGTS", icon: PiggyBank, enabled: false }
 ];
 

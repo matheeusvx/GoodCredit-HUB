@@ -17,7 +17,8 @@
   }
 
   input,
-  button {
+  button,
+  select {
     font: inherit;
   }
 }
@@ -53,6 +54,10 @@
     @apply mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100;
   }
 
+  .select-field {
+    @apply mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100;
+  }
+
   .field small {
     @apply mt-2 block text-xs font-medium text-slate-500;
   }
@@ -75,5 +80,116 @@
 
   .table-cell {
     @apply border-b border-r border-slate-100 px-3 py-2 text-right text-slate-700;
+  }
+}
+
+@layer components {
+  .gc-rules-card {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 24px;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+  }
+
+  .gc-rules-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 16px;
+  }
+
+  .gc-rules-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .gc-rules-description {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .gc-rules-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .gc-rule-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .gc-rule-label {
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 18px;
+  }
+
+  .gc-select {
+    height: 48px;
+    width: 100%;
+    min-width: 0;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 0 38px 0 12px;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 48px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    outline: none;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .gc-select:hover {
+    border-color: #94a3b8;
+  }
+
+  .gc-select:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+  }
+
+  @media (min-width: 768px) {
+    .gc-rules-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gc-rule-operation {
+      grid-column: span 2 / span 2;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .gc-rules-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .gc-rule-bank {
+      grid-column: span 4 / span 4;
+    }
+
+    .gc-rule-operation {
+      grid-column: span 8 / span 8;
+    }
+
+    .gc-rule-fgts,
+    .gc-rule-proxy,
+    .gc-rule-registration {
+      grid-column: span 4 / span 4;
+    }
   }
 }

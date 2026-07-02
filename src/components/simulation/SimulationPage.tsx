@@ -1,6 +1,6 @@
 import { Calculator, Eraser } from "lucide-react";
 import { useMemo, useState } from "react";
-import { isValidCpf, onlyDigits, parseNumberBR } from "../../lib/simulation/formatters";
+import { parseNumberBR } from "../../lib/simulation/formatters";
 import { runSimulation } from "../../lib/simulation/simulationEngine";
 import { SimulationFormData, SimulationResult } from "../../types/simulation";
 import { BankSystemCard } from "./BankSystemCard";
@@ -13,10 +13,7 @@ import { SimulationSummaryBox } from "./SimulationSummaryBox";
 
 const initialForm: SimulationFormData = {
   nomeCompleto: "",
-  cpf: "",
   dataNascimento: "",
-  celular: "",
-  email: "",
   estadoCivil: "",
   tipoFinanciamento: "",
   tipoOperacao: "",
@@ -98,6 +95,10 @@ export function SimulationPage({ onSendToAmortization }: Props) {
         <OperationDataCard form={form} onChange={patchForm} />
         <BankSystemCard form={form} onChange={patchForm} />
         <EntryFgtsCard form={form} onChange={patchForm} />
+        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 px-4 py-3 text-sm leading-6 text-goodblue-800">
+          Esta versão pública da simulação não solicita CPF, telefone ou e-mail. Os dados informados são utilizados apenas
+          para cálculo estimativo no navegador.
+        </section>
 
         {result && (
           <>
@@ -106,6 +107,10 @@ export function SimulationPage({ onSendToAmortization }: Props) {
               <div className="mt-4">
                 <SimulationResultCards result={result} />
               </div>
+            </section>
+            <section className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              Esta é uma simulação estimativa e não representa aprovação de crédito. A aprovação final depende da análise
+              bancária, validação documental, regras vigentes, avaliação do imóvel e perfil do cliente.
             </section>
             <SimulationSummaryBox text={result.textoSimulacao} />
           </>
@@ -118,12 +123,7 @@ export function SimulationPage({ onSendToAmortization }: Props) {
 function validateForm(form: SimulationFormData): string[] {
   const errors: string[] = [];
   if (!form.nomeCompleto.trim()) errors.push("Nome obrigatório.");
-  if (!form.cpf.trim()) errors.push("CPF obrigatório.");
-  if (form.cpf.trim() && !isValidCpf(form.cpf)) errors.push("CPF inválido.");
   if (!form.dataNascimento) errors.push("Data de nascimento obrigatória.");
-  if (!onlyDigits(form.celular)) errors.push("Celular obrigatório.");
-  if (!form.email.trim()) errors.push("E-mail obrigatório.");
-  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.push("E-mail inválido.");
   if (!form.estadoCivil) errors.push("Estado civil obrigatório.");
   if (!form.tipoFinanciamento) errors.push("Tipo de financiamento obrigatório.");
   if (!form.tipoOperacao) errors.push("Tipo de operação obrigatório.");

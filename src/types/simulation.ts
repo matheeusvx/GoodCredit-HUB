@@ -9,10 +9,7 @@ export type YesNo = "SIM" | "NAO";
 
 export interface SimulationFormData {
   nomeCompleto: string;
-  cpf: string;
   dataNascimento: string;
-  celular: string;
-  email: string;
   estadoCivil: CivilStatus | "";
   tipoFinanciamento: FinancingType | "";
   tipoOperacao: OperationType | "";

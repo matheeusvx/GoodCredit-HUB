@@ -9,6 +9,8 @@ import { InputCard } from "./components/InputCard";
 import { ManualContributionModal } from "./components/ManualContributionModal";
 import { Sidebar, HubView } from "./components/Sidebar";
 import { SummaryCard } from "./components/SummaryCard";
+import { ChecklistPage } from "./components/checklist/ChecklistPage";
+import { HomePage } from "./components/home/HomePage";
 import { SimulationPage } from "./components/simulation/SimulationPage";
 import {
   calcMonthlyRate,
@@ -105,7 +107,7 @@ function buildValidation(inputs: FinancingInputs): string[] {
 
 export default function App() {
   const stored = useMemo(readStoredSimulation, []);
-  const [activeView, setActiveView] = useState<HubView>("amortization");
+  const [activeView, setActiveView] = useState<HubView>("home");
   const [inputs, setInputs] = useState<FinancingInputs>(stored.inputs);
   const [valorFinanciadoInput, setValorFinanciadoInput] = useState(() =>
     formatInputCurrencyBR(stored.inputs.valorFinanciado)
@@ -384,6 +386,13 @@ export default function App() {
           <div className="mt-3 flex gap-2 overflow-x-auto">
             <button
               type="button"
+              onClick={() => setActiveView("home")}
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "home" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Início
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveView("amortization")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "amortization" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
@@ -396,10 +405,21 @@ export default function App() {
             >
               Simulação
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("checklist")}
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "checklist" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Checklist
+            </button>
           </div>
         </div>
 
-        {activeView === "simulation" ? (
+        {activeView === "home" ? (
+          <HomePage onNavigate={setActiveView} />
+        ) : activeView === "checklist" ? (
+          <ChecklistPage />
+        ) : activeView === "simulation" ? (
           <SimulationPage onSendToAmortization={handleSendToAmortization} />
         ) : (
           <>

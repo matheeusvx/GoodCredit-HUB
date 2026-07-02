@@ -70,30 +70,3 @@ export function normalizeBancoCode(value: string): BankCode {
   if (normalized.includes("SANTANDER")) return "SANTANDER";
   return "DESCONHECIDO";
 }
-
-export function formatCpf(value: string): string {
-  const digits = onlyDigits(value).slice(0, 11);
-  return digits
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1-$2");
-}
-
-export function isValidCpf(value: string): boolean {
-  const cpf = onlyDigits(value);
-  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-  const calcDigit = (base: string, factor: number) => {
-    const total = base.split("").reduce((sum, digit) => sum + Number(digit) * factor--, 0);
-    const rest = (total * 10) % 11;
-    return rest === 10 ? 0 : rest;
-  };
-  return calcDigit(cpf.slice(0, 9), 10) === Number(cpf[9]) && calcDigit(cpf.slice(0, 10), 11) === Number(cpf[10]);
-}
-
-export function formatPhone(value: string): string {
-  const digits = onlyDigits(value).slice(0, 11);
-  if (digits.length <= 10) {
-    return digits.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
-  }
-  return digits.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
-}
