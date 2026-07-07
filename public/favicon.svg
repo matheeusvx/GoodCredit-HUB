@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GoodCredit Hub">
+  <rect width="64" height="64" rx="14" fill="#2b2b2b"/>
+  <path
+    d="M19 48V26l11 4v18M30 48V26c0-4.6 2.5-7.2 6.2-9.2L47 11v37M39 48V39.5c0-4.1 2.1-6.2 5.7-7.2L52 30v18"
+    fill="none"
+    stroke="#00a859"
+    stroke-width="5"
+    stroke-linejoin="miter"
+    stroke-linecap="butt"
+  />
+</svg>

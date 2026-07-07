@@ -22,16 +22,16 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-5 py-6 shadow-sm lg:block">
-      <div className="mb-8 flex h-16 items-center">
+      <div className="mb-8 flex min-h-24 items-center justify-center border-b border-slate-100 pb-6">
         {!logoFailed ? (
           <img
-            src="/logo-goodcredit.png"
-            alt="GoodCredit"
-            className="max-h-14 w-auto object-contain"
+            src="/logo-goodcredit-hub.png"
+            alt="GoodCredit Hub"
+            className="h-auto w-52 max-w-full object-contain"
             onError={() => setLogoFailed(true)}
           />
         ) : (
-          <div>
+          <div className="text-center">
             <p className="text-2xl font-bold text-goodgreen-600">GoodCredit</p>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Hub</p>
           </div>

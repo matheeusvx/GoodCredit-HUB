@@ -73,7 +73,7 @@ function setContributionValue(map: ContributionMap, month: number, value: number
 }
 
 function getLogoDataUrl(): Promise<string | null> {
-  return fetch("/logo-goodcredit.png")
+  return fetch("/logo-goodcredit-hub.png")
     .then((response) => {
       if (!response.ok) return null;
       return response.blob();
