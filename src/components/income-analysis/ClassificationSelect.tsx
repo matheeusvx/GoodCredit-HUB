@@ -1,0 +1,3 @@
+import { TransactionClassification } from "../../types/incomeAnalysis";
+import { INCOME_ANALYSIS_RULES } from "../../lib/income-analysis/incomeRules";
+export function ClassificationSelect({ value, onChange }: { value: TransactionClassification; onChange: (value: TransactionClassification) => void }) { return <select className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold" value={value} onChange={(e) => onChange(e.target.value as TransactionClassification)}>{Object.entries(INCOME_ANALYSIS_RULES.classifications).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>; }

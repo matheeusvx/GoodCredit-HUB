@@ -1,0 +1,9 @@
+import { FgtsEligibilityResult, FgtsIncomeForm, FgtsIncomeResult, FgtsProjectionResult } from "../../types/fgts";
+import { formatCurrencyBR } from "../financial";
+import { FGTS_DOCUMENTS, FGTS_USAGE_LABELS } from "./fgtsRules";
+
+export function buildFgtsWhatsAppMessage(params: { clientName: string; usageMode: keyof typeof FGTS_USAGE_LABELS | ""; eligibility: FgtsEligibilityResult; incomeForm: FgtsIncomeForm; incomeResult: FgtsIncomeResult; projection: FgtsProjectionResult; checkedDocuments: Record<string, boolean> }): string {
+  const pending = FGTS_DOCUMENTS.filter((item) => !params.checkedDocuments[item.id]).map((item) => `- ${item.label}`).join("\n");
+  const alerts = [...params.eligibility.messages, ...params.incomeResult.alerts].map((item) => `- ${item}`).join("\n");
+  return `Olá${params.clientName ? `, ${params.clientName}` : ""}! Tudo bem?\n\nSegue o resumo inicial sobre a utilização do FGTS no seu processo:\n\n- Modalidade pretendida: ${params.usageMode ? FGTS_USAGE_LABELS[params.usageMode] : "Não informada"}\n- Saldo informado: ${formatCurrencyBR(params.projection.events[0]?.availableBalance || 0)}\n- Próxima utilização indicativa: ${params.projection.nextEligibleDate ? new Date(`${params.projection.nextEligibleDate}T12:00:00`).toLocaleDateString("pt-BR") : "Não informada"}\n- Renda do holerite: ${formatCurrencyBR(params.incomeForm.payslipGross)}\n- Renda estimada pelo FGTS: ${formatCurrencyBR(params.incomeResult.estimatedIncome)}\n- Valor considerado na análise: ${formatCurrencyBR(params.incomeResult.consideredIncome)}\n\nDocumentos pendentes:\n${pending || "- Nenhum item pendente marcado"}\n\nPendências ou alertas:\n${alerts || "- Sem alertas adicionais"}\n\nImportante: esta é uma análise inicial. A utilização efetiva do FGTS depende da validação documental, das regras vigentes e da análise do agente financeiro.\n\nAtenciosamente,\nGoodCredit`;
+}

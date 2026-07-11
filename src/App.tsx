@@ -12,6 +12,8 @@ import { SummaryCard } from "./components/SummaryCard";
 import { ChecklistPage } from "./components/checklist/ChecklistPage";
 import { HomePage } from "./components/home/HomePage";
 import { SimulationPage } from "./components/simulation/SimulationPage";
+import { FgtsPage } from "./components/fgts/FgtsPage";
+import { IncomeAnalysisPage } from "./components/income-analysis/IncomeAnalysisPage";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -26,6 +28,7 @@ import {
 } from "./lib/financial";
 import { ContributionMap, FinancingInputs, StoredSimulation } from "./types/amortization";
 import { SimulationResult } from "./types/simulation";
+import { FgtsAmortizationPrefill } from "./types/fgts";
 
 const STORAGE_KEY = "goodcredit-hub-amortization-v1";
 
@@ -230,6 +233,53 @@ export default function App() {
     setActiveView("amortization");
   }
 
+  function importFgtsProjection() {
+    const raw = localStorage.getItem("goodcredit_fgts_amortization_prefill");
+    if (!raw) {
+      setActiveView("amortization");
+      return;
+    }
+
+    try {
+      const prefill = JSON.parse(raw) as FgtsAmortizationPrefill;
+      const incoming = prefill.events.filter(
+        (event) => event.month >= 1 && event.month <= inputs.prazoMeses && event.amount > 0
+      );
+      if (!incoming.length) {
+        window.alert("Nenhum aporte válido foi encontrado dentro do prazo atual da planilha.");
+        return;
+      }
+
+      let mode: "replace" | "sum" = "replace";
+      if (Object.keys(fgtsContributions).length > 0) {
+        const choice = window.prompt(
+          "Já existem aportes de FGTS nesta simulação. Digite SUBSTITUIR, SOMAR ou CANCELAR.",
+          "CANCELAR"
+        )?.trim().toUpperCase();
+        if (!choice || choice === "CANCELAR") return;
+        if (choice !== "SUBSTITUIR" && choice !== "SOMAR") {
+          window.alert("Opção não reconhecida. A importação foi cancelada.");
+          return;
+        }
+        mode = choice === "SOMAR" ? "sum" : "replace";
+      }
+
+      const next: ContributionMap = mode === "sum" ? { ...fgtsContributions } : {};
+      incoming.forEach((event) => {
+        next[event.month] = mode === "sum" ? (next[event.month] || 0) + event.amount : event.amount;
+      });
+      setFgtsContributions(next);
+      if (prefill.clientName && (!inputs.nomeCliente || mode === "replace")) {
+        setInputs((current) => ({ ...current, nomeCliente: prefill.clientName }));
+      }
+      localStorage.removeItem("goodcredit_fgts_amortization_prefill");
+      setActiveView("amortization");
+    } catch {
+      localStorage.removeItem("goodcredit_fgts_amortization_prefill");
+      window.alert("Não foi possível importar o cronograma de FGTS.");
+    }
+  }
+
   async function generatePdf() {
     if (validation.length > 0 || isGeneratingPdf) return;
     setIsGeneratingPdf(true);
@@ -412,6 +462,20 @@ export default function App() {
             >
               Checklist
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("fgts")}
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "fgts" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              FGTS
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("income-analysis")}
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Renda
+            </button>
           </div>
         </div>
 
@@ -421,6 +485,10 @@ export default function App() {
           <ChecklistPage />
         ) : activeView === "simulation" ? (
           <SimulationPage onSendToAmortization={handleSendToAmortization} />
+        ) : activeView === "fgts" ? (
+          <FgtsPage onSendToAmortization={importFgtsProjection} />
+        ) : activeView === "income-analysis" ? (
+          <IncomeAnalysisPage onSendToSimulation={() => setActiveView("simulation")} />
         ) : (
           <>
             <Header

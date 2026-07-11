@@ -2,8 +2,8 @@ const statuses = [
   ["Simulação de Financiamento", "Ativo"],
   ["Planilha de Amortização", "Ativo"],
   ["Checklist Documental", "Ativo"],
-  ["Apuração de Renda", "Em desenvolvimento"],
-  ["Uso de FGTS", "Em desenvolvimento"]
+  ["Apuração de Renda", "Ativo"],
+  ["Uso de FGTS", "Ativo"]
 ] as const;
 
 export function ModuleStatus() {

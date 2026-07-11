@@ -1,0 +1,3 @@
+import { ClassificationReason, TransactionClassification } from "../../types/incomeAnalysis";
+import { reasonOptions } from "../../lib/income-analysis/incomeRules";
+export function ClassificationReasonSelect({ classification, value, onChange }: { classification: TransactionClassification; value: ClassificationReason; onChange: (value: ClassificationReason) => void }) { return <select className="h-10 min-w-48 rounded-lg border border-slate-300 bg-white px-3 text-sm" value={value} onChange={(e) => onChange(e.target.value as ClassificationReason)}><option value="">Selecione o motivo</option>{reasonOptions(classification).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>; }

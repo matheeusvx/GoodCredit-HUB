@@ -37,17 +37,19 @@ const modules = [
   },
   {
     title: "Apuração de Renda",
-    description: "Ferramenta para apurar renda média com base em entradas, extratos e movimentações bancárias.",
-    status: "Em desenvolvimento" as const,
-    actionLabel: "Em breve",
-    icon: FileClock
+    description: "Analise movimentações, classifique entradas e calcule média, mediana e recorrência de renda.",
+    status: "Ativo" as const,
+    actionLabel: "Apurar Renda",
+    icon: FileClock,
+    target: "income-analysis" as const
   },
   {
     title: "Uso de FGTS",
-    description: "Central de orientação sobre uso, resgate, autorização e regras de FGTS no financiamento.",
-    status: "Em desenvolvimento" as const,
-    actionLabel: "Em breve",
-    icon: PiggyBank
+    description: "Analise elegibilidade, estime renda, planeje amortizações e organize documentos para uso do FGTS.",
+    status: "Ativo" as const,
+    actionLabel: "Acessar FGTS",
+    icon: PiggyBank,
+    target: "fgts" as const
   }
 ];
 
