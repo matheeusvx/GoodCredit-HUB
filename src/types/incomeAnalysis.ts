@@ -22,6 +22,7 @@ export interface BankTransaction {
   reason: ClassificationReason;
   note: string;
   classificationSource: "MANUAL" | "SUGGESTED";
+  source?: "MANUAL" | "CSV" | "PDF_TEXT" | "PDF_OCR";
   suggestion?: { classification: TransactionClassification; reason: ClassificationReason; label: string };
 }
 
