@@ -10,7 +10,7 @@ export interface ParsedPdfValue {
   endIndex: number;
 }
 
-const VALUE_PATTERN = /(?:R\$\s*)?[-+]?\s*(?:\d{1,3}(?:\.\d{3})+|\d+)(?:[,.]\d{2})\s*[CD+\-]?/gi;
+const VALUE_PATTERN = /[-+]?\s*(?:R\$\s*)?[-+]?\s*(?:\d{1,3}(?:\.\d{3})+|\d+)(?:[,.]\d{2})\s*[CD+\-]?/gi;
 
 export function parsePdfMoney(raw: string): number | null {
   const clean = raw.replace(/R\$/gi, "").replace(/\s/g, "").replace(/[CD]$/i, "");

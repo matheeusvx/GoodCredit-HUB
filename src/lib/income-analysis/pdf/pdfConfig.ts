@@ -6,7 +6,7 @@ export const PDF_IMPORT_CONFIG = {
   minimumExtractedCharactersPerPage: 20,
   lineYTolerance: 3,
   duplicateDateToleranceDays: 0,
-  ocrScale: 2,
+  ocrScale: 2.75,
   defaultOcrLanguage: "por",
 } as const;
 
@@ -21,6 +21,7 @@ export const PDF_BANK_OPTIONS: Array<{ value: PdfBankCode; label: string }> = [
   { value: "SANTANDER", label: "Santander" },
   { value: "INTER", label: "Inter" },
   { value: "NUBANK", label: "Nubank" },
+  { value: "MERCADO_PAGO", label: "Mercado Pago" },
   { value: "C6", label: "C6" },
   { value: "OTHER", label: "Outro" },
 ];
@@ -73,5 +74,6 @@ export const PDF_BANK_MARKERS: Record<Exclude<PdfBankCode, "AUTO" | "OTHER">, st
   SANTANDER: ["santander"],
   INTER: ["banco inter", "inter.co"],
   NUBANK: ["nubank", "nu pagamentos"],
+  MERCADO_PAGO: ["mercado pago", "mercadopago"],
   C6: ["c6 bank", "banco c6"],
 };

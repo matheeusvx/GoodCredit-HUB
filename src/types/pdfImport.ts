@@ -25,6 +25,7 @@ export interface PdfTextItem {
   y: number;
   width: number;
   height: number;
+  confidence?: number;
 }
 
 export interface ReconstructedPdfLine {
@@ -51,6 +52,7 @@ export interface ParsedPdfTransaction {
   warnings: string[];
   duplicateOf?: string;
   classificationHint?: "SAME_OWNERSHIP";
+  balance?: number | null;
 }
 
 export type PdfBankCode =
@@ -62,6 +64,7 @@ export type PdfBankCode =
   | "SANTANDER"
   | "INTER"
   | "NUBANK"
+  | "MERCADO_PAGO"
   | "C6"
   | "OTHER";
 
@@ -93,6 +96,11 @@ export interface PdfReconciliation {
   parsedDebitTotal: number;
   debitDifference: number | null;
   status: PdfReconciliationStatus;
+  openingBalance?: number | null;
+  closingBalance?: number | null;
+  balanceDifference?: number | null;
+  method?: "SUMMARY" | "BALANCE_SEQUENCE" | "DAILY_BALANCE" | "NOT_AVAILABLE";
+  warnings?: string[];
 }
 
 export interface PdfImportSummary {

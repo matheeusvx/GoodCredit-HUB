@@ -1,0 +1,4 @@
+import { CircleCheck, Info } from "lucide-react";
+import type { AutomatedIncomeResult } from "../../types/statementAnalysis";
+
+export function GoodCreditExplanation({ result }: { result: AutomatedIncomeResult }) { return <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-5"><div className="flex items-start gap-3"><Info className="mt-0.5 h-5 w-5 shrink-0 text-goodblue-700" /><div><h2 className="text-lg font-bold text-goodblue-900">Como chegamos a este resultado</h2><div className="mt-3 space-y-2">{result.explanation.map((line) => <p key={line} className="flex gap-2 text-sm text-goodblue-800"><CircleCheck className="mt-0.5 h-4 w-4 shrink-0" />{line}</p>)}</div><p className="mt-4 text-xs text-goodblue-700">Cada decisão mantém motivo, confiança, arquivo, página, parser e método de extração para auditoria.</p></div></div></section>; }

@@ -1,6 +1,32 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { OcrProgress, ReconstructedPdfLine } from "../../../types/pdfImport";
 import { PDF_IMPORT_CONFIG } from "./pdfConfig";
+import { reconstructPdfLines } from "./pdfLineReconstructor";
+
+interface OcrWordLike { text?: string; confidence?: number; bbox?: { x0: number; y0: number; x1: number; y1: number } }
+interface OcrLineLike { words?: OcrWordLike[] }
+interface OcrParagraphLike { lines?: OcrLineLike[] }
+interface OcrBlockLike { paragraphs?: OcrParagraphLike[] }
+
+export function ocrBlocksToLines(blocks: OcrBlockLike[] | null | undefined, pageNumber: number, pageHeight: number, fallbackText = ""): ReconstructedPdfLine[] {
+  const items = (blocks || []).flatMap((block) => block.paragraphs || []).flatMap((paragraph) => paragraph.lines || []).flatMap((line) => line.words || []).flatMap((word) => {
+    const text = word.text?.trim(); const box = word.bbox; if (!text || !box) return [];
+    return [{ text, pageNumber, x: box.x0, y: pageHeight - box.y0, width: box.x1 - box.x0, height: box.y1 - box.y0, confidence: typeof word.confidence === "number" ? word.confidence / 100 : undefined }];
+  });
+  if (items.length) return reconstructPdfLines(items, 8);
+  return fallbackText.split(/\r?\n/).map((text) => text.trim()).filter(Boolean).map((text, index) => ({ pageNumber, y: 10_000 - index, text, items: [] }));
+}
+
+export function preprocessOcrCanvas(canvas: { width: number; height: number; getContext: (type: "2d", options?: { alpha?: boolean }) => CanvasRenderingContext2D | null }) {
+  const context = canvas.getContext("2d", { alpha: false }); if (!context) return;
+  const image = context.getImageData(0, 0, canvas.width, canvas.height); const pixels = image.data;
+  for (let index = 0; index < pixels.length; index += 4) {
+    const gray = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+    const contrasted = Math.max(0, Math.min(255, (gray - 128) * 1.4 + 128)); const value = contrasted > 245 ? 255 : contrasted < 75 ? 0 : contrasted;
+    pixels[index] = value; pixels[index + 1] = value; pixels[index + 2] = value; pixels[index + 3] = 255;
+  }
+  context.putImageData(image, 0, 0);
+}
 
 export async function processPdfWithOcr(
   document: PDFDocumentProxy,
@@ -41,10 +67,9 @@ export async function processPdfWithOcr(
       const context = canvas.getContext("2d", { alpha: false });
       if (!context) throw new Error("Canvas indisponível para OCR.");
       await page.render({ canvas, canvasContext: context, viewport }).promise;
-      const result = await worker.recognize(canvas);
-      result.data.text.split(/\r?\n/).map((text) => text.trim()).filter(Boolean).forEach((text, lineIndex) => {
-        lines.push({ pageNumber, y: 10_000 - lineIndex, text, items: [] });
-      });
+      preprocessOcrCanvas(canvas);
+      const result = await worker.recognize(canvas, {}, { text: true, blocks: true });
+      lines.push(...ocrBlocksToLines(result.data.blocks as OcrBlockLike[] | null, pageNumber, canvas.height, result.data.text));
       canvas.width = 1;
       canvas.height = 1;
       page.cleanup();

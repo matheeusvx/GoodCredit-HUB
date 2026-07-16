@@ -24,6 +24,18 @@ export interface BankTransaction {
   classificationSource: "MANUAL" | "SUGGESTED";
   source?: "MANUAL" | "CSV" | "PDF_TEXT" | "PDF_OCR";
   suggestion?: { classification: TransactionClassification; reason: ClassificationReason; label: string };
+  sourceFileId?: string;
+  sourceFileName?: string;
+  bank?: string;
+  sourcePage?: number | null;
+  sourceRow?: number | null;
+  parserId?: string;
+  extractionConfidence?: number;
+  classificationReason?: string;
+  classificationConfidence?: number;
+  balance?: number | null;
+  warnings?: string[];
+  fingerprint?: string;
 }
 
 export interface IncomeAnalysisForm {

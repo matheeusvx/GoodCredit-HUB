@@ -1,7 +1,7 @@
 import { PdfTextItem, ReconstructedPdfLine } from "../../../types/pdfImport";
 import { PDF_IMPORT_CONFIG } from "./pdfConfig";
 
-export function reconstructPdfLines(items: PdfTextItem[], tolerance = PDF_IMPORT_CONFIG.lineYTolerance): ReconstructedPdfLine[] {
+export function reconstructPdfLines(items: PdfTextItem[], tolerance: number = PDF_IMPORT_CONFIG.lineYTolerance): ReconstructedPdfLine[] {
   const byPage = new Map<number, PdfTextItem[]>();
   items.forEach((item) => byPage.set(item.pageNumber, [...(byPage.get(item.pageNumber) || []), item]));
   const lines: ReconstructedPdfLine[] = [];

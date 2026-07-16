@@ -34,6 +34,7 @@ function bankCodeFromLabel(label: string): PdfBankCode {
   if (normalized.includes("santander")) return "SANTANDER";
   if (normalized.includes("inter")) return "INTER";
   if (normalized.includes("nubank")) return "NUBANK";
+  if (normalized.includes("mercado pago")) return "MERCADO_PAGO";
   if (normalized.includes("c6")) return "C6";
   return "AUTO";
 }

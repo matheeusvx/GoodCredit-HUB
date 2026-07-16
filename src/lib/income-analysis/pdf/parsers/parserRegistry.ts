@@ -3,8 +3,23 @@ import { normalizeText } from "../../formatters";
 import { PDF_BANK_MARKERS } from "../pdfConfig";
 import { GenericBankStatementParser } from "./GenericBankStatementParser";
 import { NubankStatementParser } from "./NubankStatementParser";
+import { BradescoStatementParser } from "./BradescoStatementParser";
+import { CaixaStatementParser } from "./CaixaStatementParser";
+import { InterStatementParser } from "./InterStatementParser";
+import { ItauStatementParser } from "./ItauStatementParser";
+import { MercadoPagoStatementParser } from "./MercadoPagoStatementParser";
+import { SantanderStatementParser } from "./SantanderStatementParser";
 
-const PARSERS: BankStatementParser[] = [NubankStatementParser, GenericBankStatementParser];
+const PARSERS: BankStatementParser[] = [
+  NubankStatementParser,
+  BradescoStatementParser,
+  MercadoPagoStatementParser,
+  SantanderStatementParser,
+  CaixaStatementParser,
+  InterStatementParser,
+  ItauStatementParser,
+  GenericBankStatementParser,
+];
 
 export function detectPdfBank(text: string): PdfBankCode {
   const normalized = normalizeText(text);

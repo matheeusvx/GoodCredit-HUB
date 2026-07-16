@@ -7,3 +7,7 @@ server.log
 server.err
 vite.config.js
 vite.config.d.ts
+local-bank-statements/
+private-fixtures/
+*.statement-test.pdf
+*.bank-statement.pdf

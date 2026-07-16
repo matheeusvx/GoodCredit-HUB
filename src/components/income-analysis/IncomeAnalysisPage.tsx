@@ -1,29 +1,58 @@
-import { useEffect, useMemo, useState } from "react";
-import { calculateIncomeAnalysis } from "../../lib/income-analysis/incomeCalculator";
-import { buildIncomeWhatsAppMessage } from "../../lib/income-analysis/incomeMessageBuilder";
-import { generateIncomePdf } from "../../lib/income-analysis/incomePdfGenerator";
-import { BankTransaction, IncomeAnalysisForm, IncomeAnalysisState, IncomeSimulationPrefill } from "../../types/incomeAnalysis";
-import { IncomeAnalysisHeader } from "./IncomeAnalysisHeader";
-import { IncomeAnalysisSetup } from "./IncomeAnalysisSetup";
-import { TransactionEntryForm } from "./TransactionEntryForm";
-import { TransactionImport } from "./TransactionImport";
-import { TransactionTable } from "./TransactionTable";
-import { MonthlyIncomeSummary } from "./MonthlyIncomeSummary";
-import { IncomeCharts } from "./IncomeCharts";
-import { PayerRecurrenceTable } from "./PayerRecurrenceTable";
-import { IncomeResultPanel } from "./IncomeResultPanel";
+import { useMemo, useRef, useState } from "react";
+import type { NormalizedBankTransaction, RelatedPerson, StatementFileRecord, StatementProcessingProgress } from "../../types/statementAnalysis";
+import { calculateAutomatedIncome } from "../../lib/statement-analysis/statementAnalysis";
+import { classifyTransactions } from "../../lib/statement-analysis/transactionClassifier";
+import { markDuplicateTransactions } from "../../lib/statement-analysis/duplicateDetector";
+import { matchInternalTransfers, markTransitoryPairs } from "../../lib/statement-analysis/relatedTransferMatcher";
+import { createStatementFileRecord, processStatementFile, PROCESSING_STEPS } from "../../lib/statement-analysis/statementPipeline";
+import { generateStatementAnalysisPdf } from "../../lib/statement-analysis/statementPdfReport";
+import { StatementUpload } from "./StatementUpload";
+import { StatementProcessing } from "./StatementProcessing";
+import { IncomeAnalysisResult } from "./IncomeAnalysisResult";
+import { AdvancedTransactionReview } from "./AdvancedTransactionReview";
+import { StatementViewer } from "./StatementViewer";
 
-const STATE_KEY = "goodcredit_income_analysis_state"; const PREF_KEY = "goodcredit_income_analysis_preferences"; const SIM_KEY = "goodcredit_income_simulation_prefill";
-const currentMonth = new Date().toISOString().slice(0, 7); const initialForm: IncomeAnalysisForm = { clientName: "", incomeProfile: "", participantCount: "1", bank: "Caixa", accountCount: 1, periodStart: currentMonth, periodEnd: currentMonth, analysisType: "SINGLE_ACCOUNT", declaredActivity: "", analystNotes: "", excludedCompetences: {} };
-function loadState(): IncomeAnalysisState { try { const parsed = JSON.parse(localStorage.getItem(STATE_KEY) || "null"); return parsed?.version === 1 ? { ...parsed.data, doNotSave: Boolean(JSON.parse(localStorage.getItem(PREF_KEY) || "{}").doNotSave) } : { form: initialForm, transactions: [], doNotSave: false }; } catch { return { form: initialForm, transactions: [], doNotSave: false }; } }
+type Stage = "UPLOAD" | "PROCESSING" | "RESULT";
+const ALLOWED_EXTENSIONS = ["pdf", "csv", "xlsx", "xls"];
+const SIMULATION_KEY = "goodcredit_income_simulation_prefill";
 
 export function IncomeAnalysisPage({ onSendToSimulation }: { onSendToSimulation: () => void }) {
-  const [state, setState] = useState(loadState); const [notice, setNotice] = useState(""); const result = useMemo(() => calculateIncomeAnalysis(state.form, state.transactions), [state.form, state.transactions]);
-  useEffect(() => { localStorage.setItem(PREF_KEY, JSON.stringify({ doNotSave: state.doNotSave })); if (state.doNotSave) { localStorage.removeItem(STATE_KEY); return; } localStorage.setItem(STATE_KEY, JSON.stringify({ version: 1, savedAt: new Date().toISOString(), data: { form: state.form, transactions: state.transactions, doNotSave: false } })); }, [state]);
-  useEffect(() => { if (!state.doNotSave || !state.transactions.length) return; const handler = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; window.addEventListener("beforeunload", handler); return () => window.removeEventListener("beforeunload", handler); }, [state.doNotSave, state.transactions.length]);
-  function clear() { if (!window.confirm("Esta ação removerá todas as movimentações e classificações desta apuração.")) return; localStorage.removeItem(STATE_KEY); setState({ form: initialForm, transactions: [], doNotSave: state.doNotSave }); setNotice("Análise limpa."); }
-  async function copy() { await navigator.clipboard.writeText(buildIncomeWhatsAppMessage(state.form, result)); setNotice("Resumo copiado para a área de transferência."); }
-  function send() { const prefill: IncomeSimulationPrefill = { clientName: state.form.clientName, incomeProfile: state.form.incomeProfile, analyzedPeriod: { start: state.form.periodStart, end: state.form.periodEnd, months: result.monthCount }, averageIncome: result.averageIncome, medianIncome: result.medianIncome, totalConsidered: result.totalIncluded, pendingReviewAmount: result.totalReview, generatedAt: new Date().toISOString() }; localStorage.setItem(SIM_KEY, JSON.stringify(prefill)); onSendToSimulation(); }
-  const formErrors = !state.form.clientName.trim() || !state.form.incomeProfile || !state.form.periodStart || !state.form.periodEnd || state.form.periodEnd < state.form.periodStart;
-  return <div><IncomeAnalysisHeader onClear={clear} /><main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">{notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}<label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><input type="checkbox" className="mt-0.5" checked={state.doNotSave} onChange={(e) => setState({ ...state, doNotSave: e.target.checked })} /><span><strong>Não salvar esta análise no navegador.</strong> Os dados permanecerão apenas nesta sessão e serão apagados ao atualizar ou fechar.</span></label><IncomeAnalysisSetup form={state.form} onChange={(form) => setState({ ...state, form })} />{formErrors && <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Informe nome/processo, perfil e um período válido para concluir a apuração.</p>}<TransactionEntryForm onAdd={(transaction) => setState({ ...state, transactions: [...state.transactions, transaction] })} /><TransactionImport existing={state.transactions} analysisBank={state.form.bank} periodStart={state.form.periodStart} periodEnd={state.form.periodEnd} onImport={(transactions) => setState({ ...state, transactions })} /><div className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-4 text-sm text-goodblue-800">Os arquivos e movimentações são processados localmente no navegador. Nenhum extrato é enviado pela ferramenta.</div><TransactionTable transactions={state.transactions} onChange={(transactions) => setState({ ...state, transactions })} /><MonthlyIncomeSummary form={state.form} result={result} onFormChange={(form) => setState({ ...state, form })} /><IncomeCharts result={result} /><PayerRecurrenceTable result={result} /><IncomeResultPanel form={state.form} result={result} onCopy={copy} onPdfSummary={() => generateIncomePdf(state.form, result, state.transactions, false)} onPdfDetailed={() => generateIncomePdf(state.form, result, state.transactions, true)} onSend={send} /></main></div>;
+  const [stage, setStage] = useState<Stage>("UPLOAD"); const [clientName, setClientName] = useState(""); const [files, setFiles] = useState<StatementFileRecord[]>([]); const [relatedPeople, setRelatedPeople] = useState<RelatedPerson[]>([]); const [transactions, setTransactions] = useState<NormalizedBankTransaction[]>([]); const [progress, setProgress] = useState<StatementProcessingProgress | null>(null); const [reviewOpen, setReviewOpen] = useState(false); const [viewing, setViewing] = useState<NormalizedBankTransaction | null>(null); const [notice, setNotice] = useState(""); const controllerRef = useRef<AbortController | null>(null);
+  const result = useMemo(() => stage === "RESULT" ? calculateAutomatedIncome(clientName, files, transactions) : null, [clientName, files, stage, transactions]);
+
+  function addFiles(candidates: File[]) {
+    const rejected: string[] = []; const existing = new Set(files.map((item) => `${item.name}-${item.size}`)); const accepted = candidates.filter((file) => {
+      const extension = file.name.split(".").pop()?.toLowerCase() || ""; const duplicate = existing.has(`${file.name}-${file.size}`);
+      if (!ALLOWED_EXTENSIONS.includes(extension) || file.size <= 0 || file.size > 30 * 1024 * 1024 || duplicate) { rejected.push(file.name); return false; }
+      existing.add(`${file.name}-${file.size}`); return true;
+    });
+    setFiles((current) => [...current, ...accepted.map(createStatementFileRecord)]); setNotice(rejected.length ? `${rejected.length} arquivo(s) ignorado(s) por formato, tamanho ou duplicidade.` : "");
+  }
+
+  async function startAnalysis() {
+    if (!files.length) return; const controller = new AbortController(); controllerRef.current = controller; setStage("PROCESSING"); setNotice(""); let processed: StatementFileRecord[] = [];
+    for (let index = 0; index < files.length; index += 1) {
+      if (controller.signal.aborted) { setStage("UPLOAD"); return; }
+      const current = files[index]; setFiles((items) => items.map((item) => item.id === current.id ? { ...item, status: "PROCESSING" } : item));
+      try {
+        const next = await processStatementFile(current, (value) => { const enriched = { ...value, completedFiles: processed.filter((file) => ["COMPLETED", "REVIEW_REQUIRED", "DIVERGENT"].includes(file.status)).length, warningFiles: processed.filter((file) => ["REVIEW_REQUIRED", "DIVERGENT", "ERROR", "UNRECOGNIZED"].includes(file.status)).length }; setProgress(enriched); }, controller.signal);
+        processed = [...processed, next]; setFiles((items) => items.map((item) => item.id === current.id ? next : item));
+      } catch (error) {
+        if ((error as Error).name === "AbortError") { setStage("UPLOAD"); return; }
+        const candidate = error as { code?: string; message?: string }; const failed: StatementFileRecord = { ...current, status: candidate.code === "PASSWORD_REQUIRED" || candidate.code === "WRONG_PASSWORD" ? "PASSWORD_REQUIRED" : "ERROR", warnings: [candidate.message || "Não foi possível processar o arquivo."] };
+        processed = [...processed, failed]; setFiles((items) => items.map((item) => item.id === current.id ? failed : item));
+      }
+    }
+    const anchor = processed.at(-1) || files[0]; const emitFinal = (step: number) => setProgress({ fileId: anchor.id, fileName: "Análise consolidada", step, stepLabel: PROCESSING_STEPS[step], currentPage: 0, totalPages: 0, percent: Math.round((step / PROCESSING_STEPS.length) * 100), completedFiles: processed.filter((file) => ["COMPLETED", "REVIEW_REQUIRED", "DIVERGENT"].includes(file.status)).length, warningFiles: processed.filter((file) => ["REVIEW_REQUIRED", "DIVERGENT", "ERROR", "UNRECOGNIZED"].includes(file.status)).length });
+    emitFinal(9); let consolidated = markDuplicateTransactions(processed.flatMap((file) => file.transactions)); emitFinal(10); consolidated = matchInternalTransfers(consolidated); consolidated = markTransitoryPairs(consolidated); emitFinal(11); consolidated = classifyTransactions(consolidated, relatedPeople); emitFinal(12); emitFinal(13); emitFinal(14);
+    setFiles(processed); setTransactions(consolidated); setStage("RESULT"); setProgress(null); controllerRef.current = null;
+  }
+
+  function reset() { if ((files.length || transactions.length) && !window.confirm("Limpar os arquivos e o resultado desta análise?")) return; controllerRef.current?.abort(); setStage("UPLOAD"); setFiles([]); setTransactions([]); setProgress(null); setReviewOpen(false); setViewing(null); setNotice(""); }
+  function sendToSimulation() {
+    if (!result) return; if (localStorage.getItem(SIMULATION_KEY) && !window.confirm("Já existe uma renda preparada para a simulação. Deseja substituí-la pela renda confirmada desta análise?")) return;
+    const competences = result.months.map((month) => month.competence); localStorage.setItem(SIMULATION_KEY, JSON.stringify({ clientName: result.clientName, confirmedMonthlyIncome: result.confirmedMonthlyIncome, potentialMonthlyIncome: result.potentialMonthlyIncome, participants: [...new Set(result.transactions.map((item) => item.accountHolder).filter(Boolean))], analyzedMonths: competences, overallConfidence: Math.min(result.extractionConfidence, result.classificationConfidence), generatedAt: result.generatedAt, averageIncome: result.confirmedMonthlyIncome, medianIncome: result.medianIncome, totalConsidered: result.confirmedIncomeTotal, pendingReviewAmount: result.totalPending, incomeProfile: "", analyzedPeriod: { start: competences[0] || "", end: competences.at(-1) || "", months: result.completeMonths } })); onSendToSimulation();
+  }
+  const viewingFile = viewing ? files.find((file) => file.id === viewing.sourceFileId) : undefined;
+  return <div className="min-h-screen bg-slate-100">{notice && <div className="mx-auto mt-4 max-w-[1500px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</div>}{stage === "UPLOAD" && <StatementUpload clientName={clientName} files={files} relatedPeople={relatedPeople} onClientName={setClientName} onAddFiles={addFiles} onRemoveFile={(id) => setFiles((items) => items.filter((item) => item.id !== id))} onRelatedPeople={setRelatedPeople} onStart={() => { void startAnalysis(); }} onClear={reset} />}{stage === "PROCESSING" && <StatementProcessing files={files} progress={progress} onCancel={() => controllerRef.current?.abort()} />}{stage === "RESULT" && result && <IncomeAnalysisResult result={result} onReview={() => setReviewOpen(true)} onPdf={() => { void generateStatementAnalysisPdf(result); }} onSend={sendToSimulation} onReset={reset} />}{reviewOpen && <AdvancedTransactionReview transactions={transactions} onChange={setTransactions} onView={setViewing} onClose={() => setReviewOpen(false)} />}{viewing && viewingFile && <StatementViewer transaction={viewing} file={viewingFile} onClose={() => setViewing(null)} />}</div>;
 }
