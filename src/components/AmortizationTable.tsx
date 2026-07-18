@@ -8,6 +8,7 @@ interface AmortizationTableProps {
 }
 
 const money = (value: number) => (value > 0 ? formatCurrencyBR(value) : "-");
+const correctedMoney = (row: AmortizationRow, value: number) => row.afterPayoff ? "—" : formatCurrencyBR(value);
 
 export function AmortizationTable({
   rows,
@@ -56,8 +57,8 @@ export function AmortizationTable({
                 "Amortização",
                 "Nova Parcela",
                 "Saldo Devedor Atual"
-              ].map((header) => (
-                <th key={header} className="table-head">
+              ].map((header, index) => (
+                <th key={`${index}-${header}`} className="table-head">
                   {header}
                 </th>
               ))}
@@ -65,7 +66,7 @@ export function AmortizationTable({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.month} className="odd:bg-white even:bg-slate-50/70 hover:bg-goodblue-50/60">
+              <tr key={row.month} className={row.afterPayoff ? "bg-slate-100/80 text-slate-400" : "odd:bg-white even:bg-slate-50/70 hover:bg-goodblue-50/60"}>
                 <td className="table-cell font-bold text-slate-900">{row.month}</td>
                 <td className="table-cell">{row.remainingMonths}</td>
                 <td className="table-cell">{money(row.contractInitialBalance)}</td>
@@ -84,6 +85,11 @@ export function AmortizationTable({
                     className="h-9 w-32 rounded-lg border border-goodgreen-200 bg-white px-2 text-right text-sm font-semibold text-goodgreen-700 outline-none focus:border-goodgreen-500 focus:ring-3 focus:ring-goodgreen-100"
                     aria-label={`Amortização manual da parcela ${row.month}`}
                   />
+                  {row.manualContribution > 0 && (
+                    <p className="mt-1 w-32 text-right text-[10px] font-semibold text-slate-500">
+                      Aplicado: {formatCurrencyBR(row.manualContributionApplied)}
+                    </p>
+                  )}
                 </td>
                 <td className="table-cell bg-goodgreen-50/70">
                   <input
@@ -95,13 +101,21 @@ export function AmortizationTable({
                     className="h-9 w-32 rounded-lg border border-goodgreen-200 bg-white px-2 text-right text-sm font-semibold text-goodgreen-700 outline-none focus:border-goodgreen-500 focus:ring-3 focus:ring-goodgreen-100"
                     aria-label={`Amortização FGTS da parcela ${row.month}`}
                   />
+                  {row.fgtsContribution > 0 && (
+                    <p className="mt-1 w-32 text-right text-[10px] font-semibold text-slate-500">
+                      Aplicado: {formatCurrencyBR(row.fgtsContributionApplied)}
+                    </p>
+                  )}
                 </td>
-                <td className="table-cell">{money(row.simulatedInitialBalance)}</td>
-                <td className="table-cell">{money(row.simulatedInterest)}</td>
-                <td className="table-cell">{money(row.simulatedCurrentBalance)}</td>
-                <td className="table-cell">{money(row.simulatedAmortization)}</td>
-                <td className="table-cell font-semibold text-goodgreen-700">{money(row.simulatedInstallment)}</td>
-                <td className="table-cell">{money(row.simulatedFinalBalance)}</td>
+                <td className="table-cell">{correctedMoney(row, row.simulatedInitialBalance)}</td>
+                <td className="table-cell">{correctedMoney(row, row.simulatedInterest)}</td>
+                <td className="table-cell">{correctedMoney(row, row.simulatedCurrentBalance)}</td>
+                <td className="table-cell">{correctedMoney(row, row.simulatedAmortization)}</td>
+                <td className="table-cell font-semibold text-goodgreen-700">{correctedMoney(row, row.simulatedInstallment)}</td>
+                <td className="table-cell">
+                  {correctedMoney(row, row.simulatedFinalBalance)}
+                  {row.payoff && <span className="ml-2 inline-flex rounded-full bg-goodgreen-100 px-2 py-0.5 text-[10px] font-bold uppercase text-goodgreen-700">Quitado</span>}
+                </td>
               </tr>
             ))}
           </tbody>

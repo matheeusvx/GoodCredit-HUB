@@ -8,6 +8,8 @@ export interface FgtsEligibilityForm {
   ownsHomeResidenceCity: FgtsEligibilityAnswer;
   ownsHomeWorkCity: FgtsEligibilityAnswer;
   ownsHomeNearbyCity: FgtsEligibilityAnswer;
+  ownsHomeOtherState: FgtsEligibilityAnswer;
+  otherStateHomePaid: FgtsEligibilityAnswer;
   ownHousingPurpose: FgtsEligibilityAnswer;
   contractEligible: FgtsEligibilityAnswer;
   usageMode: FgtsUsageMode | "";
@@ -22,6 +24,7 @@ export interface FgtsEligibilityResult {
 
 export type FgtsEmploymentType = "REGULAR" | "APPRENTICE" | "OTHER" | "UNKNOWN";
 export type FgtsIncomeCriterion = "PAYSLIP" | "FGTS_ESTIMATE" | "HIGHEST" | "MANUAL";
+export type CaixaAquiIncomeOption = "FGTS" | "PAYSLIP" | "EQUIVALENT" | "PENDING_VALIDATION";
 
 export interface FgtsIncomeForm {
   payslipCompetence: string;
@@ -35,7 +38,9 @@ export interface FgtsIncomeForm {
   regularMonthlyDeposit: boolean;
   sameCompetence: boolean;
   notThirteenthSalary: boolean;
-  notAtypicalPayment: boolean;
+  notVacationPayment: boolean;
+  notRetroactiveAdjustment: boolean;
+  notAccumulatedPayment: boolean;
   rateConfirmed: boolean;
 }
 
@@ -43,12 +48,17 @@ export interface FgtsIncomeResult {
   estimatedIncome: number;
   consideredIncome: number;
   differenceAmount: number;
-  differencePercent: number;
+  differencePercent: number | null;
   highestIncome: number;
-  status: "COHERENT" | "DIVERGENT" | "REVIEW_REQUIRED";
+  recommendedOption: CaixaAquiIncomeOption;
+  provisionalOption: Exclude<CaixaAquiIncomeOption, "PENDING_VALIDATION">;
+  recommendedOptionLabel: string;
+  higherValueLabel: string;
+  competenceMatches: boolean;
+  requiresReview: boolean;
+  status: "COMPETENCES_CONFIRMED" | "COMPETENCES_DIVERGENT" | "REVIEW_REQUIRED" | "PENDING_VALIDATION";
   statusLabel: string;
-  criterionLabel: string;
-  alerts: string[];
+  warnings: string[];
 }
 
 export type FgtsContributionMode = "FIXED" | "CURRENT_BALANCE" | "MONTHLY_PROJECTION" | "INDIVIDUAL";
@@ -83,7 +93,6 @@ export interface FgtsProjectionForm {
   remainingTermMonths: number;
   firstContributionMonth: number;
   periodicityMonths: number;
-  advancedPeriodicity: boolean;
   contributionMode: FgtsContributionMode;
   fixedAmount: number;
   lastMonth?: number;

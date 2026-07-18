@@ -11,6 +11,8 @@ interface HeaderProps {
   onFgtsConfig: () => void;
   onGeneratePdf: () => void;
   onReset: () => void;
+  hasActiveManualContributions: boolean;
+  hasActiveFgts: boolean;
 }
 
 export function Header({
@@ -21,7 +23,9 @@ export function Header({
   onManualConfig,
   onFgtsConfig,
   onGeneratePdf,
-  onReset
+  onReset,
+  hasActiveManualContributions,
+  hasActiveFgts
 }: HeaderProps) {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -62,13 +66,23 @@ export function Header({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onManualConfig} className="btn-secondary">
+          <button
+            type="button"
+            onClick={onManualConfig}
+            className={hasActiveManualContributions ? "btn-secondary border-amber-500 bg-amber-500 text-white hover:bg-amber-600" : "btn-secondary"}
+            title={hasActiveManualContributions ? "Existem aportes manuais aplicados nesta simulação." : "Configure aportes adicionais para reduzir o saldo devedor."}
+          >
             <Settings className="h-4 w-4" />
-            Configurar Aportes Manuais
+            {hasActiveManualContributions ? "Manuais Ativos" : "Aportes Manuais"}
           </button>
-          <button type="button" onClick={onFgtsConfig} className="btn-secondary">
+          <button
+            type="button"
+            onClick={onFgtsConfig}
+            className={hasActiveFgts ? "btn-primary" : "btn-secondary"}
+            title={hasActiveFgts ? "Existem aportes de FGTS aplicados nesta simulação." : "Configure aportes de FGTS para reduzir o saldo devedor."}
+          >
             <Wallet className="h-4 w-4" />
-            Configurar FGTS
+            {hasActiveFgts ? "FGTS Ativo" : "Configurar FGTS"}
           </button>
           <PdfButton onClick={onGeneratePdf} />
           <button type="button" onClick={onReset} className="btn-muted">

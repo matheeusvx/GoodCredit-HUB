@@ -1,4 +1,4 @@
-import { BarChart3, CheckSquare, FileClock, PiggyBank, WalletCards } from "lucide-react";
+import { BadgeDollarSign, BarChart3, CheckSquare, FileClock, PiggyBank, WalletCards } from "lucide-react";
 import { HubView } from "../Sidebar";
 import { FinancingFlow } from "./FinancingFlow";
 import { HomeHero } from "./HomeHero";
@@ -26,6 +26,14 @@ const modules = [
     actionLabel: "Acessar Amortização",
     icon: BarChart3,
     target: "amortization" as const
+  },
+  {
+    title: "Cálculo de Pró-Soluto",
+    description: "Calcule a diferença da operação após considerar financiamento, FGTS, subsídio, entrada e outros recursos próprios.",
+    status: "Ativo" as const,
+    actionLabel: "Calcular Pró-Soluto",
+    icon: BadgeDollarSign,
+    target: "pro-soluto" as const
   },
   {
     title: "Checklist Documental",

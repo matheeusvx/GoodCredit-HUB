@@ -1,10 +1,12 @@
 import {
+  AmortizationEventResult,
   AmortizationRow,
   AmortizationSummary,
   ContributionMap,
   FinancingInputs,
   RecurringContributionConfig
 } from "../types/amortization";
+import { calculateAmortizationImpact, MONEY_EPSILON } from "./amortization/impact";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -148,23 +150,77 @@ export function generateAmortizationSchedule(
 
     const manualContribution = Math.max(0, manualContributions[month] ?? 0);
     const fgtsContribution = Math.max(0, fgtsContributions[month] ?? 0);
-    const aporteTotal = manualContribution + fgtsContribution;
     const simulatedInitialBalance = month === 1 ? valorFinanciado : simulatedFinalBalance;
 
     let simulatedInterest = 0;
     let simulatedCurrentBalance = 0;
     let simulatedAmortization = 0;
     let simulatedInstallment = 0;
+    let manualContributionApplied = 0;
+    let fgtsContributionApplied = 0;
+    let manualContributionUnused = manualContribution;
+    let fgtsContributionUnused = fgtsContribution;
+    const afterPayoff = simulatedInitialBalance <= MONEY_EPSILON;
 
-    if (simulatedInitialBalance > 0) {
+    if (!afterPayoff) {
       simulatedInterest = simulatedInitialBalance * taxaMensal;
       simulatedCurrentBalance = simulatedInitialBalance + simulatedInterest;
-      simulatedInstallment = Math.min(contractInstallment + aporteTotal, simulatedCurrentBalance);
+      const regularInstallment = Math.min(contractInstallment, simulatedCurrentBalance);
+      const balanceBeforeContributions = Math.max(0, simulatedCurrentBalance - regularInstallment);
+
+      // Deterministic order: manual contributions are applied before FGTS.
+      manualContributionApplied = Math.min(manualContribution, balanceBeforeContributions);
+      const balanceAfterManual = Math.max(0, balanceBeforeContributions - manualContributionApplied);
+      fgtsContributionApplied = Math.min(fgtsContribution, balanceAfterManual);
+      manualContributionUnused = Math.max(0, manualContribution - manualContributionApplied);
+      fgtsContributionUnused = Math.max(0, fgtsContribution - fgtsContributionApplied);
+      simulatedInstallment = regularInstallment + manualContributionApplied + fgtsContributionApplied;
       simulatedAmortization = Math.max(0, simulatedInstallment - simulatedInterest);
       simulatedFinalBalance = Math.max(0, simulatedCurrentBalance - simulatedInstallment);
+      if (simulatedFinalBalance <= MONEY_EPSILON) simulatedFinalBalance = 0;
     } else {
       simulatedFinalBalance = 0;
     }
+
+    const payoff = !afterPayoff && simulatedFinalBalance === 0;
+    const eventResults: AmortizationEventResult[] = [
+      ...(manualContribution > 0
+        ? [
+            {
+              month,
+              source: "MANUAL" as const,
+              requestedAmount: manualContribution,
+              appliedAmount: manualContributionApplied,
+              unusedAmount: manualContributionUnused,
+              status: afterPayoff
+                ? ("NOT_USED_AFTER_PAYOFF" as const)
+                : manualContributionApplied <= MONEY_EPSILON
+                  ? ("NOT_USED_AFTER_PAYOFF" as const)
+                  : manualContributionUnused > MONEY_EPSILON
+                    ? ("PARTIALLY_APPLIED" as const)
+                    : ("APPLIED" as const)
+            }
+          ]
+        : []),
+      ...(fgtsContribution > 0
+        ? [
+            {
+              month,
+              source: "FGTS" as const,
+              requestedAmount: fgtsContribution,
+              appliedAmount: fgtsContributionApplied,
+              unusedAmount: fgtsContributionUnused,
+              status: afterPayoff
+                ? ("NOT_USED_AFTER_PAYOFF" as const)
+                : fgtsContributionApplied <= MONEY_EPSILON
+                  ? ("NOT_USED_AFTER_PAYOFF" as const)
+                  : fgtsContributionUnused > MONEY_EPSILON
+                    ? ("PARTIALLY_APPLIED" as const)
+                    : ("APPLIED" as const)
+            }
+          ]
+        : [])
+    ];
 
     return {
       month,
@@ -177,12 +233,19 @@ export function generateAmortizationSchedule(
       contractFinalBalance,
       manualContribution,
       fgtsContribution,
+      manualContributionApplied,
+      fgtsContributionApplied,
+      manualContributionUnused,
+      fgtsContributionUnused,
       simulatedInitialBalance,
       simulatedInterest,
       simulatedCurrentBalance,
       simulatedAmortization,
       simulatedInstallment,
-      simulatedFinalBalance
+      simulatedFinalBalance,
+      payoff,
+      afterPayoff,
+      eventResults
     };
   });
 }
@@ -191,35 +254,24 @@ export function summarizeSchedule(
   inputs: FinancingInputs,
   rows: AmortizationRow[]
 ): AmortizationSummary {
-  const paidRows = rows.filter((row) => row.simulatedInstallment > 0 || row.simulatedInterest > 0);
-  const firstPaidOff = rows.find((row) => row.simulatedFinalBalance <= 0);
-  const prazoAtual = firstPaidOff?.month ?? inputs.prazoMeses;
-  const jurosContrato = rows.reduce((sum, row) => sum + row.contractInterest, 0);
-  const totalOriginal = rows.reduce((sum, row) => sum + row.contractInstallment, 0);
-  const jurosPago = paidRows.reduce((sum, row) => sum + row.simulatedInterest, 0);
-  const totalPago = paidRows.reduce((sum, row) => sum + row.simulatedInstallment, 0);
-  const totalAportesManuais = rows.reduce((sum, row) => sum + row.manualContribution, 0);
-  const totalAportesFgts = rows.reduce((sum, row) => sum + row.fgtsContribution, 0);
-  const totalAportes = totalAportesManuais + totalAportesFgts;
-  const economiaJuros = Math.max(0, jurosContrato - jurosPago);
-  const reducaoParcelas = Math.max(0, inputs.prazoMeses - prazoAtual);
+  const impact = calculateAmortizationImpact(rows);
 
   return {
     prazoOriginal: inputs.prazoMeses,
-    prazoAtual,
+    prazoAtual: impact.correctedTermMonths,
     sistema: inputs.sistema,
     valorFinanciado: inputs.valorFinanciado,
-    jurosContrato,
-    totalOriginal,
-    jurosPago,
-    totalPago,
-    totalAportesManuais,
-    totalAportesFgts,
-    totalAportes,
-    economiaJuros,
-    percentualReducaoJuros: jurosContrato > 0 ? economiaJuros / jurosContrato : 0,
-    reducaoParcelas,
-    percentualReducaoParcelas: inputs.prazoMeses > 0 ? reducaoParcelas / inputs.prazoMeses : 0,
-    economiaSobreTotalOriginal: totalOriginal > 0 ? economiaJuros / totalOriginal : 0
+    jurosContrato: impact.originalInterestTotal,
+    totalOriginal: impact.originalProjectedTotal,
+    jurosPago: impact.correctedInterestTotal,
+    totalPago: impact.correctedProjectedTotal,
+    totalAportesManuais: impact.manualAmortizationApplied,
+    totalAportesFgts: impact.fgtsAmortizationApplied,
+    totalAportes: impact.totalAmortizationApplied,
+    economiaJuros: impact.interestSavings,
+    percentualReducaoJuros: impact.interestSavingsPercent,
+    reducaoParcelas: impact.eliminatedInstallments,
+    percentualReducaoParcelas: impact.termReductionPercent,
+    economiaSobreTotalOriginal: impact.totalCostReductionPercent
   };
 }

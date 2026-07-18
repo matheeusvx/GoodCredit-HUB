@@ -19,7 +19,10 @@ export function EvolutionChart({ rows }: EvolutionChartProps) {
   const data = rows.map((row) => ({
     month: row.month,
     original: row.contractFinalBalance,
-    simulated: row.simulatedFinalBalance
+    simulated: row.afterPayoff ? null : row.simulatedFinalBalance,
+    manual: row.manualContributionApplied,
+    fgts: row.fgtsContributionApplied,
+    payoff: row.payoff
   }));
 
   return (
@@ -48,15 +51,20 @@ export function EvolutionChart({ rows }: EvolutionChartProps) {
               axisLine={{ stroke: "#cbd5e1" }}
               width={72}
             />
-            <Tooltip
-              formatter={(value) => formatCurrencyBR(Number(value ?? 0))}
-              labelFormatter={(label) => `Parcela ${label}`}
-              contentStyle={{
-                borderRadius: 8,
-                borderColor: "#dbeafe",
-                boxShadow: "0 14px 40px rgba(15, 23, 42, 0.12)"
-              }}
-            />
+            <Tooltip content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const item = payload[0]?.payload as (typeof data)[number];
+              return (
+                <div className="rounded-lg border border-goodblue-100 bg-white p-3 text-xs shadow-xl">
+                  <p className="font-bold text-slate-900">Parcela {item.month}</p>
+                  <p className="mt-2 text-goodblue-700">Saldo original: {formatCurrencyBR(item.original)}</p>
+                  {item.simulated !== null && <p className="mt-1 text-goodgreen-700">Saldo corrigido: {formatCurrencyBR(item.simulated)}</p>}
+                  <p className="mt-1 text-amber-700">Aporte manual: {formatCurrencyBR(item.manual)}</p>
+                  <p className="mt-1 text-goodgreen-700">FGTS: {formatCurrencyBR(item.fgts)}</p>
+                  {item.payoff && <p className="mt-2 font-bold text-goodgreen-700">Financiamento quitado</p>}
+                </div>
+              );
+            }} />
             <Legend />
             <Line
               name="Saldo original"

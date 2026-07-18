@@ -2,6 +2,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { useMemo, useState, useEffect } from "react";
 import { AmortizationTable } from "./components/AmortizationTable";
+import { AmortizationImpact } from "./components/AmortizationImpact";
 import { EvolutionChart } from "./components/EvolutionChart";
 import { FgtsContributionModal } from "./components/FgtsContributionModal";
 import { Header } from "./components/Header";
@@ -14,6 +15,7 @@ import { HomePage } from "./components/home/HomePage";
 import { SimulationPage } from "./components/simulation/SimulationPage";
 import { FgtsPage } from "./components/fgts/FgtsPage";
 import { IncomeAnalysisPage } from "./components/income-analysis/IncomeAnalysisPage";
+import { ProSolutoPage } from "./components/pro-soluto/ProSolutoPage";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -26,11 +28,33 @@ import {
   parsePercentBR,
   summarizeSchedule
 } from "./lib/financial";
-import { ContributionMap, FinancingInputs, StoredSimulation } from "./types/amortization";
+import { AmortizationContributionEvent, FinancingInputs, StoredSimulation } from "./types/amortization";
 import { SimulationResult } from "./types/simulation";
 import { FgtsAmortizationPrefill } from "./types/fgts";
+import {
+  calculateAmortizationImpact,
+  contributionEventsToMap,
+  contributionMapToEvents,
+  hasActiveContributions,
+  upsertContributionEvent
+} from "./lib/amortization/impact";
 
 const STORAGE_KEY = "goodcredit-hub-amortization-v1";
+
+const VIEW_PATHS: Record<HubView, string> = {
+  home: "/",
+  amortization: "/amortizacao",
+  simulation: "/simulacao-financiamento",
+  "pro-soluto": "/pro-soluto",
+  checklist: "/checklist-documental",
+  fgts: "/uso-fgts",
+  "income-analysis": "/apuracao-renda"
+};
+
+function viewFromPath(pathname: string): HubView {
+  const match = (Object.entries(VIEW_PATHS) as Array<[HubView, string]>).find(([, path]) => path === pathname);
+  return match?.[0] ?? "home";
+}
 
 const defaultInputs: FinancingInputs = {
   nomeCliente: "",
@@ -44,10 +68,10 @@ function readStoredSimulation(): StoredSimulation {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) {
-      return { inputs: defaultInputs, manualContributions: {}, fgtsContributions: {} };
+      return { inputs: defaultInputs, manualEvents: [], fgtsEvents: [], version: 2 };
     }
 
-    const parsed = JSON.parse(stored) as StoredSimulation;
+    const parsed = JSON.parse(stored) as Partial<StoredSimulation>;
     return {
       inputs: {
         ...defaultInputs,
@@ -57,22 +81,13 @@ function readStoredSimulation(): StoredSimulation {
         taxaAnual: Math.max(0, parsed.inputs?.taxaAnual ?? defaultInputs.taxaAnual),
         sistema: parsed.inputs?.sistema === "PRICE" ? "PRICE" : "SAC"
       },
-      manualContributions: parsed.manualContributions || {},
-      fgtsContributions: parsed.fgtsContributions || {}
+      manualEvents: parsed.manualEvents ?? contributionMapToEvents(parsed.manualContributions ?? {}, "MANUAL"),
+      fgtsEvents: parsed.fgtsEvents ?? contributionMapToEvents(parsed.fgtsContributions ?? {}, "FGTS"),
+      version: 2
     };
   } catch {
-    return { inputs: defaultInputs, manualContributions: {}, fgtsContributions: {} };
+    return { inputs: defaultInputs, manualEvents: [], fgtsEvents: [], version: 2 };
   }
-}
-
-function setContributionValue(map: ContributionMap, month: number, value: number): ContributionMap {
-  const next = { ...map };
-  if (value > 0) {
-    next[month] = value;
-  } else {
-    delete next[month];
-  }
-  return next;
 }
 
 function getLogoDataUrl(): Promise<string | null> {
@@ -110,44 +125,77 @@ function buildValidation(inputs: FinancingInputs): string[] {
 
 export default function App() {
   const stored = useMemo(readStoredSimulation, []);
-  const [activeView, setActiveView] = useState<HubView>("home");
+  const [activeView, setActiveView] = useState<HubView>(() => viewFromPath(window.location.pathname));
   const [inputs, setInputs] = useState<FinancingInputs>(stored.inputs);
   const [valorFinanciadoInput, setValorFinanciadoInput] = useState(() =>
     formatInputCurrencyBR(stored.inputs.valorFinanciado)
   );
   const [prazoMesesInput, setPrazoMesesInput] = useState(() => String(stored.inputs.prazoMeses));
   const [taxaAnualInput, setTaxaAnualInput] = useState(() => formatInputPercentBR(stored.inputs.taxaAnual));
-  const [manualContributions, setManualContributions] = useState<ContributionMap>(stored.manualContributions);
-  const [fgtsContributions, setFgtsContributions] = useState<ContributionMap>(stored.fgtsContributions);
+  const [manualEvents, setManualEvents] = useState<AmortizationContributionEvent[]>(stored.manualEvents);
+  const [fgtsEvents, setFgtsEvents] = useState<AmortizationContributionEvent[]>(stored.fgtsEvents);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [fgtsModalOpen, setFgtsModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  function navigateTo(view: HubView) {
+    setActiveView(view);
+    const path = VIEW_PATHS[view];
+    if (window.location.pathname !== path) window.history.pushState({ view }, "", path);
+  }
+
+  useEffect(() => {
+    const handlePopState = () => setActiveView(viewFromPath(window.location.pathname));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const manualContributions = useMemo(
+    () => contributionEventsToMap(manualEvents, "MANUAL", inputs.prazoMeses),
+    [inputs.prazoMeses, manualEvents]
+  );
+  const fgtsContributions = useMemo(
+    () => contributionEventsToMap(fgtsEvents, "FGTS", inputs.prazoMeses),
+    [fgtsEvents, inputs.prazoMeses]
+  );
   const rows = useMemo(
     () => generateAmortizationSchedule(inputs, manualContributions, fgtsContributions),
     [fgtsContributions, inputs, manualContributions]
   );
   const summary = useMemo(() => summarizeSchedule(inputs, rows), [inputs, rows]);
+  const impact = useMemo(
+    () => calculateAmortizationImpact(rows, [...manualEvents, ...fgtsEvents]),
+    [fgtsEvents, manualEvents, rows]
+  );
+  const hasActiveManualContributions = useMemo(
+    () => hasActiveContributions(manualEvents, "MANUAL", inputs.prazoMeses),
+    [inputs.prazoMeses, manualEvents]
+  );
+  const hasActiveFgts = useMemo(
+    () => hasActiveContributions(fgtsEvents, "FGTS", inputs.prazoMeses),
+    [fgtsEvents, inputs.prazoMeses]
+  );
   const validation = useMemo(() => buildValidation(inputs), [inputs]);
 
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        version: 2,
         inputs,
-        manualContributions,
-        fgtsContributions
+        manualEvents,
+        fgtsEvents
       })
     );
-  }, [fgtsContributions, inputs, manualContributions]);
+  }, [fgtsEvents, inputs, manualEvents]);
 
   function resetSimulation() {
     setInputs(defaultInputs);
     setValorFinanciadoInput(formatInputCurrencyBR(defaultInputs.valorFinanciado));
     setPrazoMesesInput(String(defaultInputs.prazoMeses));
     setTaxaAnualInput(formatInputPercentBR(defaultInputs.taxaAnual));
-    setManualContributions({});
-    setFgtsContributions({});
+    setManualEvents([]);
+    setFgtsEvents([]);
     localStorage.removeItem(STORAGE_KEY);
   }
 
@@ -198,8 +246,8 @@ export default function App() {
       inputs.prazoMeses !== defaultInputs.prazoMeses ||
       inputs.taxaAnual !== defaultInputs.taxaAnual ||
       inputs.sistema !== defaultInputs.sistema ||
-      Object.keys(manualContributions).length > 0 ||
-      Object.keys(fgtsContributions).length > 0;
+      hasActiveManualContributions ||
+      hasActiveFgts;
 
     if (
       hasCurrentSimulation &&
@@ -230,13 +278,13 @@ export default function App() {
     setValorFinanciadoInput(formatInputCurrencyBR(nextInputs.valorFinanciado));
     setPrazoMesesInput(String(nextInputs.prazoMeses));
     setTaxaAnualInput(formatInputPercentBR(nextInputs.taxaAnual));
-    setActiveView("amortization");
+    navigateTo("amortization");
   }
 
   function importFgtsProjection() {
     const raw = localStorage.getItem("goodcredit_fgts_amortization_prefill");
     if (!raw) {
-      setActiveView("amortization");
+      navigateTo("amortization");
       return;
     }
 
@@ -251,7 +299,7 @@ export default function App() {
       }
 
       let mode: "replace" | "sum" = "replace";
-      if (Object.keys(fgtsContributions).length > 0) {
+      if (hasActiveFgts) {
         const choice = window.prompt(
           "Já existem aportes de FGTS nesta simulação. Digite SUBSTITUIR, SOMAR ou CANCELAR.",
           "CANCELAR"
@@ -264,20 +312,36 @@ export default function App() {
         mode = choice === "SOMAR" ? "sum" : "replace";
       }
 
-      const next: ContributionMap = mode === "sum" ? { ...fgtsContributions } : {};
+      const next = mode === "sum" ? { ...fgtsContributions } : {};
       incoming.forEach((event) => {
         next[event.month] = mode === "sum" ? (next[event.month] || 0) + event.amount : event.amount;
       });
-      setFgtsContributions(next);
+      setFgtsEvents(contributionMapToEvents(next, "FGTS"));
       if (prefill.clientName && (!inputs.nomeCliente || mode === "replace")) {
         setInputs((current) => ({ ...current, nomeCliente: prefill.clientName }));
       }
       localStorage.removeItem("goodcredit_fgts_amortization_prefill");
-      setActiveView("amortization");
+      navigateTo("amortization");
     } catch {
       localStorage.removeItem("goodcredit_fgts_amortization_prefill");
       window.alert("Não foi possível importar o cronograma de FGTS.");
     }
+  }
+
+  function clearManualContributions() {
+    if (!window.confirm("Deseja remover todos os aportes manuais desta simulação?")) return;
+    setManualEvents([]);
+  }
+
+  function clearFgtsContributions() {
+    if (!window.confirm("Deseja remover todos os aportes de FGTS desta simulação?")) return;
+    setFgtsEvents([]);
+  }
+
+  function clearAllContributions() {
+    if (!window.confirm("Deseja remover todos os aportes manuais e de FGTS desta simulação?")) return;
+    setManualEvents([]);
+    setFgtsEvents([]);
   }
 
   async function generatePdf() {
@@ -317,18 +381,25 @@ export default function App() {
         ["Valor financiado", formatCurrencyBR(inputs.valorFinanciado)],
         ["Prazo", `${inputs.prazoMeses} meses`],
         ["Taxa anual", formatPercentBR(inputs.taxaAnual)],
-        ["Taxa mensal", formatPercentBR(monthlyRate)]
+        ["Taxa mensal", formatPercentBR(monthlyRate)],
+        ["Total original", formatCurrencyBR(impact.originalProjectedTotal)]
       ];
       const rightFacts = [
-        ["Juros do contrato", formatCurrencyBR(summary.jurosContrato)],
-        ["Juros pagos com amortizações", formatCurrencyBR(summary.jurosPago)],
-        ["Economia de juros", formatCurrencyBR(summary.economiaJuros)],
-        ["Redução de parcelas", `${summary.reducaoParcelas} parcelas`],
-        ["Total com amortizações", formatCurrencyBR(summary.totalPago)]
+        ["Total amortizado", formatCurrencyBR(impact.totalAmortizationApplied)],
+        ["Aportes manuais", formatCurrencyBR(impact.manualAmortizationApplied)],
+        ["FGTS utilizado", formatCurrencyBR(impact.fgtsAmortizationApplied)],
+        ["Economia de juros", formatCurrencyBR(impact.interestSavings)],
+        ["Prazo corrigido", `${impact.correctedTermMonths} meses`],
+        ["Parcelas eliminadas", `${impact.eliminatedInstallments} parcelas`]
       ];
 
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(12);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text("Impacto das Amortizações", margin, y);
+      y += 5;
       pdf.setDrawColor(226, 232, 240);
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, 44, 2, 2, "S");
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, 52, 2, 2, "S");
       pdf.setFontSize(9);
       [...leftFacts, ...rightFacts].forEach(([label, value], index) => {
         const colX = index < leftFacts.length ? margin + 6 : margin + 94;
@@ -341,7 +412,17 @@ export default function App() {
         pdf.text(value, colX + 43, rowY);
       });
 
-      y += 54;
+      y += 59;
+      pdf.setFontSize(9);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`Redução do custo total: ${formatCurrencyBR(impact.totalCostReduction)} (${formatPercentBR(impact.totalCostReductionPercent)})`, margin, y);
+      pdf.text(`Novo total projetado: ${formatCurrencyBR(impact.correctedProjectedTotal)}`, margin + 100, y);
+      y += 7;
+      if (impact.payoffMonth) {
+        pdf.setTextColor(21, 128, 61);
+        pdf.text(`Financiamento quitado na parcela ${impact.payoffMonth}.`, margin, y);
+        y += 7;
+      }
       const chartElement = document.getElementById("chart-section");
       if (chartElement) {
         const canvas = await html2canvas(chartElement, { scale: 2, backgroundColor: "#ffffff" });
@@ -350,6 +431,11 @@ export default function App() {
         const imageHeight = Math.min(70, (canvas.height * imageWidth) / canvas.width);
         pdf.addImage(image, "PNG", margin, y, imageWidth, imageHeight);
         y += imageHeight + 10;
+      }
+
+      if (y > 180) {
+        pdf.addPage();
+        y = 18;
       }
 
       pdf.setFont("helvetica", "bold");
@@ -363,11 +449,11 @@ export default function App() {
           1,
           Math.ceil(inputs.prazoMeses * 0.25),
           Math.ceil(inputs.prazoMeses * 0.5),
-          summary.prazoAtual,
+          impact.correctedTermMonths,
           inputs.prazoMeses
         ])
       )
-        .filter((month) => month >= 1 && month <= inputs.prazoMeses)
+        .filter((month) => month >= 1 && month <= impact.correctedTermMonths)
         .sort((a, b) => a - b);
       const tableRows = keyMonths.map((month) => rows[month - 1]);
       const columns = ["Parcela", "Original", "Com amort.", "Juros sim.", "Saldo sim."];
@@ -403,6 +489,20 @@ export default function App() {
         y += 8;
       });
 
+      y += 5;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text("Metodologia e aportes não utilizados", margin, y);
+      y += 5;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(71, 85, 105);
+      const methodology = `As parcelas corrigidas já incluem os aportes efetivamente aplicados, sem dupla contagem. Manual é aplicado antes do FGTS. Não utilizado: manual ${formatCurrencyBR(impact.unusedManualAmount)}; FGTS ${formatCurrencyBR(impact.unusedFgtsAmount)}.`;
+      pdf.text(pdf.splitTextToSize(methodology, pageWidth - margin * 2), margin, y);
+      y += 9;
+      pdf.text(pdf.splitTextToSize("Valores configurados acima do saldo necessário para quitação ou após o encerramento do financiamento não foram considerados como efetivamente utilizados.", pageWidth - margin * 2), margin, y);
+
       pdf.setFontSize(8);
       pdf.setTextColor(100, 116, 139);
       pdf.text("Relatório gerado localmente no GoodCredit Hub. Simulação meramente informativa.", margin, 288);
@@ -427,7 +527,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <Sidebar activeView={activeView} onNavigate={setActiveView} />
+      <Sidebar activeView={activeView} onNavigate={navigateTo} />
 
       <div className="lg:pl-72">
         <div className="border-b border-slate-200 bg-white px-4 py-4 lg:hidden">
@@ -436,42 +536,49 @@ export default function App() {
           <div className="mt-3 flex gap-2 overflow-x-auto">
             <button
               type="button"
-              onClick={() => setActiveView("home")}
+              onClick={() => navigateTo("home")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "home" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               Início
             </button>
             <button
               type="button"
-              onClick={() => setActiveView("amortization")}
+              onClick={() => navigateTo("amortization")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "amortization" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               Amortização
             </button>
             <button
               type="button"
-              onClick={() => setActiveView("simulation")}
+              onClick={() => navigateTo("simulation")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "simulation" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               Simulação
             </button>
             <button
               type="button"
-              onClick={() => setActiveView("checklist")}
+              onClick={() => navigateTo("pro-soluto")}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "pro-soluto" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Pró-Soluto
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo("checklist")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "checklist" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               Checklist
             </button>
             <button
               type="button"
-              onClick={() => setActiveView("fgts")}
+              onClick={() => navigateTo("fgts")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "fgts" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               FGTS
             </button>
             <button
               type="button"
-              onClick={() => setActiveView("income-analysis")}
+              onClick={() => navigateTo("income-analysis")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               Renda
@@ -480,15 +587,17 @@ export default function App() {
         </div>
 
         {activeView === "home" ? (
-          <HomePage onNavigate={setActiveView} />
+          <HomePage onNavigate={navigateTo} />
         ) : activeView === "checklist" ? (
           <ChecklistPage />
         ) : activeView === "simulation" ? (
           <SimulationPage onSendToAmortization={handleSendToAmortization} />
+        ) : activeView === "pro-soluto" ? (
+          <ProSolutoPage />
         ) : activeView === "fgts" ? (
           <FgtsPage onSendToAmortization={importFgtsProjection} />
         ) : activeView === "income-analysis" ? (
-          <IncomeAnalysisPage onSendToSimulation={() => setActiveView("simulation")} />
+          <IncomeAnalysisPage onSendToSimulation={() => navigateTo("simulation")} />
         ) : (
           <>
             <Header
@@ -500,6 +609,8 @@ export default function App() {
               onFgtsConfig={() => setFgtsModalOpen(true)}
               onGeneratePdf={generatePdf}
               onReset={resetSimulation}
+              hasActiveManualContributions={hasActiveManualContributions}
+              hasActiveFgts={hasActiveFgts}
             />
 
             <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
@@ -517,6 +628,17 @@ export default function App() {
                 errors={validation}
               />
 
+              {(hasActiveManualContributions || hasActiveFgts) && (
+                <AmortizationImpact
+                  impact={impact}
+                  hasManual={hasActiveManualContributions}
+                  hasFgts={hasActiveFgts}
+                  onClearManual={clearManualContributions}
+                  onClearFgts={clearFgtsContributions}
+                  onClearAll={clearAllContributions}
+                />
+              )}
+
               <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 {summaryCards.map((card) => (
                   <SummaryCard key={`${card.label}-${card.value}`} {...card} />
@@ -528,10 +650,10 @@ export default function App() {
               <AmortizationTable
                 rows={rows}
                 onManualContributionChange={(month, value) =>
-                  setManualContributions((current) => setContributionValue(current, month, value))
+                  setManualEvents((current) => upsertContributionEvent(current, "MANUAL", month, value))
                 }
                 onFgtsContributionChange={(month, value) =>
-                  setFgtsContributions((current) => setContributionValue(current, month, value))
+                  setFgtsEvents((current) => upsertContributionEvent(current, "FGTS", month, value))
                 }
               />
             </main>
@@ -542,14 +664,20 @@ export default function App() {
       <ManualContributionModal
         isOpen={manualModalOpen}
         prazoMeses={inputs.prazoMeses}
+        events={manualEvents}
+        effectiveUsed={impact.manualAmortizationApplied}
         onClose={() => setManualModalOpen(false)}
-        onApply={setManualContributions}
+        onApply={setManualEvents}
+        onClear={() => setManualEvents([])}
       />
       <FgtsContributionModal
         isOpen={fgtsModalOpen}
         prazoMeses={inputs.prazoMeses}
+        events={fgtsEvents}
+        effectiveUsed={impact.fgtsAmortizationApplied}
         onClose={() => setFgtsModalOpen(false)}
-        onApply={setFgtsContributions}
+        onApply={setFgtsEvents}
+        onClear={() => setFgtsEvents([])}
       />
     </div>
   );

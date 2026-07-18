@@ -11,7 +11,7 @@ function addMonths(date: string, months: number): string {
 export function getNextEligibleDate(lastUsageDate: string): string { return addMonths(lastUsageDate, 24); }
 
 export function projectFgtsContributions(form: FgtsProjectionForm): FgtsProjectionResult {
-  const periodicity = Math.max(1, Math.floor(form.periodicityMonths || 24));
+  const periodicity = 24;
   const first = Math.max(1, Math.floor(form.firstContributionMonth || periodicity));
   const limit = Math.min(Math.max(1, form.remainingTermMonths), form.lastMonth || form.remainingTermMonths);
   const events: FgtsAmortizationEvent[] = [];
