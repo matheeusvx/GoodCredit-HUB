@@ -16,6 +16,8 @@ import { SimulationPage } from "./components/simulation/SimulationPage";
 import { FgtsPage } from "./components/fgts/FgtsPage";
 import { IncomeAnalysisPage } from "./components/income-analysis/IncomeAnalysisPage";
 import { ProSolutoPage } from "./components/pro-soluto/ProSolutoPage";
+import { FaqPage } from "./components/faq/FaqPage";
+import { UsageGuidePage } from "./components/usage-guide/UsageGuidePage";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -48,7 +50,9 @@ const VIEW_PATHS: Record<HubView, string> = {
   "pro-soluto": "/pro-soluto",
   checklist: "/checklist-documental",
   fgts: "/uso-fgts",
-  "income-analysis": "/apuracao-renda"
+  "income-analysis": "/apuracao-renda",
+  "usage-guide": "/guia-de-uso",
+  faq: "/faq"
 };
 
 function viewFromPath(pathname: string): HubView {
@@ -583,6 +587,20 @@ export default function App() {
             >
               Renda
             </button>
+            <button
+              type="button"
+              onClick={() => navigateTo("usage-guide")}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "usage-guide" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Guia de Uso
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo("faq")}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "faq" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              FAQ
+            </button>
           </div>
         </div>
 
@@ -598,6 +616,10 @@ export default function App() {
           <FgtsPage onSendToAmortization={importFgtsProjection} />
         ) : activeView === "income-analysis" ? (
           <IncomeAnalysisPage onSendToSimulation={() => navigateTo("simulation")} />
+        ) : activeView === "usage-guide" ? (
+          <UsageGuidePage onNavigate={navigateTo} />
+        ) : activeView === "faq" ? (
+          <FaqPage />
         ) : (
           <>
             <Header
