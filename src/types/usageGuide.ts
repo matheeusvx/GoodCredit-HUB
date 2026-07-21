@@ -3,6 +3,7 @@ export type UsageGuideId =
   | "amortization"
   | "financing-simulation"
   | "pro-soluto"
+  | "registration"
   | "income-analysis"
   | "document-checklist"
   | "fgts"
@@ -13,6 +14,7 @@ export type UsageGuideDestination =
   | "amortization"
   | "simulation"
   | "pro-soluto"
+  | "registration"
   | "income-analysis"
   | "checklist"
   | "fgts"
@@ -23,6 +25,7 @@ export type UsageGuideIcon =
   | "amortization"
   | "simulation"
   | "pro-soluto"
+  | "registration"
   | "income"
   | "checklist"
   | "fgts"
@@ -68,4 +71,5 @@ export interface UsageGuide {
   actions: UsageGuideAction[];
   cautions: string[];
   commonMistakes: string[];
+  instructionHighlights?: string[];
 }

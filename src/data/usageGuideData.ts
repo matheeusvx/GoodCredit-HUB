@@ -1,6 +1,6 @@
 import type { UsageGuide } from "../types/usageGuide";
 
-export const USAGE_GUIDE_VERSION = "1.0";
+export const USAGE_GUIDE_VERSION = "1.1";
 export const USAGE_GUIDE_LAST_REVIEWED_AT: string | null = null;
 
 export const USAGE_GUIDES: UsageGuide[] = [
@@ -213,6 +213,135 @@ export const USAGE_GUIDES: UsageGuide[] = [
       "Tratar o limite financiável como financiamento aprovado.",
       "Informar novamente como recursos próprios valores já incluídos na entrada.",
       "Ignorar que a importação pode substituir os valores atuais após confirmação."
+    ]
+  },
+  {
+    id: "registration",
+    anchor: "registro",
+    title: "Registro",
+    shortDescription: "Simule o ITBI de municípios disponíveis e consulte o status da futura calculadora de custas cartoriais.",
+    destination: "registration",
+    icon: "registration",
+    keywords: [
+      "registro",
+      "ITBI",
+      "imposto",
+      "custas",
+      "cartório",
+      "São Bernardo",
+      "SBC",
+      "Diadema",
+      "Santo André",
+      "São Paulo",
+      "Guarulhos",
+      "Mauá",
+      "compra e venda",
+      "alíquota",
+      "dedução",
+      "em desenvolvimento"
+    ],
+    keyFeatures: [
+      "Simulação de ITBI",
+      "São Bernardo do Campo e Diadema",
+      "Cidades e Simulação de Custas em desenvolvimento"
+    ],
+    purpose: "O módulo Registro reúne ferramentas relacionadas às despesas de registro da operação imobiliária. Na versão atual, permite realizar simulações simplificadas de ITBI para municípios disponíveis e consultar o status da futura calculadora de custas cartoriais. O módulo possui as ferramentas Simulação de ITBI e Simulação de Custas; a Simulação de Custas ainda está em desenvolvimento.",
+    whenToUse: [
+      "Para estimar o ITBI de uma operação nos municípios disponíveis.",
+      "Para consultar a regra simplificada disponível para determinada cidade.",
+      "Para conferir a alíquota utilizada e a dedução aplicada, quando existir.",
+      "Para consultar quais cidades estão disponíveis ou em desenvolvimento.",
+      "Para verificar o status da futura calculadora de custas cartoriais."
+    ],
+    requiredInformation: [
+      {
+        name: "Cidade da operação",
+        description: "Selecione o município em que o imóvel está localizado.",
+        required: true,
+        example: "São Bernardo do Campo"
+      },
+      {
+        name: "Valor de compra e venda",
+        description: "Informe o valor declarado na operação de compra e venda.",
+        required: true,
+        example: "R$ 230.000,00"
+      },
+      {
+        name: "Dados não utilizados nesta versão",
+        description: "A simulação não utiliza valor financiado, valor de avaliação, valor venal, VMA, base municipal, subsídio, FGTS ou entrada. Esses itens não são campos da ferramenta."
+      }
+    ],
+    steps: [
+      { id: "registration-1", title: "Abra o módulo", description: "Acesse Registro pelo menu principal ou pelo botão Abrir Registro deste guia." },
+      { id: "registration-2", title: "Selecione a ferramenta", description: "Escolha Simulação de ITBI no seletor superior." },
+      { id: "registration-3", title: "Escolha o município", description: "Selecione a cidade em que o imóvel está localizado." },
+      { id: "registration-4", title: "Confira a disponibilidade", description: "Verifique se a cidade está disponível ou identificada como Em desenvolvimento." },
+      { id: "registration-5", title: "Informe o valor", description: "Preencha o valor de compra e venda do imóvel." },
+      { id: "registration-6", title: "Calcule", description: "Clique em Calcular para aplicar somente a regra simplificada da cidade selecionada." },
+      { id: "registration-7", title: "Confira o resultado", description: "Revise a faixa, a alíquota, o valor pela alíquota, a dedução quando existir e o ITBI estimado." },
+      { id: "registration-8", title: "Leia as orientações", description: "Consulte Como esse cálculo foi feito? e o aviso de simulação simplificada." },
+      { id: "registration-9", title: "Inicie outro cálculo", description: "Use Limpar simulação para remover o valor, o resultado e os alertas, mantendo a cidade selecionada." },
+      { id: "registration-10", title: "Consulte a ferramenta de custas", description: "Selecione Simulação de Custas para visualizar o status Em desenvolvimento; essa ferramenta ainda não realiza cálculos." }
+    ],
+    results: [
+      {
+        title: "Cidades disponíveis",
+        description: "São Bernardo do Campo e Diadema possuem regras simplificadas disponíveis para simulação."
+      },
+      {
+        title: "Cidades em desenvolvimento",
+        description: "Santo André, São Paulo, Guarulhos e Mauá podem ser selecionadas para consulta de status, mas não realizam cálculos."
+      },
+      {
+        title: "São Bernardo do Campo",
+        description: "A regra disponível é aplicada somente quando o valor de compra e venda é superior a R$ 200.000,00. Aplica-se 2,5% sobre o valor informado e depois se subtrai a dedução fixa de R$ 2.250,00. Para R$ 230.000,00, o valor pela alíquota é R$ 5.750,00 e o ITBI estimado após a dedução é R$ 3.500,00. Para valores inferiores ou iguais a R$ 200.000,00, o sistema não apresenta estimativa e orienta a conferência manual da regra aplicável."
+      },
+      {
+        title: "Diadema",
+        description: "A alíquota é selecionada pela faixa e aplicada sobre todo o valor informado: até R$ 50.000,00, 0,5%; de R$ 50.000,01 até R$ 100.000,00, 1%; de R$ 100.000,01 até R$ 150.000,00, 1,5%; acima de R$ 150.000,00, 2,5%. Para R$ 180.000,00, aplica-se 2,5% e o ITBI estimado é R$ 4.500,00."
+      },
+      {
+        title: "Redução equivalente em Diadema",
+        description: "As equivalências são apenas explicativas em comparação com 2,5%: 0,5% corresponde a 80%; 1% a 60%; 1,5% a 40%; e 2,5% não possui redução. Não aplique um segundo desconto."
+      },
+      { title: "Cidade", description: "Município selecionado para a simulação." },
+      { title: "Valor de compra e venda", description: "Valor utilizado como única base desta versão simplificada." },
+      { title: "Alíquota aplicada", description: "Percentual utilizado conforme a regra simplificada da cidade." },
+      { title: "Valor pela alíquota", description: "Resultado da aplicação da alíquota sobre o valor informado." },
+      { title: "Dedução aplicada", description: "Valor subtraído no cálculo de São Bernardo do Campo, quando a regra for aplicável." },
+      { title: "Faixa identificada", description: "Intervalo de valor utilizado para selecionar a alíquota de Diadema." },
+      { title: "ITBI estimado", description: "Estimativa resultante da regra simplificada configurada; não equivale à guia oficial." },
+      { title: "Status Em desenvolvimento", description: "Indica que a cidade ou ferramenta ainda não possui cálculo disponível." }
+    ],
+    actions: [
+      { title: "Simulação de ITBI", description: "Abre a calculadora simplificada de ITBI." },
+      { title: "Simulação de Custas", description: "Mostra o status de desenvolvimento da futura calculadora de custas." },
+      { title: "Selecionar cidade", description: "Define qual regra municipal será consultada." },
+      { title: "Calcular", description: "Valida os dados e apresenta a estimativa ou o alerta correspondente." },
+      { title: "Limpar simulação", description: "Remove o valor e o resultado, mantendo a cidade selecionada." }
+    ],
+    cautions: [
+      "A simulação é simplificada e utiliza somente o valor de compra e venda.",
+      "O resultado não substitui a guia oficial de ITBI.",
+      "As regras municipais podem mudar e a base reconhecida pelo município pode ser diferente.",
+      "O enquadramento da operação pode alterar o resultado definitivo.",
+      "Cidades em desenvolvimento não realizam cálculos.",
+      "A Simulação de Custas ainda não possui regras implementadas.",
+      "São Bernardo do Campo não calcula valores inferiores ou iguais a R$ 200.000,00 nesta versão."
+    ],
+    commonMistakes: [
+      "Selecionar uma cidade em desenvolvimento e esperar um resultado.",
+      "Interpretar a estimativa como valor oficial ou como substituição da guia municipal.",
+      "Informar o valor do financiamento em vez do valor de compra e venda.",
+      "Aplicar novamente a redução percentual explicativa de Diadema.",
+      "Esperar resultado de São Bernardo do Campo para valor inferior ou igual a R$ 200.000,00.",
+      "Considerar a Simulação de Custas como uma calculadora já disponível.",
+      "Ignorar o aviso de conferência municipal."
+    ],
+    instructionHighlights: [
+      "Cidades disponíveis: São Bernardo do Campo e Diadema.",
+      "Cidades em desenvolvimento: Santo André, São Paulo, Guarulhos e Mauá; elas não realizam cálculos.",
+      "A Simulação de Custas está em desenvolvimento e ainda não realiza cálculos."
     ]
   },
   {

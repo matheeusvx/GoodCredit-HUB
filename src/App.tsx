@@ -16,6 +16,7 @@ import { SimulationPage } from "./components/simulation/SimulationPage";
 import { FgtsPage } from "./components/fgts/FgtsPage";
 import { IncomeAnalysisPage } from "./components/income-analysis/IncomeAnalysisPage";
 import { ProSolutoPage } from "./components/pro-soluto/ProSolutoPage";
+import { RegistrationPage } from "./components/registration/RegistrationPage";
 import { FaqPage } from "./components/faq/FaqPage";
 import { UsageGuidePage } from "./components/usage-guide/UsageGuidePage";
 import {
@@ -48,6 +49,7 @@ const VIEW_PATHS: Record<HubView, string> = {
   amortization: "/amortizacao",
   simulation: "/simulacao-financiamento",
   "pro-soluto": "/pro-soluto",
+  registration: "/registro",
   checklist: "/checklist-documental",
   fgts: "/uso-fgts",
   "income-analysis": "/apuracao-renda",
@@ -568,6 +570,20 @@ export default function App() {
             </button>
             <button
               type="button"
+              onClick={() => navigateTo("registration")}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "registration" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Registro
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo("income-analysis")}
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Renda
+            </button>
+            <button
+              type="button"
               onClick={() => navigateTo("checklist")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "checklist" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
@@ -579,13 +595,6 @@ export default function App() {
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "fgts" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
               FGTS
-            </button>
-            <button
-              type="button"
-              onClick={() => navigateTo("income-analysis")}
-              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
-            >
-              Renda
             </button>
             <button
               type="button"
@@ -612,6 +621,8 @@ export default function App() {
           <SimulationPage onSendToAmortization={handleSendToAmortization} />
         ) : activeView === "pro-soluto" ? (
           <ProSolutoPage />
+        ) : activeView === "registration" ? (
+          <RegistrationPage />
         ) : activeView === "fgts" ? (
           <FgtsPage onSendToAmortization={importFgtsProjection} />
         ) : activeView === "income-analysis" ? (

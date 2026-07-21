@@ -2,6 +2,7 @@ import { Info } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { USAGE_GUIDES, USAGE_GUIDE_LAST_REVIEWED_AT, USAGE_GUIDE_VERSION } from "../../data/usageGuideData";
 import { filterUsageGuides } from "../../lib/usageGuideSearch";
+import { buildUsageGuideInstructions } from "../../lib/usageGuideInstructions";
 import type { HubView } from "../Sidebar";
 import type { UsageGuide, UsageGuideDestination } from "../../types/usageGuide";
 import { UsageGuideCards } from "./UsageGuideCards";
@@ -31,21 +32,6 @@ async function copyToClipboard(value: string): Promise<void> {
   textarea.select();
   document.execCommand("copy");
   textarea.remove();
-}
-
-function instructionsText(guide: UsageGuide): string {
-  return [
-    guide.title,
-    "",
-    "Para que serve:",
-    guide.purpose,
-    "",
-    "Passo a passo:",
-    ...guide.steps.map((step, index) => `${index + 1}. ${step.title}: ${step.description}`),
-    "",
-    "Principais cuidados:",
-    ...guide.cautions.map((item) => `- ${item}`)
-  ].join("\n");
 }
 
 export function UsageGuidePage({ onNavigate }: { onNavigate: (view: HubView) => void }) {
@@ -86,7 +72,7 @@ export function UsageGuidePage({ onNavigate }: { onNavigate: (view: HubView) => 
   }
 
   async function copyInstructions() {
-    await copyToClipboard(instructionsText(selectedGuide));
+    await copyToClipboard(buildUsageGuideInstructions(selectedGuide));
     showFeedback("instructions");
   }
 

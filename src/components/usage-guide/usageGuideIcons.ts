@@ -5,6 +5,7 @@ import {
   CircleHelp,
   FileClock,
   Home,
+  Landmark,
   PiggyBank,
   WalletCards
 } from "lucide-react";
@@ -15,6 +16,7 @@ export const usageGuideIcons = {
   amortization: BarChart3,
   simulation: WalletCards,
   "pro-soluto": BadgeDollarSign,
+  registration: Landmark,
   income: FileClock,
   checklist: CheckSquare,
   fgts: PiggyBank,
