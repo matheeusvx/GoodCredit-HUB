@@ -162,56 +162,57 @@ export const USAGE_GUIDES: UsageGuide[] = [
     id: "pro-soluto",
     anchor: "pro-soluto",
     title: "Cálculo de Pró-Soluto",
-    shortDescription: "Identifique a parte da operação ainda não coberta pelos recursos informados.",
+    shortDescription: "Apure quanto falta para o vendedor receber integralmente o valor acordado.",
     destination: "pro-soluto",
     icon: "pro-soluto",
-    keywords: ["pró-soluto", "pro soluto", "avaliação", "financiamento", "FGTS", "subsídio", "entrada", "recursos próprios", "relatório"],
-    keyFeatures: ["Composição da operação", "Financiamento estimado", "Resumo e relatório"],
-    purpose: "O pró-soluto representa o valor da operação que ainda não foi coberto pelo financiamento e pelos demais recursos informados.",
+    keywords: ["pró-soluto", "pro soluto", "CCV", "vendedor", "avaliação", "limite financiável", "crédito aprovado", "FGTS", "entrada", "relatório"],
+    keyFeatures: ["Recebimento do vendedor", "Limite pela avaliação", "Composição auditável"],
+    purpose: "O pró-soluto representa o valor que ainda precisa ser pago com recursos próprios para que o vendedor receba integralmente o valor acordado na compra e venda. A avaliação do imóvel é usada somente para calcular o limite de financiamento.",
     whenToUse: [
-      "Para conferir a composição financeira da compra.",
-      "Para estimar a diferença quando o financiamento ainda não foi aprovado.",
-      "Para identificar recursos excedentes ou uma parcela ainda descoberta.",
+      "Para conferir se financiamento, FGTS e entrada já paga cobrem o valor que o vendedor precisa receber.",
+      "Para estimar o valor descoberto quando o crédito ainda não foi aprovado.",
+      "Para identificar recursos excedentes sem apresentar pró-soluto negativo.",
       "Para importar os valores já preenchidos na Simulação de Financiamento."
     ],
     requiredInformation: [
       { name: "Nome do cliente ou processo", description: "Identificação opcional usada no resumo e no relatório.", example: "Processo Silva" },
-      { name: "Valor de compra e venda", description: "Preço reconhecido na negociação.", required: true, example: "R$ 300.000,00" },
-      { name: "Avaliação da engenharia", description: "Valor avaliado; se omitido, a base considera o preço de compra.", example: "R$ 290.000,00" },
-      { name: "Percentual financiável", description: "Percentual aplicável à operação para estimar o limite.", example: "80,00%" },
-      { name: "Financiamento aprovado", description: "Valor aprovado pelo banco, quando já disponível.", example: "R$ 220.000,00" },
-      { name: "Recursos complementares", description: "FGTS, subsídio, entrada ou parcelas pagas e outros recursos próprios.", example: "FGTS de R$ 20.000,00" }
+      { name: "Valor que o vendedor precisa receber — CCV", description: "Valor total acordado que precisa ser entregue ao vendedor.", required: true, example: "R$ 270.000,00" },
+      { name: "Valor de avaliação do imóvel", description: "Base usada exclusivamente para calcular o limite estimado de financiamento.", required: true, example: "R$ 250.000,00" },
+      { name: "Percentual máximo financiável", description: "Percentual da avaliação que poderá ser financiado conforme a operação.", required: true, example: "80,00%" },
+      { name: "Crédito aprovado", description: "Valor efetivamente aprovado pelo banco. Se ainda não existir aprovação, marque a opção correspondente.", example: "R$ 200.000,00" },
+      { name: "FGTS utilizado", description: "Valor de FGTS efetivamente aplicado na compra.", example: "R$ 28.000,00" },
+      { name: "Entrada já paga", description: "Sinal ou parcelas que já foram entregues ao vendedor.", example: "R$ 10.000,00" }
     ],
     steps: [
-      { id: "pro-soluto-1", title: "Informe a negociação", description: "Preencha o valor de compra e, se disponível, a avaliação da engenharia." },
-      { id: "pro-soluto-2", title: "Defina o financiamento", description: "Informe o percentual financiável e o valor aprovado, ou marque que o financiamento ainda não foi aprovado." },
-      { id: "pro-soluto-3", title: "Inclua os recursos", description: "Preencha FGTS, subsídio, entrada já paga e outros recursos próprios reconhecidos." },
-      { id: "pro-soluto-4", title: "Revise o resultado", description: "Confira base, limite, financiamento considerado, total coberto e pró-soluto." },
+      { id: "pro-soluto-1", title: "Informe o valor do vendedor", description: "Preencha o CCV com o total que o vendedor precisa receber e informe a avaliação do imóvel." },
+      { id: "pro-soluto-2", title: "Defina o limite", description: "Informe o percentual máximo financiável e o crédito aprovado, ou marque que o crédito ainda não foi aprovado." },
+      { id: "pro-soluto-3", title: "Inclua os recursos aplicados", description: "Preencha somente o FGTS utilizado e a entrada que já foi paga ao vendedor." },
+      { id: "pro-soluto-4", title: "Revise a composição", description: "Confira o limite pela avaliação, o financiamento considerado, o total de recursos disponíveis e o pró-soluto." },
       { id: "pro-soluto-5", title: "Registre a análise", description: "Copie o resumo ou gere o relatório depois que os dados estiverem completos." }
     ],
     results: [
-      { title: "Base financiável", description: "Valor de referência adotado entre compra e avaliação para aplicar o percentual informado." },
-      { title: "Limite financiável", description: "Estimativa obtida pela base e pelo percentual; não equivale a aprovação." },
-      { title: "Financiamento considerado", description: "Valor aprovado limitado à operação ou, quando marcado, o limite tratado como estimativa." },
-      { title: "Total coberto", description: "Soma do financiamento considerado e dos recursos complementares." },
-      { title: "Pró-soluto estimado", description: "Parte da operação ainda não coberta pelos recursos informados, acompanhada do percentual descoberto." },
-      { title: "Recursos excedentes", description: "Valor informado além do necessário para cobrir a operação." }
+      { title: "Limite de financiamento pela avaliação", description: "Resultado da aplicação do percentual máximo financiável diretamente sobre a avaliação do imóvel." },
+      { title: "Financiamento considerado", description: "Menor valor entre o crédito aprovado e o limite pela avaliação. Sem aprovação, o limite aparece somente como estimativa." },
+      { title: "Total de recursos disponíveis", description: "Soma do financiamento considerado, do FGTS utilizado e da entrada já paga." },
+      { title: "Pró-soluto apurado", description: "Diferença positiva entre o CCV e o total de recursos disponíveis, acompanhada do percentual descoberto." },
+      { title: "Recursos excedentes", description: "Valor acima do necessário para o recebimento do vendedor, exibido separadamente enquanto o pró-soluto permanece em zero." }
     ],
     actions: [
-      { title: "Importar Simulação", description: "Preenche compra, financiamento, FGTS e entrada a partir da Simulação de Financiamento salva no navegador." },
+      { title: "Importar Simulação", description: "Preenche CCV, crédito, FGTS e entrada a partir da Simulação de Financiamento. Avaliação e percentual não são importados." },
       { title: "Copiar Resumo", description: "Copia o resultado completo quando os dados são válidos." },
       { title: "Gerar Relatório", description: "Gera um PDF local com a composição e os alertas." },
       { title: "Limpar Cálculo", description: "Apaga os dados deste cálculo após confirmação." }
     ],
     cautions: [
       "Financiamento estimado é apenas uma referência e não representa valor aprovado pelo banco.",
-      "A avaliação de engenharia e o percentual financiável precisam corresponder à operação analisada.",
-      "Alertas de valor aprovado acima do limite ou recursos excedentes devem ser conferidos."
+      "A avaliação limita o financiamento, mas não substitui o valor que o vendedor precisa receber.",
+      "O crédito considerado nunca ultrapassa o limite calculado pela avaliação.",
+      "Alertas de crédito acima ou abaixo do limite, FGTS excedente e recursos excedentes devem ser conferidos."
     ],
     commonMistakes: [
-      "Preencher o preço de compra no campo de avaliação sem ter uma avaliação efetiva.",
+      "Usar o menor valor entre CCV e avaliação como base do recebimento do vendedor.",
       "Tratar o limite financiável como financiamento aprovado.",
-      "Informar novamente como recursos próprios valores já incluídos na entrada.",
+      "Informar como entrada um valor que ainda não foi pago ao vendedor.",
       "Ignorar que a importação pode substituir os valores atuais após confirmação."
     ]
   },

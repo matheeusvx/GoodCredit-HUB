@@ -29,7 +29,7 @@ const modules = [
   },
   {
     title: "Cálculo de Pró-Soluto",
-    description: "Calcule a diferença da operação após considerar financiamento, FGTS, subsídio, entrada e outros recursos próprios.",
+    description: "Apure quanto falta para o vendedor receber o valor acordado após considerar financiamento, FGTS e entrada já paga.",
     status: "Ativo" as const,
     actionLabel: "Calcular Pró-Soluto",
     icon: BadgeDollarSign,

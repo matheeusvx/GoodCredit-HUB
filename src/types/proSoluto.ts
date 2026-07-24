@@ -14,28 +14,29 @@ export interface ProSolutoAlert {
   message: string;
 }
 
-export interface ProSolutoForm {
-  clientName: string;
-  purchasePrice: number;
-  appraisalValue: number | null;
-  financeablePercent: number | null;
-  approvedFinancing: number | null;
-  useEstimatedFinancing: boolean;
+export interface ProSolutoInput {
+  sellerReceivableAmount: number;
+  appraisalValue: number;
+  financeablePercent: number;
+  approvedCreditAmount: number | null;
+  creditNotApprovedYet: boolean;
   fgtsAmount: number;
-  subsidyAmount: number;
   paidEntryAmount: number;
-  otherOwnResources: number;
+}
+
+export interface ProSolutoForm extends ProSolutoInput {
+  clientName: string;
 }
 
 export interface ProSolutoCalculationResult {
-  financingBase: number;
-  financingLimit: number | null;
+  validatedFinanceablePercent: number;
+  appraisalFinancingLimit: number;
   financingConsidered: number;
   financingSource: FinancingSourceType;
   financingIsEstimated: boolean;
-  approvedFinancingExcess: number;
-  complementaryResources: number;
-  totalCovered: number;
+  approvedCreditExcess: number;
+  approvedCreditShortfall: number;
+  totalAvailableResources: number;
   rawProSoluto: number;
   proSoluto: number;
   uncoveredPercent: number;
@@ -48,13 +49,27 @@ export interface ProSolutoExplanationStep {
   number: number;
   title: string;
   description: string;
-  formula: string;
-  substitution: string;
+  calculation: string;
   result: string;
 }
 
 export interface StoredProSolutoState {
-  version: 1;
+  version: 2;
   form: ProSolutoForm;
 }
 
+export interface LegacyStoredProSolutoState {
+  version?: 1;
+  form?: {
+    clientName?: string;
+    purchasePrice?: number;
+    appraisalValue?: number | null;
+    financeablePercent?: number | null;
+    approvedFinancing?: number | null;
+    useEstimatedFinancing?: boolean;
+    fgtsAmount?: number;
+    subsidyAmount?: number;
+    paidEntryAmount?: number;
+    otherOwnResources?: number;
+  };
+}

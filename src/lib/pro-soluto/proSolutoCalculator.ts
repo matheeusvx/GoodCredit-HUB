@@ -4,80 +4,92 @@ import {
   ProSolutoForm,
   ProSolutoStatus
 } from "../../types/proSoluto";
+import {
+  MAX_FINANCEABLE_PERCENT,
+  MAX_FINANCEABLE_PERCENT_DECIMAL,
+  clampFinanceablePercent
+} from "./proSolutoConstants";
 
 const CENT = 0.01;
 
-function safeMoney(value: number | null | undefined): number {
-  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function validPercent(value: number | null): value is number {
-  return value !== null && Number.isFinite(value) && value > 0 && value <= 1;
+function finiteOrZero(value: number | null | undefined): number {
+  return Number.isFinite(value) ? Number(value) : 0;
 }
 
 export function validateProSolutoForm(input: ProSolutoForm): string[] {
   const errors: string[] = [];
-  if (!Number.isFinite(input.purchasePrice) || input.purchasePrice <= 0) {
-    errors.push("Informe um valor de compra maior que zero.");
+
+  if (!Number.isFinite(input.sellerReceivableAmount) || input.sellerReceivableAmount <= 0) {
+    errors.push("Informe o valor que o vendedor precisa receber, maior que zero.");
   }
-  if (input.appraisalValue !== null && (!Number.isFinite(input.appraisalValue) || input.appraisalValue < 0)) {
-    errors.push("O valor de avaliação não pode ser negativo.");
+  if (!Number.isFinite(input.appraisalValue) || input.appraisalValue <= 0) {
+    errors.push("Informe o valor de avaliação do imóvel, maior que zero.");
   }
-  if (input.financeablePercent !== null && !validPercent(input.financeablePercent)) {
-    errors.push("O percentual financiável deve ser maior que 0% e menor ou igual a 100%.");
+  if (!Number.isFinite(input.financeablePercent) || input.financeablePercent <= 0) {
+    errors.push("O percentual máximo financiável deve ser maior que 0%.");
+  } else if (input.financeablePercent > MAX_FINANCEABLE_PERCENT_DECIMAL) {
+    errors.push(`O percentual máximo financiável permitido é de ${MAX_FINANCEABLE_PERCENT}%.`);
   }
-  if (input.useEstimatedFinancing && !validPercent(input.financeablePercent)) {
-    errors.push("Informe o percentual financiável para estimar o financiamento.");
+  if (
+    !input.creditNotApprovedYet &&
+    (!Number.isFinite(input.approvedCreditAmount) || Number(input.approvedCreditAmount) <= 0)
+  ) {
+    errors.push("Informe o crédito aprovado ou marque que ele ainda não foi aprovado.");
   }
-  if (!input.useEstimatedFinancing && safeMoney(input.approvedFinancing) <= 0) {
-    errors.push("Informe o financiamento aprovado ou marque que ele ainda não foi aprovado.");
+  if (finiteOrZero(input.fgtsAmount) < 0) {
+    errors.push("O valor de FGTS não pode ser negativo.");
   }
+  if (finiteOrZero(input.paidEntryAmount) < 0) {
+    errors.push("A entrada já paga não pode ser negativa.");
+  }
+
   return errors;
 }
 
 export function calculateProSoluto(input: ProSolutoForm): ProSolutoCalculationResult {
-  const purchasePrice = safeMoney(input.purchasePrice);
-  const appraisalValue = safeMoney(input.appraisalValue);
-  const approvedFinancing = safeMoney(input.approvedFinancing);
-  const hasPurchasePrice = purchasePrice > 0;
-  const hasAppraisal = appraisalValue > 0;
-  const hasValidPercent = validPercent(input.financeablePercent);
-  const financeablePercent = hasValidPercent ? Number(input.financeablePercent) : 0;
+  const validationErrors = validateProSolutoForm(input);
+  const sellerReceivableAmount = Math.max(0, finiteOrZero(input.sellerReceivableAmount));
+  const appraisalValue = Math.max(0, finiteOrZero(input.appraisalValue));
+  const validatedFinanceablePercent = clampFinanceablePercent(input.financeablePercent);
+  const approvedCreditAmount = Math.max(0, finiteOrZero(input.approvedCreditAmount));
+  const fgtsAmount = Math.max(0, finiteOrZero(input.fgtsAmount));
+  const paidEntryAmount = Math.max(0, finiteOrZero(input.paidEntryAmount));
 
-  const financingBase = hasPurchasePrice
-    ? hasAppraisal
-      ? Math.min(purchasePrice, appraisalValue)
-      : purchasePrice
-    : 0;
-  const financingLimit = hasPurchasePrice && hasValidPercent
-    ? financingBase * financeablePercent
-    : null;
+  const appraisalFinancingLimit = roundMoney(appraisalValue * validatedFinanceablePercent);
+  const calculationComplete = validationErrors.length === 0;
 
   let financingConsidered = 0;
   let financingSource: ProSolutoCalculationResult["financingSource"] = "UNAVAILABLE";
-  if (input.useEstimatedFinancing && financingLimit !== null) {
-    financingConsidered = financingLimit;
+
+  if (calculationComplete && input.creditNotApprovedYet) {
+    financingConsidered = appraisalFinancingLimit;
     financingSource = "ESTIMATED";
-  } else if (!input.useEstimatedFinancing && approvedFinancing > 0) {
-    financingConsidered = financingLimit === null
-      ? approvedFinancing
-      : Math.min(approvedFinancing, financingLimit);
+  } else if (calculationComplete) {
+    financingConsidered = Math.min(approvedCreditAmount, appraisalFinancingLimit);
     financingSource = "APPROVED";
   }
 
-  const complementaryResources =
-    safeMoney(input.fgtsAmount) +
-    safeMoney(input.subsidyAmount) +
-    safeMoney(input.paidEntryAmount) +
-    safeMoney(input.otherOwnResources);
-  const calculationComplete = hasPurchasePrice && financingSource !== "UNAVAILABLE";
-  const totalCovered = calculationComplete ? financingConsidered + complementaryResources : 0;
-  const rawProSoluto = calculationComplete ? purchasePrice - totalCovered : 0;
-  const proSoluto = calculationComplete ? Math.max(0, rawProSoluto) : 0;
-  const surplusResources = calculationComplete ? Math.max(0, -rawProSoluto) : 0;
-  const uncoveredPercent = calculationComplete && purchasePrice > 0 ? proSoluto / purchasePrice : 0;
-  const approvedFinancingExcess = financingLimit !== null
-    ? Math.max(0, approvedFinancing - financingLimit)
+  financingConsidered = roundMoney(financingConsidered);
+  const totalAvailableResources = calculationComplete
+    ? roundMoney(financingConsidered + fgtsAmount + paidEntryAmount)
+    : 0;
+  const rawProSoluto = calculationComplete
+    ? roundMoney(sellerReceivableAmount - totalAvailableResources)
+    : 0;
+  const proSoluto = calculationComplete ? roundMoney(Math.max(0, rawProSoluto)) : 0;
+  const surplusResources = calculationComplete ? roundMoney(Math.max(0, -rawProSoluto)) : 0;
+  const uncoveredPercent = calculationComplete && sellerReceivableAmount > 0
+    ? proSoluto / sellerReceivableAmount
+    : 0;
+  const approvedCreditExcess = calculationComplete && !input.creditNotApprovedYet
+    ? roundMoney(Math.max(0, approvedCreditAmount - appraisalFinancingLimit))
+    : 0;
+  const approvedCreditShortfall = calculationComplete && !input.creditNotApprovedYet
+    ? roundMoney(Math.max(0, appraisalFinancingLimit - approvedCreditAmount))
     : 0;
 
   let status: ProSolutoStatus = "INCOMPLETE";
@@ -88,72 +100,113 @@ export function calculateProSoluto(input: ProSolutoForm): ProSolutoCalculationRe
   }
 
   const warnings: ProSolutoAlert[] = [];
+
   if (!calculationComplete) {
     warnings.push({
       code: "INCOMPLETE",
       level: "warning",
-      message: "Preencha o valor de compra e informe o financiamento aprovado ou os dados necessários para estimá-lo."
+      message: "Preencha os dados obrigatórios para calcular a composição da operação."
     });
   }
-  if (hasPurchasePrice && hasAppraisal && appraisalValue < purchasePrice) {
+  if (
+    Number.isFinite(input.financeablePercent) &&
+    input.financeablePercent > MAX_FINANCEABLE_PERCENT_DECIMAL
+  ) {
     warnings.push({
-      code: "APPRAISAL_BELOW_PURCHASE",
+      code: "PERCENT_ABOVE_MAX",
+      level: "danger",
+      message: `O percentual máximo financiável permitido é de ${MAX_FINANCEABLE_PERCENT}%.`
+    });
+  }
+  if (calculationComplete && appraisalValue < sellerReceivableAmount) {
+    warnings.push({
+      code: "APPRAISAL_BELOW_CCV",
       level: "warning",
-      message: "A avaliação é menor que o valor de compra. O limite financiável foi calculado sobre a avaliação."
+      message:
+        "A avaliação do imóvel é inferior ao valor que o vendedor precisa receber. Isso reduz o limite estimado de financiamento e pode aumentar o pró-soluto."
     });
   }
-  if (hasPurchasePrice && hasAppraisal && appraisalValue > purchasePrice) {
+  if (calculationComplete && appraisalValue > sellerReceivableAmount) {
     warnings.push({
-      code: "APPRAISAL_ABOVE_PURCHASE",
+      code: "APPRAISAL_ABOVE_CCV",
       level: "info",
-      message: "A avaliação é maior que o valor de compra. A base financiável permanece limitada ao valor de compra."
+      message:
+        "A avaliação do imóvel é superior ao CCV. O limite foi calculado sobre a avaliação; confirme o percentual aplicável à operação."
     });
   }
-  if (!input.useEstimatedFinancing && approvedFinancingExcess >= CENT) {
+  if (approvedCreditExcess >= CENT) {
     warnings.push({
       code: "APPROVED_ABOVE_LIMIT",
       level: "danger",
-      message: "O financiamento informado supera o limite estimado. O cálculo considerou apenas o limite financiável."
+      message:
+        "O crédito aprovado supera o limite calculado pela avaliação. Para esta composição, foi considerado somente o limite financiável."
+    });
+  }
+  if (approvedCreditShortfall >= CENT) {
+    warnings.push({
+      code: "APPROVED_BELOW_LIMIT",
+      level: "info",
+      message:
+        "O crédito aprovado é inferior ao limite calculado pela avaliação. A composição considerou o valor efetivamente aprovado."
     });
   }
   if (financingSource === "ESTIMATED") {
     warnings.push({
       code: "ESTIMATED_FINANCING",
-      level: "info",
-      message: "O financiamento considerado é uma estimativa e não representa aprovação bancária."
+      level: "warning",
+      message:
+        "O financiamento considerado é uma estimativa baseada na avaliação e no percentual informado. Ele não representa aprovação bancária."
+    });
+  }
+
+  const fgtsNeededAfterFinancingAndEntry = Math.max(
+    0,
+    sellerReceivableAmount - financingConsidered - paidEntryAmount
+  );
+  if (
+    calculationComplete &&
+    fgtsAmount > fgtsNeededAfterFinancingAndEntry + CENT &&
+    totalAvailableResources > sellerReceivableAmount + CENT
+  ) {
+    warnings.push({
+      code: "FGTS_ABOVE_NEEDED",
+      level: "warning",
+      message:
+        "O FGTS informado é superior ao necessário para completar o valor que o vendedor precisa receber. Revise o valor efetivamente utilizado."
     });
   }
   if (status === "HAS_PRO_SOLUTO") {
     warnings.push({
       code: "HAS_PRO_SOLUTO",
       level: "warning",
-      message: "A composição informada ainda possui valor descoberto a ser negociado como pró-soluto."
+      message: "Ainda existe valor descoberto a ser pago com recursos próprios ao vendedor."
     });
   }
   if (status === "FULLY_COVERED") {
     warnings.push({
       code: "FULLY_COVERED",
       level: "success",
-      message: "Os recursos informados cobrem integralmente o valor de compra."
+      message: "Os recursos informados cobrem exatamente o valor que o vendedor precisa receber."
     });
   }
   if (status === "SURPLUS_RESOURCES") {
     warnings.push({
       code: "SURPLUS_RESOURCES",
       level: "info",
-      message: "Os recursos informados excedem o valor de compra. Revise a composição para evitar dupla contagem."
+      message:
+        "Os recursos informados superam o valor que o vendedor precisa receber. O pró-soluto foi mantido em zero e o excedente foi exibido separadamente."
     });
   }
 
   return {
-    financingBase,
-    financingLimit,
+    validatedFinanceablePercent,
+    appraisalFinancingLimit,
     financingConsidered,
     financingSource,
     financingIsEstimated: financingSource === "ESTIMATED",
-    approvedFinancingExcess,
-    complementaryResources,
-    totalCovered,
+    approvedCreditExcess,
+    approvedCreditShortfall,
+    totalAvailableResources,
     rawProSoluto,
     proSoluto,
     uncoveredPercent,
