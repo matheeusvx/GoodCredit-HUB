@@ -19,6 +19,7 @@ import { ProSolutoPage } from "./components/pro-soluto/ProSolutoPage";
 import { RegistrationPage } from "./components/registration/RegistrationPage";
 import { FaqPage } from "./components/faq/FaqPage";
 import { UsageGuidePage } from "./components/usage-guide/UsageGuidePage";
+import { ComplianceChecklistPage } from "./pages/ComplianceChecklistPage";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -51,6 +52,7 @@ const VIEW_PATHS: Record<HubView, string> = {
   "pro-soluto": "/pro-soluto",
   registration: "/registro",
   checklist: "/checklist-documental",
+  "compliance-checklist": "/checklist-conformidade",
   fgts: "/uso-fgts",
   "income-analysis": "/apuracao-renda",
   "usage-guide": "/guia-de-uso",
@@ -591,6 +593,13 @@ export default function App() {
             </button>
             <button
               type="button"
+              onClick={() => navigateTo("compliance-checklist")}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "compliance-checklist" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+            >
+              Checklist de Conformidade
+            </button>
+            <button
+              type="button"
               onClick={() => navigateTo("fgts")}
               className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "fgts" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
@@ -617,6 +626,8 @@ export default function App() {
           <HomePage onNavigate={navigateTo} />
         ) : activeView === "checklist" ? (
           <ChecklistPage />
+        ) : activeView === "compliance-checklist" ? (
+          <ComplianceChecklistPage />
         ) : activeView === "simulation" ? (
           <SimulationPage onSendToAmortization={handleSendToAmortization} />
         ) : activeView === "pro-soluto" ? (

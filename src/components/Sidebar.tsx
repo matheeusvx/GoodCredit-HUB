@@ -1,7 +1,7 @@
-import { BadgeDollarSign, BarChart3, BookOpen, CheckSquare, CircleHelp, FileClock, Home, Landmark, Lock, PiggyBank, WalletCards } from "lucide-react";
+import { BadgeDollarSign, BarChart3, BookOpen, CheckSquare, CircleHelp, FileClock, Home, Landmark, Lock, PiggyBank, ShieldCheck, WalletCards } from "lucide-react";
 import { Fragment, type KeyboardEvent, useState } from "react";
 
-export type HubView = "home" | "amortization" | "simulation" | "pro-soluto" | "registration" | "checklist" | "fgts" | "income-analysis" | "usage-guide" | "faq";
+export type HubView = "home" | "amortization" | "simulation" | "pro-soluto" | "registration" | "checklist" | "compliance-checklist" | "fgts" | "income-analysis" | "usage-guide" | "faq";
 
 const modules = [
   { label: "Início", icon: Home, enabled: true, view: "home" as const },
@@ -11,6 +11,7 @@ const modules = [
   { label: "Registro", icon: Landmark, enabled: true, view: "registration" as const },
   { label: "Apuração de Renda", icon: FileClock, enabled: true, view: "income-analysis" as const },
   { label: "Checklist Documental", icon: CheckSquare, enabled: true, view: "checklist" as const },
+  { label: "Checklist de Conformidade", icon: ShieldCheck, enabled: true, view: "compliance-checklist" as const },
   { label: "Uso de FGTS", icon: PiggyBank, enabled: true, view: "fgts" as const },
   { label: "Guia de Uso", icon: BookOpen, enabled: true, view: "usage-guide" as const },
   { label: "FAQ de Atendimento", icon: CircleHelp, enabled: true, view: "faq" as const }
