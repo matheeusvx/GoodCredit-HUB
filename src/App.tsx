@@ -1,6 +1,9 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { LogOut } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
+import { AppAuthGate } from "./auth/AppAuthGate";
+import { replaceAppPath } from "./auth/authNavigation";
 import { AmortizationTable } from "./components/AmortizationTable";
 import { AmortizationImpact } from "./components/AmortizationImpact";
 import { EvolutionChart } from "./components/EvolutionChart";
@@ -20,7 +23,8 @@ import { RegistrationPage } from "./components/registration/RegistrationPage";
 import { FaqPage } from "./components/faq/FaqPage";
 import { UsageGuidePage } from "./components/usage-guide/UsageGuidePage";
 import { ComplianceChecklistPage } from "./pages/ComplianceChecklistPage";
-import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { useAuth } from "./contexts/AuthContext";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -43,32 +47,13 @@ import {
   hasActiveContributions,
   upsertContributionEvent
 } from "./lib/amortization/impact";
+import {
+  HUB_VIEW_PATHS,
+  resolveHubView,
+  type ResolvedHubView
+} from "./lib/hubNavigation";
 
 const STORAGE_KEY = "goodcredit-hub-amortization-v1";
-
-const VIEW_PATHS: Record<HubView, string> = {
-  home: "/",
-  amortization: "/amortizacao",
-  simulation: "/simulacao-financiamento",
-  "pro-soluto": "/pro-soluto",
-  registration: "/registro",
-  checklist: "/checklist-documental",
-  "compliance-checklist": "/checklist-conformidade",
-  fgts: "/uso-fgts",
-  "income-analysis": "/apuracao-renda",
-  "usage-guide": "/guia-de-uso",
-  faq: "/faq",
-  login: "/login"
-};
-
-function viewFromPath(pathname: string): HubView {
-  if (pathname === "/login") return "login";
-  if (pathname.startsWith("/checklist-conformidade")) {
-    return "compliance-checklist";
-  }
-  const match = (Object.entries(VIEW_PATHS) as Array<[HubView, string]>).find(([, path]) => path === pathname);
-  return match?.[0] ?? "home";
-}
 
 const defaultInputs: FinancingInputs = {
   nomeCliente: "",
@@ -138,8 +123,20 @@ function buildValidation(inputs: FinancingInputs): string[] {
 }
 
 export default function App() {
+  return (
+    <AppAuthGate>
+      <AuthenticatedHub />
+    </AppAuthGate>
+  );
+}
+
+function AuthenticatedHub() {
+  const { signOut, user } = useAuth();
   const stored = useMemo(readStoredSimulation, []);
-  const [activeView, setActiveView] = useState<HubView>(() => viewFromPath(window.location.pathname));
+  const [activeView, setActiveView] = useState<ResolvedHubView>(() =>
+    resolveHubView(window.location.pathname)
+  );
+  const [mobileSigningOut, setMobileSigningOut] = useState(false);
   const [inputs, setInputs] = useState<FinancingInputs>(stored.inputs);
   const [valorFinanciadoInput, setValorFinanciadoInput] = useState(() =>
     formatInputCurrencyBR(stored.inputs.valorFinanciado)
@@ -154,15 +151,23 @@ export default function App() {
 
   function navigateTo(view: HubView) {
     setActiveView(view);
-    const path = VIEW_PATHS[view];
+    const path = HUB_VIEW_PATHS[view];
     if (window.location.pathname !== path) window.history.pushState({ view }, "", path);
   }
 
   useEffect(() => {
-    const handlePopState = () => setActiveView(viewFromPath(window.location.pathname));
+    const handlePopState = () =>
+      setActiveView(resolveHubView(window.location.pathname));
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  async function handleMobileSignOut() {
+    if (mobileSigningOut) return;
+    setMobileSigningOut(true);
+    await signOut();
+    replaceAppPath("/login");
+  }
 
   const manualContributions = useMemo(
     () => contributionEventsToMap(manualEvents, "MANUAL", inputs.prazoMeses),
@@ -539,16 +544,38 @@ export default function App() {
     { label: "Redução de parcelas", value: formatPercentBR(summary.percentualReducaoParcelas), tone: "blue" as const }
   ];
 
-  if (activeView === "login") return <LoginPage />;
-
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <Sidebar activeView={activeView} onNavigate={navigateTo} />
+      <Sidebar
+        activeView={activeView === "not-found" ? null : activeView}
+        onNavigate={navigateTo}
+      />
 
       <div className="lg:pl-72">
         <div className="border-b border-slate-200 bg-white px-4 py-4 lg:hidden">
-          <div className="text-xl font-bold text-goodgreen-600">GoodCredit</div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Hub</div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xl font-bold text-goodgreen-600">GoodCredit</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Hub</div>
+            </div>
+            <div className="min-w-0 text-right">
+              <p
+                className="max-w-44 truncate text-xs font-semibold text-slate-500"
+                title={user?.email}
+              >
+                {user?.email}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleMobileSignOut()}
+                disabled={mobileSigningOut}
+                className="mt-1 inline-flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-300 disabled:opacity-60"
+              >
+                <LogOut className="h-4 w-4" />
+                {mobileSigningOut ? "Saindo..." : "Sair"}
+              </button>
+            </div>
+          </div>
           <div className="mt-3 flex gap-2 overflow-x-auto">
             <button
               type="button"
@@ -650,6 +677,8 @@ export default function App() {
           <UsageGuidePage onNavigate={navigateTo} />
         ) : activeView === "faq" ? (
           <FaqPage />
+        ) : activeView === "not-found" ? (
+          <NotFoundPage onBackHome={() => navigateTo("home")} />
         ) : (
           <>
             <Header

@@ -1,18 +1,11 @@
 import { KeyRound, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { useState } from "react";
+import {
+  getPasswordResetErrorMessage,
+  getSignInErrorMessage
+} from "../auth/authErrors";
+import { getReturnPath, replaceAppPath } from "../auth/authNavigation";
 import { useAuth } from "../contexts/AuthContext";
-
-function safeReturnPath(): string {
-  const value = new URLSearchParams(window.location.search).get("returnTo");
-  return value?.startsWith("/checklist-conformidade")
-    ? value
-    : "/checklist-conformidade";
-}
-
-function navigate(path: string) {
-  window.history.replaceState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
 
 export function LoginPage() {
   const {
@@ -26,8 +19,15 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [isError, setIsError] = useState(false);
+  const sessionExpired =
+    new URLSearchParams(window.location.search).get("reason") ===
+    "session-expired";
+  const [message, setMessage] = useState(() =>
+    sessionExpired
+      ? "Sua sessão expirou. Entre novamente para continuar."
+      : ""
+  );
+  const [isError, setIsError] = useState(sessionExpired);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -37,10 +37,10 @@ export function LoginPage() {
     setLoading(false);
     if (error) {
       setIsError(true);
-      setMessage("Não foi possível entrar. Confira o e-mail e a senha.");
+      setMessage(getSignInErrorMessage(error));
       return;
     }
-    navigate(safeReturnPath());
+    replaceAppPath(getReturnPath(window.location.search));
   }
 
   async function handlePasswordReset() {
@@ -55,7 +55,7 @@ export function LoginPage() {
     setIsError(Boolean(error));
     setMessage(
       error
-        ? "Não foi possível solicitar a recuperação de senha."
+        ? getPasswordResetErrorMessage(error)
         : "Enviamos as instruções de recuperação para o e-mail informado."
     );
   }
@@ -82,7 +82,7 @@ export function LoginPage() {
       setMessage("Não foi possível atualizar a senha. Solicite um novo link.");
       return;
     }
-    navigate(safeReturnPath());
+    replaceAppPath(getReturnPath(window.location.search));
   }
 
   return (
@@ -99,7 +99,10 @@ export function LoginPage() {
           </div>
           <h1 className="mt-4 text-2xl font-bold text-slate-950">Acesso interno</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Entre para acessar os Checklists de Conformidade da GoodCredit.
+            Entre para acessar o GoodCredit Hub.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Acesso interno às ferramentas operacionais da GoodCredit.
           </p>
         </div>
 

@@ -4,10 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { getReturnPath } from "../auth/authNavigation";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
 interface AuthContextValue {
@@ -16,6 +18,7 @@ interface AuthContextValue {
   loading: boolean;
   configured: boolean;
   passwordRecovery: boolean;
+  sessionExpired: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<string | null>;
@@ -28,6 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const explicitSignOutRef = useRef(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -47,6 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (event === "SIGNED_IN") setSessionExpired(false);
+      if (event === "SIGNED_OUT") {
+        setSessionExpired(!explicitSignOutRef.current);
+      }
       setLoading(false);
     });
 
@@ -64,12 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    explicitSignOutRef.current = true;
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setSessionExpired(false);
+      setPasswordRecovery(false);
+    } finally {
+      explicitSignOutRef.current = false;
+    }
   }, []);
 
   const requestPasswordReset = useCallback(async (email: string) => {
     if (!supabase) return "Supabase não configurado.";
-    const redirectTo = `${window.location.origin}/login`;
+    const returnTo = getReturnPath(window.location.search);
+    const redirectTo = `${window.location.origin}/reset-password?returnTo=${encodeURIComponent(returnTo)}`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo
     });
@@ -90,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured: isSupabaseConfigured,
       passwordRecovery,
+      sessionExpired,
       signIn,
       signOut,
       requestPasswordReset,
@@ -100,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       passwordRecovery,
       requestPasswordReset,
       session,
+      sessionExpired,
       signIn,
       signOut,
       updatePassword

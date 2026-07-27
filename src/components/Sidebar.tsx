@@ -1,7 +1,9 @@
-import { BadgeDollarSign, BarChart3, BookOpen, CheckSquare, CircleHelp, FileClock, Home, Landmark, Lock, PiggyBank, ShieldCheck, WalletCards } from "lucide-react";
+import { BadgeDollarSign, BarChart3, BookOpen, CheckSquare, CircleHelp, FileClock, Home, Landmark, Lock, LogOut, PiggyBank, ShieldCheck, WalletCards } from "lucide-react";
 import { Fragment, type KeyboardEvent, useState } from "react";
+import { replaceAppPath } from "../auth/authNavigation";
+import { useAuth } from "../contexts/AuthContext";
 
-export type HubView = "home" | "amortization" | "simulation" | "pro-soluto" | "registration" | "checklist" | "compliance-checklist" | "fgts" | "income-analysis" | "usage-guide" | "faq" | "login";
+export type HubView = "home" | "amortization" | "simulation" | "pro-soluto" | "registration" | "checklist" | "compliance-checklist" | "fgts" | "income-analysis" | "usage-guide" | "faq";
 
 const modules = [
   { label: "Início", icon: Home, enabled: true, view: "home" as const },
@@ -18,7 +20,7 @@ const modules = [
 ];
 
 interface SidebarProps {
-  activeView: HubView;
+  activeView: HubView | null;
   onNavigate: (view: HubView) => void;
 }
 
@@ -31,7 +33,16 @@ function SidebarSectionLabel({ label }: { label: string }) {
 }
 
 export function Sidebar({ activeView, onNavigate }: SidebarProps) {
+  const { signOut, user } = useAuth();
   const [logoFailed, setLogoFailed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+    replaceAppPath("/login");
+  }
 
   function handleScrollKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const container = event.currentTarget;
@@ -108,6 +119,21 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
             })}
           </nav>
         </div>
+      </div>
+
+      <div className="shrink-0 border-t border-slate-200 px-5 py-4">
+        <p className="truncate text-xs font-semibold text-slate-600" title={user?.email}>
+          {user?.email || "Usuário autenticado"}
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleSignOut()}
+          disabled={signingOut}
+          className="mt-2 flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-300 disabled:opacity-60"
+        >
+          <LogOut className="h-[17px] w-[17px] shrink-0" />
+          {signingOut ? "Saindo..." : "Sair da conta"}
+        </button>
       </div>
     </aside>
   );
