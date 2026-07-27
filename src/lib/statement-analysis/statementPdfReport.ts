@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import type { AutomatedIncomeResult } from "../../types/statementAnalysis";
 import { formatCompetence, formatCurrencyBR } from "../income-analysis/formatters";
+import { maskCpf, maskHolderName } from "../income-analysis/platforms/platformUtils";
 import { getBankLabel, getConfidenceLabel, getReconciliationStatusLabel, getStabilityLabel } from "./presentationLabels";
 
 async function logo() {
@@ -27,6 +28,86 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
   if (brand) pdf.addImage(brand, "PNG", margin, y, 28, 22);
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.setTextColor(15, 23, 42); pdf.text("Relatório de Apuração de Renda", margin, y + 28);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); pdf.setTextColor(71, 85, 105); pdf.text(`Cliente/processo: ${result.clientName || "Não informado"}`, margin, y + 36); pdf.text(`Gerado em ${new Date(result.generatedAt).toLocaleDateString("pt-BR")}`, margin, y + 42); y += 53;
+  if (result.analysisType === "PLATFORM_INCOME" && result.platformIncomeResult) {
+    const platform = result.platformIncomeResult;
+    const platformStatus = {
+      COMPLETE: "Análise concluída",
+      INSUFFICIENT_DOCUMENTS: "Comprovantes insuficientes",
+      HOLDER_MISMATCH: "Titulares divergentes",
+      DUPLICATE_COMPETENCE: "Competência divergente",
+      VALUE_DIVERGENCE: "Valores divergentes",
+      REVIEW_REQUIRED: "Revisão necessária",
+    }[platform.status];
+    const facts = [
+      ["Plataforma", platform.platform],
+      ["Titular", maskHolderName(platform.holderName)],
+      ["CPF", maskCpf(platform.holderCpf)],
+      ["Comprovantes selecionados", `${platform.selectedDocuments.length} de 4`],
+      ["Renda considerada", formatCurrencyBR(result.confirmedMonthlyIncome)],
+      ["Competência determinante", platform.determiningCompetence ? formatCompetence(platform.determiningCompetence) : "Não definida"],
+      ["Situação", platformStatus],
+    ];
+    facts.forEach(([label, value]) => {
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`${label}:`, margin, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(String(value), margin + 52, y);
+      y += 6;
+    });
+    y += 4;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Comprovantes mensais analisados", margin, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    platform.selectedDocuments.forEach((document) => {
+      if (y > 274) { pdf.addPage(); y = 15; }
+      const marker = document.competence === platform.determiningCompetence
+        ? " - menor renda bruta"
+        : "";
+      pdf.text(
+        `${document.competence ? formatCompetence(document.competence) : "Competência não identificada"} | ${formatCurrencyBR(document.grossIncome || 0)}${marker}`,
+        margin,
+        y
+      );
+      y += 5;
+    });
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Metodologia e documentos desconsiderados", margin, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    const notes = [
+      platform.method,
+      ...platform.ignoredDocuments.map((document) => {
+        const reference = document.documentPeriod === "ANNUAL"
+          ? `Resumo anual da ${document.platform}${document.periodStart ? ` — ${document.periodStart.slice(0, 4)}` : ""}`
+          : `${document.platform} · ${document.competence ? formatCompetence(document.competence) : "competência não identificada"}`;
+        return `${reference}: ${document.invalidReason || "Documento não selecionado."}`;
+      }),
+      ...platform.warnings,
+    ];
+    notes.forEach((line) => {
+      if (y > 270) { pdf.addPage(); y = 15; }
+      const rows = pdf.splitTextToSize(`• ${line}`, 180);
+      pdf.text(rows, margin, y);
+      y += rows.length * 4 + 1;
+    });
+    if (y > 260) { pdf.addPage(); y = 15; }
+    y += 5;
+    pdf.setFontSize(8);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(
+      pdf.splitTextToSize(
+        "Indicador interno de apoio à análise. A renda considerada corresponde ao menor valor bruto entre os quatro comprovantes mensais mais recentes da mesma plataforma. Não representa aprovação bancária.",
+        180
+      ),
+      margin,
+      y
+    );
+    pdf.text("GoodCredit Hub · processamento local · dados sensíveis mascarados", margin, 290);
+    pdf.save(`goodcredit-relatorio-renda-${result.clientName || "analise"}.pdf`);
+    return;
+  }
   const facts = [
     ["Bancos", [...new Set(result.files.map((file) => getBankLabel(file.bank)))].join(", ")],
     ["Meses completos", String(result.completeMonths)],

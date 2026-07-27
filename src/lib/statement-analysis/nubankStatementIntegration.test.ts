@@ -68,6 +68,8 @@ function statementFile(
     transactions,
     reconciliation: reconciliationFromPdf(parsed.reconciliation, transactions.length),
     warnings: [],
+    contentKind: "BANK_STATEMENT",
+    platformDocument: null,
   };
 }
 
