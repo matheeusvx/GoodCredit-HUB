@@ -150,7 +150,7 @@ export function PdfImportModal({ existing, analysisBank, periodStart, periodEnd,
     try {
       const extraction = await extractPdfText(documentRef.current, selectedPages, (item) => setProgress({ label: item.label, value: item.progress }), controller.signal);
       extractionRef.current = extraction; setDocumentInfo(extraction.info);
-      const text = extraction.lines.map((line) => line.text).join(" "); const bank = detectPdfBank(text); setDetectedBank(bank); if (bankCode === "AUTO" && bank !== "AUTO") setBankCode(bank);
+      const bank = detectPdfBank(extraction.lines); setDetectedBank(bank); if (bankCode === "AUTO" && bank !== "AUTO") setBankCode(bank);
       if (extraction.info.documentType === "TEXT") { setStatus("PARSING"); reviewResult(parsePdfTransactions(extraction.lines, parsingContext("PDF_TEXT", bank)), extraction.lines.length, true); }
       else setStatus("OCR_REQUIRED");
     } catch (caught) {

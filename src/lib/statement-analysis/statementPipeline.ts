@@ -50,15 +50,18 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
     const extraction = await extractPdfText(document, pages, (progress) => emit(onProgress, record, 3, progress.label, progress.pageNumber, progress.totalPages), signal);
     record.documentType = extraction.info.documentType; record.needsOcr = extraction.info.documentType !== "TEXT";
     const metadata = maskedMetadata(extraction.lines); record.holderMasked = metadata.holder; record.accountMasked = metadata.account;
-    const documentText = extraction.lines.map((line) => line.text).join(" "); const bankCode = detectPdfBank(documentText); record.bank = supportedBank(bankCode);
+    const bankCode = detectPdfBank(extraction.lines); record.bank = supportedBank(bankCode);
     let lines = extraction.lines; let method: "PDF_TEXT" | "PDF_OCR" = "PDF_TEXT";
     if (extraction.info.documentType === "SCANNED" || (record.bank === "CAIXA" && extraction.info.textCharacters < 100)) {
       emit(onProgress, record, 4, "Executando OCR local"); lines = await processPdfWithOcr(document, pages, (progress) => emit(onProgress, record, 4, progress.label, progress.pageNumber, progress.totalPages), signal); method = "PDF_OCR"; record.needsOcr = true;
     }
     emit(onProgress, record, 5); emit(onProgress, record, 6, `Identificando transações de ${record.bank}`);
-    const parsed = parsePdfTransactions(lines, { bankCode, account: record.accountMasked, source: method }); const transactions = normalizePdfTransactions({ sourceFileId: record.id, bank: bankCode, holder: record.holderMasked, account: maskAccount(record.accountMasked), parserId: parsed.parserId || "generic", extractionMethod: method, transactions: parsed.transactions });
-    const period = derivePeriod(transactions); const reconciliation = reconciliationFromPdf(parsed.reconciliation); const requiresReview = parsed.ambiguousLines.length > 0 || reconciliation.status === "DIVERGENCE" || parsed.parserId === "generic";
+    const parsed = parsePdfTransactions(lines, { bankCode, account: record.accountMasked, source: method });
+    const resolvedBankCode = parsed.bankCode || bankCode;
+    record.bank = supportedBank(resolvedBankCode);
+    const transactions = normalizePdfTransactions({ sourceFileId: record.id, bank: resolvedBankCode, holder: record.holderMasked, account: maskAccount(record.accountMasked), parserId: parsed.parserId || "generic", extractionMethod: method, transactions: parsed.transactions });
+    const period = derivePeriod(transactions); const reconciliation = reconciliationFromPdf(parsed.reconciliation, transactions.length); const requiresReview = parsed.ambiguousLines.length > 0 || reconciliation.status === "DIVERGENCE" || parsed.parserId === "generic";
     emit(onProgress, record, 12, "Conferindo totais e saldos");
-    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : [])], processingTimeMs: performance.now() - started };
+    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []), ...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : [])], processingTimeMs: performance.now() - started };
   } finally { await document?.loadingTask.destroy().catch(() => undefined); }
 }

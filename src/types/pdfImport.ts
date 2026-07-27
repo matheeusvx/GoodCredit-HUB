@@ -83,6 +83,14 @@ export interface PdfParseResult {
   ambiguousLines: ReconstructedPdfLine[];
   parserId?: string;
   parserLabel?: string;
+  bankCode?: PdfBankCode;
+  parserAudit?: {
+    requestedBank: PdfBankCode;
+    selectedParserId: string;
+    selectedParserScore: number;
+    fallbackParserId?: string;
+    fallbackReason?: string;
+  };
   reconciliation?: PdfReconciliation;
 }
 
