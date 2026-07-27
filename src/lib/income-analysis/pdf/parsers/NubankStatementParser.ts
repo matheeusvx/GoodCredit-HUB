@@ -18,32 +18,38 @@ const NUBANK_DATE_PATTERN = /^(\d{2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT
 const NUBANK_VALUE_AT_END_PATTERN = /([+-]?\s*(?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})*|\d+),\d{2})\s*([CD])?\s*$/i;
 
 export const NUBANK_NOISE_PATTERNS = [
-  /^saldo\s+(inicial|final|do\s+dia|dispon[ií]vel)/i,
-  /^total\s+de\s+(entradas|sa[ií]das)/i,
+  /^saldo\s+(inicial|final|do\s+dia|disponivel)/i,
+  /^total\s+de\s+(entradas|saidas)/i,
   /^valores\s+em\s+r\$/i,
-  /^tem\s+alguma\s+d[uú]vida/i,
+  /^tem\s+alguma\s+duvida/i,
   /^extrato\s+gerado\s+dia/i,
   /^ouvidoria/i,
-  /^capitais\s+e\s+regi[oõ]es/i,
+  /^capitais\s+e\s+regioes/i,
   /^demais\s+localidades/i,
   /^0800\s+/i,
   /^\d{1,2}\s+de\s+\d{1,2}$/i,
   /^nu\s+(pagamentos|financeira)/i,
   /^nubank$/i,
-  /^per[ií]odo\s+do\s+extrato/i,
+  /^periodo\s+do\s+extrato/i,
+  /^extrato\s+da\s+conta/i,
+  /^(www\.|https?:\/\/)/i,
 ] as const;
 
 const NUBANK_TRANSACTION_START_PATTERNS = [
-  /^transfer[eê]ncia\s+recebida\b/i,
-  /^transfer[eê]ncia\s+recebida\s+pelo\s+pix\b/i,
-  /^transfer[eê]ncia\s+enviada\s+pelo\s+pix\b/i,
+  /^transferencia\s+recebida\b/i,
+  /^transferencia\s+recebida\s+pelo\s+pix\b/i,
+  /^transferencia\s+enviada\s+pelo\s+pix\b/i,
+  /^credito\s+em\s+conta\b/i,
+  /^resgate\s+rdb\b/i,
+  /^aplicacao\s+rdb\b/i,
   /^reembolso\s+recebido\s+pelo\s+pix\b/i,
   /^pagamento\s+de\s+boleto\s+efetuado\b/i,
+  /^pagamento\s+de\s+fatura\b/i,
   /^pagamento\s+da\s+fatura\b/i,
   /^pagamento\s+efetuado\b/i,
-  /^dep[oó]sito\b/i,
+  /^deposito\b/i,
   /^pix\s+(recebido|enviado)\b/i,
-  /^compra(?:\s+no\s+d[eé]bito)?\b/i,
+  /^compra(?:\s+no\s+debito)?\b/i,
   /^saque\b/i,
   /^tarifa\b/i,
   /^recarga\b/i,
@@ -52,16 +58,19 @@ const NUBANK_TRANSACTION_START_PATTERNS = [
 ] as const;
 
 const CREDIT_DESCRIPTION_PATTERNS = [
-  /^transfer[eê]ncia\s+recebida/i,
+  /^transferencia\s+recebida/i,
+  /^credito\s+em\s+conta/i,
+  /^resgate\s+rdb/i,
   /^reembolso\s+recebido/i,
-  /^dep[oó]sito/i,
+  /^deposito/i,
   /^pix\s+recebido/i,
   /^estorno/i,
   /^rendimento/i,
 ] as const;
 
 const DEBIT_DESCRIPTION_PATTERNS = [
-  /^transfer[eê]ncia\s+enviada/i,
+  /^transferencia\s+enviada/i,
+  /^aplicacao\s+rdb/i,
   /^pagamento/i,
   /^compra/i,
   /^saque/i,
@@ -92,17 +101,19 @@ function parseNubankDate(text: string): string | null {
 }
 
 function isNubankNoise(text: string): boolean {
-  return NUBANK_NOISE_PATTERNS.some((pattern) => pattern.test(text.trim()));
+  const normalized = normalizeText(text);
+  return NUBANK_NOISE_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function isTransactionStart(text: string): boolean {
-  return NUBANK_TRANSACTION_START_PATTERNS.some((pattern) => pattern.test(text.trim()));
+  const normalized = normalizeText(text);
+  return NUBANK_TRANSACTION_START_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function directionFromDescription(text: string): TransactionDirection {
-  const trimmed = text.trim();
-  if (CREDIT_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(trimmed))) return "CREDIT";
-  if (DEBIT_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(trimmed))) return "DEBIT";
+  const normalized = normalizeText(text);
+  if (CREDIT_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(normalized))) return "CREDIT";
+  if (DEBIT_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(normalized))) return "DEBIT";
   return "UNKNOWN";
 }
 
@@ -142,11 +153,11 @@ function extractPayer(firstLine: string): string {
 }
 
 function holderNameFromHeader(lines: ReconstructedPdfLine[]): string {
-  const beforeMovements = lines.slice(0, Math.max(0, lines.findIndex((line) => /^movimenta[cç][oõ]es$/i.test(line.text.trim()))));
+  const beforeMovements = lines.slice(0, Math.max(0, lines.findIndex((line) => normalizeText(line.text) === "movimentacoes")));
   for (let index = 1; index < beforeMovements.length; index += 1) {
     if (!/(?:CPF|CNPJ)|\d{3}\.\d{3}\.\d{3}-\d{2}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/i.test(beforeMovements[index].text)) continue;
     const candidate = beforeMovements[index - 1].text.trim();
-    if (/^[A-Za-zÀ-ÿ' ]{5,120}$/.test(candidate) && candidate.split(/\s+/).length >= 2) return candidate;
+    if (/^[\p{L}' ]{5,120}$/u.test(candidate) && candidate.split(/\s+/).length >= 2) return candidate;
   }
   return "";
 }
@@ -169,7 +180,18 @@ function buildReconciliation(statementCreditTotal: number | null, statementDebit
   const matched = available
     && (creditDifference === null || Math.abs(creditDifference) <= 0.01)
     && (debitDifference === null || Math.abs(debitDifference) <= 0.01);
-  return { statementCreditTotal, parsedCreditTotal, creditDifference, statementDebitTotal, parsedDebitTotal, debitDifference, status: !available ? "NOT_AVAILABLE" : matched ? "MATCHED" : "DIVERGENT" };
+  const noTransactions = transactions.length === 0;
+  return {
+    statementCreditTotal,
+    parsedCreditTotal,
+    creditDifference,
+    statementDebitTotal,
+    parsedDebitTotal,
+    debitDifference,
+    status: !available ? "NOT_AVAILABLE" : noTransactions ? "DIVERGENT" : matched ? "MATCHED" : "DIVERGENT",
+    method: available ? "SUMMARY" : "NOT_AVAILABLE",
+    warnings: noTransactions ? ["Nenhuma movimentação foi identificada para conferir os totais do extrato."] : [],
+  };
 }
 
 export const NubankStatementParser: BankStatementParser = {
@@ -193,6 +215,23 @@ export const NubankStatementParser: BankStatementParser = {
     let insideTransactionsSection = false;
     let statementCreditTotal: number | null = null;
     let statementDebitTotal: number | null = null;
+    const repeatedOuterLines = new Map<string, Set<number>>();
+    lines.forEach((line) => {
+      const normalized = normalizeText(line.text);
+      if (
+        normalized.length < 8
+        || (line.y > 130 && line.y < 650)
+        || NUBANK_VALUE_AT_END_PATTERN.test(line.text.trim())
+      ) return;
+      const pages = repeatedOuterLines.get(normalized) || new Set<number>();
+      pages.add(line.pageNumber);
+      repeatedOuterLines.set(normalized, pages);
+    });
+    const repeatedPageNoise = new Set(
+      [...repeatedOuterLines.entries()]
+        .filter(([, pages]) => pages.size > 1)
+        .map(([text]) => text)
+    );
 
     const finishPending = () => {
       if (!pendingTransaction) return;
@@ -237,11 +276,18 @@ export const NubankStatementParser: BankStatementParser = {
     lines.forEach((line) => {
       const text = line.text.replace(/\s+/g, " ").trim();
       if (!text) return;
+      const normalized = normalizeText(text);
 
       if (!insideTransactionsSection) {
-        if (/^movimenta[cç][oõ]es$/i.test(text)) { insideTransactionsSection = true; ignoredLines.push(line); return; }
-        if (/total\s+de\s+entradas/i.test(text) && statementCreditTotal === null) statementCreditTotal = extractAmountAtEnd(text)?.amount ?? null;
-        if (/total\s+de\s+sa[ií]das/i.test(text) && statementDebitTotal === null) statementDebitTotal = extractAmountAtEnd(text)?.amount ?? null;
+        if (normalized === "movimentacoes") { insideTransactionsSection = true; ignoredLines.push(line); return; }
+        if (/total\s+de\s+entradas/i.test(normalized) && statementCreditTotal === null) statementCreditTotal = extractAmountAtEnd(text)?.amount ?? null;
+        if (/total\s+de\s+saidas/i.test(normalized) && statementDebitTotal === null) statementDebitTotal = extractAmountAtEnd(text)?.amount ?? null;
+        const initialDate = parseNubankDate(text);
+        if (initialDate && /total\s+de\s+(entradas|saidas)/i.test(normalized)) {
+          insideTransactionsSection = true;
+          currentDate = initialDate;
+          currentDirection = /total\s+de\s+entradas/i.test(normalized) ? "CREDIT" : "DEBIT";
+        }
         ignoredLines.push(line);
         return;
       }
@@ -250,15 +296,15 @@ export const NubankStatementParser: BankStatementParser = {
       if (date) {
         if (pendingTransaction) finishPending();
         currentDate = date;
-        if (/total\s+de\s+entradas/i.test(text)) currentDirection = "CREDIT";
-        else if (/total\s+de\s+sa[ií]das/i.test(text)) currentDirection = "DEBIT";
+        if (/total\s+de\s+entradas/i.test(normalized)) currentDirection = "CREDIT";
+        else if (/total\s+de\s+saidas/i.test(normalized)) currentDirection = "DEBIT";
         ignoredLines.push(line);
         return;
       }
 
-      if (/^total\s+de\s+entradas/i.test(text)) { if (pendingTransaction) finishPending(); currentDirection = "CREDIT"; ignoredLines.push(line); return; }
-      if (/^total\s+de\s+sa[ií]das/i.test(text)) { if (pendingTransaction) finishPending(); currentDirection = "DEBIT"; ignoredLines.push(line); return; }
-      if (isNubankNoise(text)) { ignoredLines.push(line); return; }
+      if (/^total\s+de\s+entradas/i.test(normalized)) { if (pendingTransaction) finishPending(); currentDirection = "CREDIT"; ignoredLines.push(line); return; }
+      if (/^total\s+de\s+saidas/i.test(normalized)) { if (pendingTransaction) finishPending(); currentDirection = "DEBIT"; ignoredLines.push(line); return; }
+      if (isNubankNoise(text) || repeatedPageNoise.has(normalized)) { ignoredLines.push(line); return; }
 
       if (isTransactionStart(text)) {
         if (pendingTransaction) finishPending();

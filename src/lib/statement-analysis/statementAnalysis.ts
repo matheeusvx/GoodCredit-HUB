@@ -14,7 +14,7 @@ export function calculateAutomatedIncome(clientName: string, files: StatementFil
   const stability = analyzeStability(months, concentration);
   const extractionConfidence = transactions.length ? transactions.reduce((sum, item) => sum + item.extractionConfidence, 0) / transactions.length : 0;
   const classificationConfidence = transactions.length ? transactions.reduce((sum, item) => sum + item.classificationConfidence, 0) / transactions.length : 0;
-  const reconciliationStatus = files.some((file) => file.reconciliation.status === "DIVERGENCE") ? "DIVERGENCE" : files.some((file) => file.reconciliation.status === "SMALL_DIFFERENCE") ? "SMALL_DIFFERENCE" : files.length && files.every((file) => file.reconciliation.status === "RECONCILED") ? "RECONCILED" : "NO_SUMMARY";
+  const reconciliationStatus = !transactions.length ? "NO_SUMMARY" : files.some((file) => file.reconciliation.status === "DIVERGENCE") ? "DIVERGENCE" : files.some((file) => file.reconciliation.status === "SMALL_DIFFERENCE") ? "SMALL_DIFFERENCE" : files.length && files.every((file) => file.reconciliation.status === "RECONCILED") ? "RECONCILED" : "NO_SUMMARY";
   const credits = transactions.filter((item) => item.direction === "CREDIT");
   const included = credits.filter((item) => item.classification === "INCLUDED_INCOME");
   const pending = credits.filter((item) => item.classification === "PENDING_REVIEW");
@@ -22,6 +22,7 @@ export function calculateAutomatedIncome(clientName: string, files: StatementFil
   credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).forEach((item) => excludedGroups.set(item.classification, (excludedGroups.get(item.classification) || 0) + 1));
   const analyzedMonths = complete.length || months.length;
   const explanation = [
+    ...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []),
     credits.length === 1 ? "Foi identificada 1 entrada bancária." : `Foram identificadas ${credits.length} entradas bancárias.`,
     buildClassificationExplanation("INCLUDED_INCOME", included.length),
     ...[...excludedGroups.entries()].map(([classification, count]) => buildClassificationExplanation(classification, count)),

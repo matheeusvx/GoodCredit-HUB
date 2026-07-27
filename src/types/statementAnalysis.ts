@@ -214,7 +214,24 @@ export function toLegacyTransaction(transaction: NormalizedBankTransaction): Ban
   };
 }
 
-export function reconciliationFromPdf(value?: PdfReconciliation): StatementReconciliation {
+export function reconciliationFromPdf(value?: PdfReconciliation, transactionCount?: number): StatementReconciliation {
+  if (transactionCount === 0) {
+    return {
+      status: "NO_SUMMARY",
+      creditTotal: 0,
+      debitTotal: 0,
+      statementCreditTotal: value?.statementCreditTotal ?? null,
+      statementDebitTotal: value?.statementDebitTotal ?? null,
+      openingBalance: value?.openingBalance ?? null,
+      closingBalance: value?.closingBalance ?? null,
+      difference: null,
+      method: "NOT_AVAILABLE",
+      warnings: [
+        "Análise incompleta: nenhuma movimentação foi extraída.",
+        ...(value?.warnings || []),
+      ],
+    };
+  }
   const difference = value?.balanceDifference ?? value?.creditDifference ?? value?.debitDifference ?? null;
   return {
     status: !value || value.status === "NOT_AVAILABLE" ? "NO_SUMMARY" : value.status === "MATCHED" ? "RECONCILED" : Math.abs(difference || 0) <= 0.01 ? "SMALL_DIFFERENCE" : "DIVERGENCE",

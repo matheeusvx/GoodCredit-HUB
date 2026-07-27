@@ -99,6 +99,17 @@ describe("NubankStatementParser", () => {
     expect(result.transactions.map((item) => [item.direction, item.amount])).toEqual([["CREDIT", 30], ["DEBIT", 91.17]]);
   });
 
+  it("reconhece pagamento de fatura como débito", () => {
+    const fixture = [
+      line("Movimentações"),
+      line("01 JUN 2026 Total de saídas - 400,00"),
+      line("Pagamento de fatura 400,00"),
+    ];
+    const result = NubankStatementParser.parse(fixture, context);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]).toMatchObject({ direction: "DEBIT", amount: 400 });
+  });
+
   it("sugere mesma titularidade sem excluir automaticamente", () => {
     const fixture = [
       line("TITULAR EXEMPLO"),
