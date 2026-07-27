@@ -11,3 +11,7 @@ local-bank-statements/
 private-fixtures/
 *.statement-test.pdf
 *.bank-statement.pdf
+.env
+.env.local
+.env.*.local
+!.env.example

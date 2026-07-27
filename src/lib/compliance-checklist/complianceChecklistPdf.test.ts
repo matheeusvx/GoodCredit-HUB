@@ -65,4 +65,26 @@ describe("buildComplianceChecklistPdfModel", () => {
     expect(model.summary.completed).toBe(0);
     expect(model.issues).toHaveLength(0);
   });
+
+  it("inclui auditoria e identificador curto no relatório salvo", () => {
+    const state = createInitialComplianceChecklistState("2026-07-27");
+    state.clientName = "Cliente";
+    const model = buildComplianceChecklistPdfModel(
+      state,
+      calculateComplianceChecklistSummary(state.items),
+      false,
+      new Date("2026-07-27T12:00:00.000Z"),
+      {
+        checklistId: "12345678-1234-1234-1234-123456789012",
+        createdByLabel: "criador@goodcredit.com",
+        updatedByLabel: "editor@goodcredit.com",
+        createdAt: "2026-07-27T10:00:00.000Z",
+        updatedAt: "2026-07-27T11:00:00.000Z"
+      }
+    );
+
+    expect(model.checklistIdShort).toBe("12345678");
+    expect(model.createdByLabel).toBe("criador@goodcredit.com");
+    expect(model.updatedByLabel).toBe("editor@goodcredit.com");
+  });
 });

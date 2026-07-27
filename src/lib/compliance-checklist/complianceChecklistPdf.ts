@@ -4,6 +4,7 @@ import {
   COMPLIANCE_STATUS_LABELS
 } from "../../data/complianceChecklistItems";
 import {
+  ComplianceChecklistAuditContext,
   ComplianceChecklistState,
   ComplianceChecklistSummary,
   ComplianceChecklistStatus
@@ -26,6 +27,11 @@ export interface ComplianceChecklistPdfModel {
   analystName: string;
   reviewDate: string;
   generatedAt: string;
+  checklistIdShort: string;
+  createdByLabel: string;
+  updatedByLabel: string;
+  createdAt: string;
+  updatedAt: string;
   summary: ComplianceChecklistSummary;
   overallStatusLabel: string;
   rows: ComplianceChecklistPdfRow[];
@@ -46,7 +52,8 @@ export function buildComplianceChecklistPdfModel(
   state: ComplianceChecklistState,
   summary: ComplianceChecklistSummary,
   draft: boolean,
-  generatedAt = new Date()
+  generatedAt = new Date(),
+  audit?: ComplianceChecklistAuditContext
 ): ComplianceChecklistPdfModel {
   const stateById = new Map(state.items.map((item) => [item.itemId, item]));
   const rows = COMPLIANCE_CHECKLIST_ITEMS.map((definition) => {
@@ -69,6 +76,15 @@ export function buildComplianceChecklistPdfModel(
     analystName: state.analystName.trim() || "Não informado",
     reviewDate: formatDate(state.reviewDate),
     generatedAt: generatedAt.toLocaleString("pt-BR"),
+    checklistIdShort: audit?.checklistId.slice(0, 8) ?? "rascunho",
+    createdByLabel: audit?.createdByLabel ?? "Não informado",
+    updatedByLabel: audit?.updatedByLabel ?? "Não informado",
+    createdAt: audit?.createdAt
+      ? new Date(audit.createdAt).toLocaleString("pt-BR")
+      : "Não informado",
+    updatedAt: audit?.updatedAt
+      ? new Date(audit.updatedAt).toLocaleString("pt-BR")
+      : "Não informado",
     summary,
     overallStatusLabel: COMPLIANCE_OVERALL_STATUS_LABELS[summary.overallStatus],
     rows,
@@ -112,9 +128,16 @@ const ROW_TONES: Record<ComplianceChecklistStatus, [number, number, number]> = {
 export async function generateComplianceChecklistPdf(
   state: ComplianceChecklistState,
   summary: ComplianceChecklistSummary,
-  draft: boolean
+  draft: boolean,
+  audit?: ComplianceChecklistAuditContext
 ): Promise<void> {
-  const model = buildComplianceChecklistPdfModel(state, summary, draft);
+  const model = buildComplianceChecklistPdfModel(
+    state,
+    summary,
+    draft,
+    new Date(),
+    audit
+  );
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -128,6 +151,12 @@ export async function generateComplianceChecklistPdf(
     pdf.setFontSize(8);
     pdf.setTextColor(100, 116, 139);
     pdf.text("GoodCredit Hub • Uso interno", margin, pageHeight - 8);
+    pdf.text(
+      `ID do checklist: ${model.checklistIdShort}`,
+      pageWidth / 2,
+      pageHeight - 8,
+      { align: "center" }
+    );
     pdf.text(String(page), pageWidth - margin, pageHeight - 8, { align: "right" });
   };
 
@@ -182,6 +211,10 @@ export async function generateComplianceChecklistPdf(
     ["Referência do processo", model.processReference],
     ["Responsável", model.analystName],
     ["Data da conferência", model.reviewDate],
+    ["Criado por", model.createdByLabel],
+    ["Criado em", model.createdAt],
+    ["Atualizado por", model.updatedByLabel],
+    ["Última atualização", model.updatedAt],
     ["Data e hora da geração", model.generatedAt]
   ];
   identificationRows.forEach(([label, value]) => {

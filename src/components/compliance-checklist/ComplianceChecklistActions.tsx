@@ -22,7 +22,7 @@ export function ComplianceChecklistActions({
     <>
       <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-500">
-          As alterações são armazenadas somente neste navegador.
+          Os dados são sincronizados com o histórico central da GoodCredit.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button type="button" onClick={onMarkAllCompliant} className="btn-secondary">

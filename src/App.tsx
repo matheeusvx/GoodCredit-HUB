@@ -20,6 +20,7 @@ import { RegistrationPage } from "./components/registration/RegistrationPage";
 import { FaqPage } from "./components/faq/FaqPage";
 import { UsageGuidePage } from "./components/usage-guide/UsageGuidePage";
 import { ComplianceChecklistPage } from "./pages/ComplianceChecklistPage";
+import { LoginPage } from "./pages/LoginPage";
 import {
   calcMonthlyRate,
   formatInputCurrencyBR,
@@ -56,10 +57,15 @@ const VIEW_PATHS: Record<HubView, string> = {
   fgts: "/uso-fgts",
   "income-analysis": "/apuracao-renda",
   "usage-guide": "/guia-de-uso",
-  faq: "/faq"
+  faq: "/faq",
+  login: "/login"
 };
 
 function viewFromPath(pathname: string): HubView {
+  if (pathname === "/login") return "login";
+  if (pathname.startsWith("/checklist-conformidade")) {
+    return "compliance-checklist";
+  }
   const match = (Object.entries(VIEW_PATHS) as Array<[HubView, string]>).find(([, path]) => path === pathname);
   return match?.[0] ?? "home";
 }
@@ -532,6 +538,8 @@ export default function App() {
     { label: "Redução de juros", value: formatPercentBR(summary.percentualReducaoJuros), tone: "green" as const },
     { label: "Redução de parcelas", value: formatPercentBR(summary.percentualReducaoParcelas), tone: "blue" as const }
   ];
+
+  if (activeView === "login") return <LoginPage />;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
