@@ -10,6 +10,9 @@ import { reconciliationFromPdf } from "../../types/statementAnalysis";
 import { normalizePdfTransactions, supportedBank } from "./statementNormalizer";
 import { parseStatementSpreadsheet } from "./statementSpreadsheetImport";
 import type { ReconstructedPdfLine } from "../../types/pdfImport";
+import { detectPlatformDocument } from "../income-analysis/platforms/detectPlatformDocument";
+import { parsePlatformIncomeDocument } from "../income-analysis/platforms/parsers/platformParserRegistry";
+import { maskHolderName } from "../income-analysis/platforms/platformUtils";
 
 export const PROCESSING_STEPS = ["Validando arquivos", "Identificando o banco", "Verificando a camada de texto", "Extraindo páginas", "Executando OCR quando necessário", "Reconstruindo linhas e colunas", "Identificando movimentações", "Separando entradas e saídas", "Removendo saldos e totais", "Detectando duplicidades", "Detectando transferências internas", "Classificando as entradas", "Conciliando valores", "Calculando a renda mensal", "Gerando o diagnóstico"];
 
@@ -19,7 +22,7 @@ function emit(onProgress: (value: StatementProcessingProgress) => void, file: St
 
 export function createStatementFileRecord(file: File): StatementFileRecord {
   const extension = file.name.split(".").pop()?.toUpperCase(); const format = extension === "PDF" ? "PDF" : extension === "XLSX" ? "XLSX" : extension === "XLS" ? "XLS" : "CSV";
-  return { id: `statement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, name: file.name, size: file.size, format, pageCount: null, bank: "AUTO", holderMasked: "Não identificado", accountMasked: "Não identificada", periodStart: null, periodEnd: null, documentType: format === "PDF" ? "UNKNOWN" : "SPREADSHEET", needsOcr: false, status: "READY", parserId: "", extractionMethod: null, transactions: [], reconciliation: { status: "NO_SUMMARY", creditTotal: 0, debitTotal: 0, statementCreditTotal: null, statementDebitTotal: null, openingBalance: null, closingBalance: null, difference: null, method: "NOT_AVAILABLE", warnings: [] }, warnings: [] };
+  return { id: `statement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, name: file.name, size: file.size, format, pageCount: null, bank: "AUTO", holderMasked: "Não identificado", accountMasked: "Não identificada", periodStart: null, periodEnd: null, documentType: format === "PDF" ? "UNKNOWN" : "SPREADSHEET", needsOcr: false, status: "READY", parserId: "", extractionMethod: null, transactions: [], reconciliation: { status: "NO_SUMMARY", creditTotal: 0, debitTotal: 0, statementCreditTotal: null, statementDebitTotal: null, openingBalance: null, closingBalance: null, difference: null, method: "NOT_AVAILABLE", warnings: [] }, warnings: [], contentKind: "UNKNOWN", platformDocument: null };
 }
 
 function derivePeriod(transactions: StatementFileRecord["transactions"]) { const dates = transactions.map((item) => item.date).filter((value): value is string => Boolean(value)).sort(); return { start: dates[0] || null, end: dates.at(-1) || null }; }
@@ -41,7 +44,7 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
   if (record.format !== "PDF") {
     emit(onProgress, record, 1, "Identificando colunas da planilha"); const parsed = await parseStatementSpreadsheet(record.file, record.id, record.format);
     emit(onProgress, record, 6, "Normalizando movimentações da planilha"); const period = derivePeriod(parsed.transactions);
-    return { ...record, status: parsed.transactions.length ? parsed.confidence >= 0.8 ? "COMPLETED" : "REVIEW_REQUIRED" : "UNRECOGNIZED", extractionMethod: "XLSX", parserId: "spreadsheet-auto", transactions: parsed.transactions, warnings: parsed.warnings, periodStart: period.start, periodEnd: period.end, processingTimeMs: performance.now() - started };
+    return { ...record, status: parsed.transactions.length ? parsed.confidence >= 0.8 ? "COMPLETED" : "REVIEW_REQUIRED" : "UNRECOGNIZED", extractionMethod: "XLSX", parserId: "spreadsheet-auto", transactions: parsed.transactions, warnings: parsed.warnings, periodStart: period.start, periodEnd: period.end, contentKind: "BANK_STATEMENT", processingTimeMs: performance.now() - started };
   }
   let document: PDFDocumentProxy | null = null;
   try {
@@ -50,11 +53,47 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
     const extraction = await extractPdfText(document, pages, (progress) => emit(onProgress, record, 3, progress.label, progress.pageNumber, progress.totalPages), signal);
     record.documentType = extraction.info.documentType; record.needsOcr = extraction.info.documentType !== "TEXT";
     const metadata = maskedMetadata(extraction.lines); record.holderMasked = metadata.holder; record.accountMasked = metadata.account;
-    const bankCode = detectPdfBank(extraction.lines); record.bank = supportedBank(bankCode);
+    let bankCode = detectPdfBank(extraction.lines); record.bank = supportedBank(bankCode);
     let lines = extraction.lines; let method: "PDF_TEXT" | "PDF_OCR" = "PDF_TEXT";
     if (extraction.info.documentType === "SCANNED" || (record.bank === "CAIXA" && extraction.info.textCharacters < 100)) {
       emit(onProgress, record, 4, "Executando OCR local"); lines = await processPdfWithOcr(document, pages, (progress) => emit(onProgress, record, 4, progress.label, progress.pageNumber, progress.totalPages), signal); method = "PDF_OCR"; record.needsOcr = true;
     }
+    const platformDetection = detectPlatformDocument(lines);
+    if (platformDetection.platform) {
+      emit(onProgress, record, 5, "Reconstruindo comprovante de rendimentos");
+      emit(onProgress, record, 6, `Identificando comprovante ${platformDetection.platform}`);
+      const platformDocument = parsePlatformIncomeDocument(lines, {
+        id: record.id,
+        fileName: record.name,
+        extractionMethod: method,
+        pageCount: record.pageCount || 0,
+      }, platformDetection);
+      const warnings = [
+        ...(platformDocument.invalidReason ? [platformDocument.invalidReason] : []),
+        ...platformDocument.warnings,
+      ];
+      return {
+        ...record,
+        bank: "OTHER",
+        holderMasked: maskHolderName(platformDocument.holderName),
+        accountMasked: "Não se aplica",
+        periodStart: platformDocument.periodStart,
+        periodEnd: platformDocument.periodEnd,
+        status: platformDocument.isValidForIncomeCalculation
+          || platformDocument.documentPeriod === "ANNUAL"
+          ? "COMPLETED"
+          : "REVIEW_REQUIRED",
+        parserId: platformDocument.parserId,
+        extractionMethod: method,
+        transactions: [],
+        warnings,
+        contentKind: "PLATFORM_INCOME",
+        platformDocument,
+        processingTimeMs: performance.now() - started,
+      };
+    }
+    bankCode = detectPdfBank(lines);
+    record.bank = supportedBank(bankCode);
     emit(onProgress, record, 5); emit(onProgress, record, 6, `Identificando transações de ${record.bank}`);
     const parsed = parsePdfTransactions(lines, { bankCode, account: record.accountMasked, source: method });
     const resolvedBankCode = parsed.bankCode || bankCode;
@@ -62,6 +101,6 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
     const transactions = normalizePdfTransactions({ sourceFileId: record.id, bank: resolvedBankCode, holder: record.holderMasked, account: maskAccount(record.accountMasked), parserId: parsed.parserId || "generic", extractionMethod: method, transactions: parsed.transactions });
     const period = derivePeriod(transactions); const reconciliation = reconciliationFromPdf(parsed.reconciliation, transactions.length); const requiresReview = parsed.ambiguousLines.length > 0 || reconciliation.status === "DIVERGENCE" || parsed.parserId === "generic";
     emit(onProgress, record, 12, "Conferindo totais e saldos");
-    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []), ...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : [])], processingTimeMs: performance.now() - started };
+    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []), ...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : [])], contentKind: "BANK_STATEMENT", processingTimeMs: performance.now() - started };
   } finally { await document?.loadingTask.destroy().catch(() => undefined); }
 }
