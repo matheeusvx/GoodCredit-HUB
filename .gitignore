@@ -11,6 +11,8 @@ local-bank-statements/
 private-fixtures/
 *.statement-test.pdf
 *.bank-statement.pdf
+local-platform-documents/
+*.platform-income.pdf
 .env
 .env.local
 .env.*.local

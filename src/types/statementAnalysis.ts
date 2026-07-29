@@ -1,5 +1,6 @@
 import type { BankTransaction } from "./incomeAnalysis";
 import type { PdfBankCode, PdfReconciliation } from "./pdfImport";
+import type { PlatformIncomeDocument, PlatformIncomeResult } from "./platformIncome";
 
 export type SupportedBank = Exclude<PdfBankCode, "AUTO" | "OTHER" | "BANCO_DO_BRASIL" | "C6"> | "OTHER";
 export type StatementFileFormat = "PDF" | "CSV" | "XLSX" | "XLS";
@@ -82,6 +83,8 @@ export interface StatementFileRecord {
   transactions: NormalizedBankTransaction[];
   reconciliation: StatementReconciliation;
   warnings: string[];
+  contentKind: "BANK_STATEMENT" | "PLATFORM_INCOME" | "UNKNOWN";
+  platformDocument: PlatformIncomeDocument | null;
   processingTimeMs?: number;
 }
 
@@ -167,6 +170,9 @@ export interface AutomatedIncomeResult {
   reconciliationStatus: ReconciliationStatus;
   explanation: string[];
   generatedAt: string;
+  analysisType: "BANK_STATEMENT" | "PLATFORM_INCOME";
+  platformIncomeResult: PlatformIncomeResult | null;
+  canSendToSimulation: boolean;
 }
 
 export interface AutomatedIncomeState {
