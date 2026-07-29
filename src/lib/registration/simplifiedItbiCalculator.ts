@@ -94,5 +94,11 @@ export function calculateSimplifiedItbi(input: SimplifiedItbiInput): SimplifiedI
     };
   }
 
-  return input.city === "SAO_BERNARDO_DO_CAMPO" ? calculateSaoBernardo(input) : calculateDiadema(input);
+  if (input.city === "SAO_BERNARDO_DO_CAMPO") return calculateSaoBernardo(input);
+  if (input.city === "DIADEMA") return calculateDiadema(input);
+  return {
+    ...result,
+    status: "IN_DEVELOPMENT",
+    warnings: ["Esta cidade utiliza uma calculadora específica ou ainda está em desenvolvimento."]
+  };
 }
