@@ -8,6 +8,7 @@ import { ItbiCitySelector } from "./ItbiCitySelector";
 import { ItbiForm } from "./ItbiForm";
 import { ItbiResult } from "./ItbiResult";
 import { RegistrationDevelopmentState } from "./RegistrationDevelopmentState";
+import { SaoPauloItbiSimulation } from "./SaoPauloItbiSimulation";
 
 export function ItbiSimulation() {
   const [city, setCity] = useState<RegistrationCity | "">("");
@@ -19,6 +20,7 @@ export function ItbiSimulation() {
 
   const selectedCity = city ? getRegistrationCity(city) : null;
   const inDevelopment = selectedCity?.availability === "IN_DEVELOPMENT";
+  const isSaoPaulo = city === "SAO_PAULO";
 
   function selectCity(nextCity: RegistrationCity) {
     setCity(nextCity);
@@ -81,13 +83,15 @@ export function ItbiSimulation() {
       <section>
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">Simulação simplificada</p>
         <h2 className="mt-2 text-xl font-bold text-slate-950 sm:text-2xl">Simulação Simplificada de ITBI</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Selecione a cidade e informe o valor de compra e venda do imóvel para obter uma estimativa.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Selecione a cidade e informe os dados da operação para obter uma estimativa.</p>
       </section>
 
       <ItbiCitySelector value={city} onChange={selectCity} error={cityError} />
 
       {inDevelopment && selectedCity ? (
         <RegistrationDevelopmentState kind="CITY" cityLabel={selectedCity.label} />
+      ) : isSaoPaulo ? (
+        <SaoPauloItbiSimulation />
       ) : (
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(330px,0.8fr)_minmax(0,1.2fr)]">
           <ItbiForm
@@ -113,7 +117,10 @@ export function ItbiSimulation() {
       )}
 
       <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-4 text-sm leading-6 text-goodblue-900">
-        <strong>Importante:</strong> esta é uma simulação simplificada baseada exclusivamente no valor de compra e venda informado. O valor definitivo pode variar conforme a base reconhecida pelo município, o enquadramento da operação e a emissão da guia oficial.
+        <strong>Importante:</strong>{" "}
+        {isSaoPaulo
+          ? "esta é uma estimativa baseada nas regras informadas para contratos celebrados em 2026. A base considera o maior valor entre a transação e o Valor Venal de Referência. O valor definitivo depende do enquadramento e da emissão oficial."
+          : "esta é uma simulação simplificada baseada exclusivamente no valor de compra e venda informado. O valor definitivo pode variar conforme a base reconhecida pelo município, o enquadramento da operação e a emissão da guia oficial."}
       </section>
     </div>
   );

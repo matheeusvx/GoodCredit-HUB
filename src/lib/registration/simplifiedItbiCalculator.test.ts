@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RegistrationCity } from "../../types/registration";
+import { getRegistrationCity } from "./registrationCities";
 import { calculateSimplifiedItbi } from "./simplifiedItbiCalculator";
 
 describe("calculateSimplifiedItbi - São Bernardo do Campo", () => {
@@ -44,7 +45,14 @@ describe("calculateSimplifiedItbi - Diadema", () => {
 });
 
 describe("calculateSimplifiedItbi - validações", () => {
-  it.each<RegistrationCity>(["SANTO_ANDRE", "SAO_PAULO", "GUARULHOS", "MAUA"])("não calcula a cidade %s", (city) => {
+  it("libera somente São Paulo entre as cidades que estavam em desenvolvimento", () => {
+    expect(getRegistrationCity("SAO_PAULO").availability).toBe("AVAILABLE");
+    expect(getRegistrationCity("SANTO_ANDRE").availability).toBe("IN_DEVELOPMENT");
+    expect(getRegistrationCity("GUARULHOS").availability).toBe("IN_DEVELOPMENT");
+    expect(getRegistrationCity("MAUA").availability).toBe("IN_DEVELOPMENT");
+  });
+
+  it.each<RegistrationCity>(["SANTO_ANDRE", "GUARULHOS", "MAUA"])("não calcula a cidade %s", (city) => {
     const result = calculateSimplifiedItbi({ city, purchasePrice: 250000 });
     expect(result.status).toBe("IN_DEVELOPMENT");
     expect(result.estimatedItbi).toBeNull();
