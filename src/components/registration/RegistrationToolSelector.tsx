@@ -1,10 +1,10 @@
-import { Calculator, FileText } from "lucide-react";
+import { Calculator, Scale } from "lucide-react";
 import { type KeyboardEvent, useRef } from "react";
 import type { RegistrationTool } from "../../types/registration";
 
 const tools = [
   { id: "ITBI" as const, label: "Simulação de ITBI", icon: Calculator, panelId: "registration-itbi-panel" },
-  { id: "CARTORIAL_COSTS" as const, label: "Simulação de Custas", icon: FileText, panelId: "registration-costs-panel" }
+  { id: "CARTORIAL_BALANCE" as const, label: "Balancete Cartorial", icon: Scale, panelId: "registration-balance-panel" }
 ];
 
 export function RegistrationToolSelector({ value, onChange }: { value: RegistrationTool; onChange: (tool: RegistrationTool) => void }) {

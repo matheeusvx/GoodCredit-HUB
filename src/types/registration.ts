@@ -1,4 +1,4 @@
-export type RegistrationTool = "ITBI" | "CARTORIAL_COSTS";
+export type RegistrationTool = "ITBI" | "CARTORIAL_BALANCE";
 
 export type RegistrationCity =
   | "SAO_BERNARDO_DO_CAMPO"

@@ -17,6 +17,9 @@ export const HUB_VIEW_PATHS: Record<HubView, string> = {
 export type ResolvedHubView = HubView | "not-found";
 
 export function resolveHubView(pathname: string): ResolvedHubView {
+  if (/^\/registro(?:\/balancete(?:\/novo|\/[^/]+)?)?$/.test(pathname)) {
+    return "registration";
+  }
   if (
     /^\/checklist-conformidade(?:\/novo|\/[^/]+)?$/.test(pathname)
   ) {
