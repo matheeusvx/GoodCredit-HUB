@@ -16,6 +16,12 @@ type CaseRow = {
   id: string; owner_id: string; client_name: string; process_reference: string | null; registry_office: string | null;
   city: string | null; operation_mode: RegistrationFinancialCase["operationMode"]; advisory_fee_expected_cents: number;
   estimated_itbi_cents: number; estimated_registry_cents: number; estimated_other_costs_cents: number; notes: string | null;
+  control_number?: number | null; signing_date?: string | null; referral_source?: string | null; bank_branch?: string | null;
+  iq_status?: RegistrationFinancialCase["iqStatus"]; payment_status?: RegistrationFinancialCase["paymentStatus"]; collection_status?: RegistrationFinancialCase["collectionStatus"];
+  itbi_amount_cents?: number; itbi_payment_status?: RegistrationFinancialCase["itbiPaymentStatus"]; protocol_reference?: string | null;
+  registry_costs_cents?: number; registry_costs_payment_status?: RegistrationFinancialCase["registryCostsPaymentStatus"];
+  operational_status?: string | null; operational_status_updated_at?: string | null; bank_delivery_date?: string | null;
+  seller_payment_status?: RegistrationFinancialCase["sellerPaymentStatus"]; seller_payment_date?: string | null;
   financial_finalized_at: string | null; opened_at: string; archived_at: string | null; created_at: string; updated_at: string;
 };
 
@@ -31,6 +37,12 @@ function mapCase(row: CaseRow): RegistrationFinancialCase {
   return {
     id: row.id, ownerId: row.owner_id, clientName: row.client_name, processReference: row.process_reference ?? "",
     registryOffice: row.registry_office ?? "", city: row.city ?? "", operationMode: row.operation_mode,
+    controlNumber: row.control_number ?? null, signingDate: row.signing_date ?? null, referralSource: row.referral_source ?? "", bankBranch: row.bank_branch ?? "",
+    iqStatus: row.iq_status ?? null, paymentStatus: row.payment_status ?? null, collectionStatus: row.collection_status ?? null,
+    itbiAmountCents: Number(row.itbi_amount_cents ?? 0), itbiPaymentStatus: row.itbi_payment_status ?? null, protocolReference: row.protocol_reference ?? "",
+    registryCostsCents: Number(row.registry_costs_cents ?? 0), registryCostsPaymentStatus: row.registry_costs_payment_status ?? null,
+    operationalStatus: row.operational_status ?? "", operationalStatusUpdatedAt: row.operational_status_updated_at ?? null,
+    bankDeliveryDate: row.bank_delivery_date ?? null, sellerPaymentStatus: row.seller_payment_status ?? null, sellerPaymentDate: row.seller_payment_date ?? null,
     advisoryFeeExpectedCents: Number(row.advisory_fee_expected_cents), estimatedItbiCents: Number(row.estimated_itbi_cents),
     estimatedRegistryCents: Number(row.estimated_registry_cents), estimatedOtherCostsCents: Number(row.estimated_other_costs_cents), notes: row.notes ?? "",
     financialFinalizedAt: row.financial_finalized_at, openedAt: row.opened_at, archivedAt: row.archived_at, createdAt: row.created_at, updatedAt: row.updated_at
@@ -60,6 +72,12 @@ function casePayload(input: RegistrationFinancialCaseInput) {
   return {
     client_name: input.clientName.trim(), process_reference: input.processReference.trim() || null, registry_office: input.registryOffice.trim() || null,
     city: input.city.trim() || null, operation_mode: input.operationMode, advisory_fee_expected_cents: input.advisoryFeeExpectedCents,
+    signing_date: input.signingDate || null, referral_source: input.referralSource.trim() || null, bank_branch: input.bankBranch.trim() || null,
+    iq_status: input.iqStatus, payment_status: input.paymentStatus, collection_status: input.collectionStatus,
+    itbi_amount_cents: input.itbiAmountCents, itbi_payment_status: input.itbiPaymentStatus, protocol_reference: input.protocolReference.trim() || null,
+    registry_costs_cents: input.registryCostsCents, registry_costs_payment_status: input.registryCostsPaymentStatus,
+    operational_status: input.operationalStatus.trim(), bank_delivery_date: input.bankDeliveryDate || null,
+    seller_payment_status: input.sellerPaymentStatus, seller_payment_date: input.sellerPaymentDate || null,
     estimated_itbi_cents: input.estimatedItbiCents, estimated_registry_cents: input.estimatedRegistryCents,
     estimated_other_costs_cents: input.estimatedOtherCostsCents, notes: input.notes.trim() || null, opened_at: input.openedAt
   };
@@ -168,6 +186,78 @@ export async function updateFinancialCase(id: string, input: RegistrationFinanci
   const ownerId = await getAuthenticatedUserId();
   const { error } = await client.from("registration_financial_cases").update(casePayload(input)).eq("id", id).eq("owner_id", ownerId);
   if (error) throw new Error("Não foi possível salvar o balancete.");
+}
+
+export type RegistrationOperationalCasePatch = Partial<Pick<RegistrationFinancialCase,
+  "iqStatus" | "paymentStatus" | "collectionStatus" | "itbiPaymentStatus" | "registryCostsPaymentStatus" |
+  "sellerPaymentStatus" | "operationalStatus" | "signingDate" | "referralSource" | "bankBranch" | "registryOffice" |
+  "protocolReference" | "itbiAmountCents" | "registryCostsCents" | "bankDeliveryDate" | "sellerPaymentDate" | "operationMode"
+>>;
+
+export async function updateFinancialCaseFields(id: string, patch: RegistrationOperationalCasePatch): Promise<void> {
+  const client = requireSupabase();
+  const ownerId = await getAuthenticatedUserId();
+  const columnMap: Record<keyof RegistrationOperationalCasePatch, string> = {
+    iqStatus: "iq_status", paymentStatus: "payment_status", collectionStatus: "collection_status", itbiPaymentStatus: "itbi_payment_status",
+    registryCostsPaymentStatus: "registry_costs_payment_status", sellerPaymentStatus: "seller_payment_status", operationalStatus: "operational_status",
+    signingDate: "signing_date", referralSource: "referral_source", bankBranch: "bank_branch", registryOffice: "registry_office",
+    protocolReference: "protocol_reference", itbiAmountCents: "itbi_amount_cents", registryCostsCents: "registry_costs_cents",
+    bankDeliveryDate: "bank_delivery_date", sellerPaymentDate: "seller_payment_date", operationMode: "operation_mode"
+  };
+  const payload: Record<string, string | number | null> = {};
+  for (const [key, value] of Object.entries(patch) as Array<[keyof RegistrationOperationalCasePatch, RegistrationOperationalCasePatch[keyof RegistrationOperationalCasePatch]]>) {
+    payload[columnMap[key]] = value === "" ? null : value ?? null;
+  }
+  const { error } = await client.from("registration_financial_cases").update(payload).eq("id", id).eq("owner_id", ownerId);
+  if (error) throw new Error("Não foi possível salvar a alteração. O valor anterior foi restaurado.");
+}
+
+export async function listMyFinancialWorkspaceData(): Promise<{ records: RegistrationFinancialCaseWithMetrics[]; transactions: RegistrationFinancialTransaction[] }> {
+  const client = requireSupabase();
+  const ownerId = await getAuthenticatedUserId();
+  const { data, error } = await client.from("registration_financial_cases").select("*").eq("owner_id", ownerId).order("updated_at", { ascending: false });
+  if (error) throw new Error("Não foi possível carregar os processos cartoriais.");
+  const cases = ((data ?? []) as CaseRow[]).map(mapCase);
+  const grouped = await transactionsForCases(cases.map((item) => item.id));
+  const transactions = [...grouped.values()].flat();
+  return { records: cases.map((financialCase) => ({ financialCase, metrics: calculateRegistrationFinancialMetrics(financialCase, grouped.get(financialCase.id) ?? []) })), transactions };
+}
+
+export async function listRegistrationOperationalSuggestions(): Promise<{ referrals: string[]; bankBranches: string[]; registryOffices: string[] }> {
+  const { records } = await listMyFinancialWorkspaceData();
+  const unique = (values: string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return {
+    referrals: unique(records.map(({ financialCase }) => financialCase.referralSource)),
+    bankBranches: unique(records.map(({ financialCase }) => financialCase.bankBranch)),
+    registryOffices: unique(records.map(({ financialCase }) => financialCase.registryOffice))
+  };
+}
+
+export async function registerOperationalPayment(params: {
+  caseId: string; target: "ITBI" | "REGISTRY_FEES"; payer: "GOODCREDIT" | "CLIENT";
+  amountCents: number; date: string; paymentMethod: string; reference: string; notes: string;
+}): Promise<void> {
+  const client = requireSupabase();
+  const ownerId = await getAuthenticatedUserId();
+  const autoReference = params.target === "ITBI" ? "AUTO:ITBI" : "AUTO:REGISTRY_FEES";
+  const { data: existing, error: lookupError } = await client.from("registration_financial_transactions").select("id").eq("case_id", params.caseId).eq("owner_id", ownerId).eq("reference_number", autoReference).maybeSingle();
+  if (lookupError) throw new Error("Não foi possível conferir o pagamento operacional existente.");
+  const statusColumn = params.target === "ITBI" ? "itbi_payment_status" : "registry_costs_payment_status";
+  const amountColumn = params.target === "ITBI" ? "itbi_amount_cents" : "registry_costs_cents";
+  const status = params.payer === "GOODCREDIT" ? "PAID_BY_GOODCREDIT" : "PAID_BY_CLIENT";
+  const transaction = {
+    transaction_type: params.payer === "GOODCREDIT" ? "EXPENSE" : "DIRECT_CUSTOMER_PAYMENT",
+    category: params.target === "ITBI" ? "ITBI" : "Custas cartorárias", transaction_date: params.date, amount_cents: params.amountCents,
+    advisory_allocation_cents: 0, cost_allocation_cents: 0, customer_interest_cents: 0, customer_total_paid_cents: 0,
+    adjustment_direction: null, payment_method: params.paymentMethod || null, reference_number: autoReference,
+    description: params.reference || null, notes: params.notes || null
+  };
+  const transactionResult = existing
+    ? await client.from("registration_financial_transactions").update(transaction).eq("id", existing.id).eq("owner_id", ownerId)
+    : await client.from("registration_financial_transactions").insert({ case_id: params.caseId, owner_id: ownerId, ...transaction });
+  if (transactionResult.error) throw new Error("Não foi possível registrar o pagamento operacional.");
+  const { error: caseError } = await client.from("registration_financial_cases").update({ [statusColumn]: status, [amountColumn]: params.amountCents }).eq("id", params.caseId).eq("owner_id", ownerId);
+  if (caseError) throw new Error("O pagamento foi registrado, mas o status do processo precisa ser revisado.");
 }
 
 async function updateCaseTimestamp(id: string, values: { archived_at?: string | null; financial_finalized_at?: string | null }) {

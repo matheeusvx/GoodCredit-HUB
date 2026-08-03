@@ -5,7 +5,7 @@ export function validateRegistrationFinancialCase(input: RegistrationFinancialCa
   if (!input.clientName.trim()) errors.push("Informe o nome do cliente.");
   if (!input.openedAt) errors.push("Informe a data de abertura.");
   if (input.advisoryFeeExpectedCents < 0) errors.push("O valor da assessoria não pode ser negativo.");
-  if ([input.estimatedItbiCents, input.estimatedRegistryCents, input.estimatedOtherCostsCents].some((value) => value < 0)) {
+  if ([input.estimatedItbiCents, input.estimatedRegistryCents, input.estimatedOtherCostsCents, input.itbiAmountCents, input.registryCostsCents].some((value) => value < 0)) {
     errors.push("Os valores estimados não podem ser negativos.");
   }
   return errors;

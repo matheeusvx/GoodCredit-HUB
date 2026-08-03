@@ -5,6 +5,7 @@ import { formatCentsBRL } from "../../lib/registration/financial/money";
 import { validateRegistrationTransaction } from "../../lib/registration/financial/validation";
 import type { RegistrationFinancialOperationMode, RegistrationFinancialTransaction, RegistrationFinancialTransactionInput } from "../../types/registrationFinancial";
 import { FinancialMoneyInput } from "./FinancialMoneyInput";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../../lib/registration/financial/operationalConstants";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function blank(): RegistrationFinancialTransactionInput {
@@ -15,14 +16,15 @@ function fromRecord(item: RegistrationFinancialTransaction): RegistrationFinanci
   return input;
 }
 
-export function FinancialTransactionForm({ operationMode, editing, disabled, onCancelEdit, onSubmit }: {
+export function FinancialTransactionForm({ operationMode, editing, disabled, initialType = "INCOME", onCancelEdit, onSubmit }: {
   operationMode: RegistrationFinancialOperationMode; editing: RegistrationFinancialTransaction | null; disabled: boolean;
+  initialType?: RegistrationFinancialTransactionInput["transactionType"];
   onCancelEdit: () => void; onSubmit: (input: RegistrationFinancialTransactionInput) => Promise<void>;
 }) {
   const [input, setInput] = useState<RegistrationFinancialTransactionInput>(blank);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { setInput(editing ? fromRecord(editing) : blank()); setErrors([]); }, [editing]);
+  useEffect(() => { setInput(editing ? fromRecord(editing) : { ...blank(), transactionType: initialType, adjustmentDirection: initialType === "ADJUSTMENT" ? "POSITIVE" : null }); setErrors([]); }, [editing, initialType]);
   const distributionRemaining = useMemo(() => input.amountCents - input.advisoryAllocationCents - input.costAllocationCents, [input]);
 
   function set<K extends keyof RegistrationFinancialTransactionInput>(key: K, value: RegistrationFinancialTransactionInput[K]) { setInput((current) => ({ ...current, [key]: value })); }
@@ -41,7 +43,7 @@ export function FinancialTransactionForm({ operationMode, editing, disabled, onC
         <label className="text-sm font-semibold text-slate-700">Tipo<select className={`${inputClass} mt-2`} value={input.transactionType} disabled={disabled} onChange={(e) => { const type = e.target.value as RegistrationFinancialTransactionInput["transactionType"]; setInput((current) => ({ ...current, transactionType: type, advisoryAllocationCents: type === "INCOME" ? current.advisoryAllocationCents : 0, costAllocationCents: type === "INCOME" ? current.costAllocationCents : 0, adjustmentDirection: type === "ADJUSTMENT" ? "POSITIVE" : null })); }}>{Object.entries(REGISTRATION_TRANSACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="text-sm font-semibold text-slate-700">Data<input type="date" className={`${inputClass} mt-2`} value={input.transactionDate} disabled={disabled} onChange={(e) => set("transactionDate", e.target.value)} /></label>
         <label className="text-sm font-semibold text-slate-700">Valor líquido<div className="mt-2"><FinancialMoneyInput valueCents={input.amountCents} disabled={disabled} onChange={(value) => { setInput((current) => ({ ...current, amountCents: value, customerTotalPaidCents: Math.max(current.customerTotalPaidCents, value) })); }} /></div></label>
-        <label className="text-sm font-semibold text-slate-700">Categoria<input className={`${inputClass} mt-2`} value={input.category} disabled={disabled} onChange={(e) => set("category", e.target.value)} placeholder="Ex.: ITBI, registro" /></label>
+        <label className="text-sm font-semibold text-slate-700">Categoria<input list="registration-transaction-categories" className={`${inputClass} mt-2`} value={input.category} disabled={disabled} onChange={(e) => set("category", e.target.value)} placeholder="Selecione ou digite" /><datalist id="registration-transaction-categories">{(input.transactionType === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(category=><option key={category} value={category}/>)}</datalist></label>
         {input.transactionType === "INCOME" && <>
           <label className="text-sm font-semibold text-slate-700">Alocado à assessoria<div className="mt-2"><FinancialMoneyInput valueCents={input.advisoryAllocationCents} disabled={disabled} onChange={(value) => set("advisoryAllocationCents", value)} /></div></label>
           <label className="text-sm font-semibold text-slate-700">Alocado às custas<div className="mt-2"><FinancialMoneyInput valueCents={input.costAllocationCents} disabled={disabled || operationMode === "ADVISORY_ONLY"} onChange={(value) => set("costAllocationCents", value)} /></div></label>

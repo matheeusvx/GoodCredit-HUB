@@ -34,6 +34,7 @@ export async function generateRegistrationFinancialPdf(detail: RegistrationFinan
   pdf.setTextColor(15, 118, 76); line("GOODCREDIT HUB", 11, true);
   pdf.setTextColor(15, 23, 42); line("Balancete Cartorial", 20, true);
   line(`Cliente: ${detail.financialCase.clientName}`, 11, true);
+  line(`Número de controle: ${detail.financialCase.controlNumber ?? "Não informado"} | Assinatura: ${detail.financialCase.signingDate ? new Date(`${detail.financialCase.signingDate}T12:00:00`).toLocaleDateString("pt-BR") : "Não informada"}`);
   line(`Processo: ${detail.financialCase.processReference || "Não informado"}`);
   line(`Cartório: ${detail.financialCase.registryOffice || "Não informado"} | Cidade: ${detail.financialCase.city || "Não informada"}`);
   line(`Modalidade: ${REGISTRATION_FINANCIAL_MODE_LABELS[detail.financialCase.operationMode]}`);
@@ -46,6 +47,7 @@ export async function generateRegistrationFinancialPdf(detail: RegistrationFinan
   line(`Juros pagos pelo cliente: ${formatCentsBRL(detail.metrics.customerInterestCents)} (não integra o saldo de custas)`);
   y += 3; line("Estimativas", 13, true);
   line(`ITBI: ${formatCentsBRL(detail.financialCase.estimatedItbiCents)} | Registro: ${formatCentsBRL(detail.financialCase.estimatedRegistryCents)} | Outras custas: ${formatCentsBRL(detail.financialCase.estimatedOtherCostsCents)}`);
+  line(`ITBI operacional: ${formatCentsBRL(detail.financialCase.itbiAmountCents)} | Custas operacionais: ${formatCentsBRL(detail.financialCase.registryCostsCents)} | Protocolo: ${detail.financialCase.protocolReference || "Não informado"}`);
   y += 3; line("Histórico de lançamentos", 13, true);
   if (detail.transactions.length === 0) line("Nenhum lançamento registrado.");
   detail.transactions.forEach((item) => line(`${new Date(`${item.transactionDate}T12:00:00`).toLocaleDateString("pt-BR")} | ${REGISTRATION_TRANSACTION_LABELS[item.transactionType]} | ${formatCentsBRL(item.amountCents)} | ${item.description || item.category || "Sem descrição"}`));

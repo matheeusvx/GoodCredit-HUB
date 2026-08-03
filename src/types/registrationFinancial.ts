@@ -11,6 +11,14 @@ export type RegistrationFinancialTransactionType =
 
 export type RegistrationFinancialAdjustmentDirection = "POSITIVE" | "NEGATIVE";
 
+export type RegistrationIqStatus =
+  | "SANTANDER" | "CAIXA" | "INTER" | "ITAU" | "BRADESCO" | "BANCO_DO_BRASIL" | "NAO";
+export type RegistrationPaymentStatus = "TO_CHARGE" | "FULL_PAYMENT" | "FOLLOWED_ACCOUNT" | "ADVISORY_ONLY" | "NO_PAYMENT";
+export type RegistrationCollectionStatus = "TO_CHARGE" | "ALREADY_PAID" | "NOTHING_PAID" | "DO_NOT_CHARGE" | "CHARGE_SENT";
+export type RegistrationItbiPaymentStatus = "PENDING" | "PAID_BY_GOODCREDIT" | "PAID_BY_CLIENT" | "EXEMPT" | "NOT_APPLICABLE";
+export type RegistrationCostsPaymentStatus = "PENDING" | "PAID_BY_GOODCREDIT" | "PAID_BY_CLIENT" | "NOT_APPLICABLE";
+export type RegistrationSellerPaymentStatus = "PENDING" | "IN_PROGRESS" | "PAID" | "NOT_APPLICABLE";
+
 export type RegistrationFinancialStatus =
   | "AWAITING_PAYMENT"
   | "PARTIAL_PAYMENT"
@@ -34,6 +42,23 @@ export interface RegistrationFinancialCase {
   processReference: string;
   registryOffice: string;
   city: string;
+  controlNumber: number | null;
+  signingDate: string | null;
+  referralSource: string;
+  bankBranch: string;
+  iqStatus: RegistrationIqStatus | null;
+  paymentStatus: RegistrationPaymentStatus | null;
+  collectionStatus: RegistrationCollectionStatus | null;
+  itbiAmountCents: number;
+  itbiPaymentStatus: RegistrationItbiPaymentStatus | null;
+  protocolReference: string;
+  registryCostsCents: number;
+  registryCostsPaymentStatus: RegistrationCostsPaymentStatus | null;
+  operationalStatus: string;
+  operationalStatusUpdatedAt: string | null;
+  bankDeliveryDate: string | null;
+  sellerPaymentStatus: RegistrationSellerPaymentStatus | null;
+  sellerPaymentDate: string | null;
   operationMode: RegistrationFinancialOperationMode;
   advisoryFeeExpectedCents: number;
   estimatedItbiCents: number;
@@ -124,12 +149,101 @@ export interface RegistrationFinancialDashboard {
   valueToRefundCents: number;
 }
 
+export interface RegistrationOperationalDashboard {
+  activeProcesses: number;
+  toCharge: number;
+  receivedByGoodCreditCents: number;
+  pendingItbiOrRegistry: number;
+}
+
+export interface RegistrationFinancialReportFilters {
+  startDate: string;
+  endDate: string;
+  clientSearch: string;
+  processSearch: string;
+  operationMode: "ALL" | RegistrationFinancialOperationMode;
+  registryOffice: string;
+  iqStatus: "ALL" | RegistrationIqStatus;
+  paymentStatus: "ALL" | RegistrationPaymentStatus;
+  collectionStatus: "ALL" | RegistrationCollectionStatus;
+  archive: RegistrationFinancialArchiveFilter;
+}
+
+export interface RegistrationMonthlyCashFlow {
+  competence: string;
+  incomeCents: number;
+  expensesCents: number;
+  refundsCents: number;
+  netBalanceCents: number;
+  cumulativeBalanceCents: number;
+}
+
+export interface RegistrationCategorySummary {
+  category: string;
+  incomeCents: number;
+  expenseCents: number;
+  balanceCents: number;
+}
+
+export interface RegistrationProcessSummary {
+  caseId: string;
+  clientName: string;
+  processReference: string;
+  receivedCents: number;
+  paidCents: number;
+  balanceCents: number;
+  pendingReceivableCents: number;
+  refundableCents: number;
+  status: RegistrationFinancialStatus;
+}
+
+export type RegistrationFinancialHealthStatus = "HEALTHY" | "ATTENTION" | "CRITICAL";
+
+export interface RegistrationCashFlowReport {
+  netIncomeCents: number;
+  operationalExpensesCents: number;
+  refundsCents: number;
+  netBalanceCents: number;
+  advisoryReceivedCents: number;
+  costFundsReceivedCents: number;
+  itbiPaidCents: number;
+  registryFeesPaidCents: number;
+  directCustomerPaymentsCents: number;
+  customerInterestCents: number;
+  receivableCents: number;
+  refundableCents: number;
+  pendingPaymentCents: number;
+  divergenceCount: number;
+  reconciledCount: number;
+  expenseToIncomePercent: number | null;
+  healthStatus: RegistrationFinancialHealthStatus;
+  healthExplanation: string;
+  monthly: RegistrationMonthlyCashFlow[];
+  categories: RegistrationCategorySummary[];
+  processes: RegistrationProcessSummary[];
+}
+
 export type RegistrationFinancialCaseInput = Pick<
   RegistrationFinancialCase,
   | "clientName"
   | "processReference"
   | "registryOffice"
   | "city"
+  | "signingDate"
+  | "referralSource"
+  | "bankBranch"
+  | "iqStatus"
+  | "paymentStatus"
+  | "collectionStatus"
+  | "itbiAmountCents"
+  | "itbiPaymentStatus"
+  | "protocolReference"
+  | "registryCostsCents"
+  | "registryCostsPaymentStatus"
+  | "operationalStatus"
+  | "bankDeliveryDate"
+  | "sellerPaymentStatus"
+  | "sellerPaymentDate"
   | "operationMode"
   | "advisoryFeeExpectedCents"
   | "estimatedItbiCents"
