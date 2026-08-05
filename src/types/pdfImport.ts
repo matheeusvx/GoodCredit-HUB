@@ -42,6 +42,8 @@ export interface ParsedPdfTransaction {
   competence: string | null;
   description: string;
   payer: string;
+  counterpartyDocumentType?: "CPF" | "CNPJ" | "UNKNOWN";
+  counterpartyDocumentNumber?: string | null;
   amount: number | null;
   direction: TransactionDirection;
   account: string;

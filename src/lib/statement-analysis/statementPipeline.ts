@@ -13,6 +13,7 @@ import type { ReconstructedPdfLine } from "../../types/pdfImport";
 import { detectPlatformDocument } from "../income-analysis/platforms/detectPlatformDocument";
 import { parsePlatformIncomeDocument } from "../income-analysis/platforms/parsers/platformParserRegistry";
 import { maskHolderName } from "../income-analysis/platforms/platformUtils";
+import { extractAccountHolderIdentity } from "./relatedPartyClassifier";
 
 export const PROCESSING_STEPS = ["Validando arquivos", "Identificando o banco", "Verificando a camada de texto", "Extraindo páginas", "Executando OCR quando necessário", "Reconstruindo linhas e colunas", "Identificando movimentações", "Separando entradas e saídas", "Removendo saldos e totais", "Detectando duplicidades", "Detectando transferências internas", "Classificando as entradas", "Conciliando valores", "Calculando a renda mensal", "Gerando o diagnóstico"];
 
@@ -22,7 +23,7 @@ function emit(onProgress: (value: StatementProcessingProgress) => void, file: St
 
 export function createStatementFileRecord(file: File): StatementFileRecord {
   const extension = file.name.split(".").pop()?.toUpperCase(); const format = extension === "PDF" ? "PDF" : extension === "XLSX" ? "XLSX" : extension === "XLS" ? "XLS" : "CSV";
-  return { id: `statement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, name: file.name, size: file.size, format, pageCount: null, bank: "AUTO", holderMasked: "Não identificado", accountMasked: "Não identificada", periodStart: null, periodEnd: null, documentType: format === "PDF" ? "UNKNOWN" : "SPREADSHEET", needsOcr: false, status: "READY", parserId: "", extractionMethod: null, transactions: [], reconciliation: { status: "NO_SUMMARY", creditTotal: 0, debitTotal: 0, statementCreditTotal: null, statementDebitTotal: null, openingBalance: null, closingBalance: null, difference: null, method: "NOT_AVAILABLE", warnings: [] }, warnings: [], contentKind: "UNKNOWN", platformDocument: null };
+  return { id: `statement-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, name: file.name, size: file.size, format, pageCount: null, bank: "AUTO", holderMasked: "Não identificado", holderIdentity: null, accountMasked: "Não identificada", periodStart: null, periodEnd: null, documentType: format === "PDF" ? "UNKNOWN" : "SPREADSHEET", needsOcr: false, status: "READY", parserId: "", extractionMethod: null, transactions: [], reconciliation: { status: "NO_SUMMARY", creditTotal: 0, debitTotal: 0, statementCreditTotal: null, statementDebitTotal: null, openingBalance: null, closingBalance: null, difference: null, method: "NOT_AVAILABLE", warnings: [] }, warnings: [], contentKind: "UNKNOWN", platformDocument: null };
 }
 
 function derivePeriod(transactions: StatementFileRecord["transactions"]) { const dates = transactions.map((item) => item.date).filter((value): value is string => Boolean(value)).sort(); return { start: dates[0] || null, end: dates.at(-1) || null }; }
@@ -36,6 +37,10 @@ function maskedMetadata(lines: ReconstructedPdfLine[]) {
     holder = candidate.split(/\s+/).filter(Boolean).map((part) => `${part[0]}${"*".repeat(Math.min(5, Math.max(2, part.length - 1)))}`).join(" ");
   }
   return { holder, account };
+}
+
+function maskIdentityName(value: string): string {
+  return value.split(/\s+/).filter(Boolean).map((part) => `${part[0]}${"*".repeat(Math.min(5, Math.max(2, part.length - 1)))}`).join(" ");
 }
 
 export async function processStatementFile(fileRecord: StatementFileRecord, onProgress: (value: StatementProcessingProgress) => void, signal: AbortSignal): Promise<StatementFileRecord> {
@@ -52,11 +57,11 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
     const pages = Array.from({ length: document.numPages }, (_, index) => index + 1); emit(onProgress, record, 2);
     const extraction = await extractPdfText(document, pages, (progress) => emit(onProgress, record, 3, progress.label, progress.pageNumber, progress.totalPages), signal);
     record.documentType = extraction.info.documentType; record.needsOcr = extraction.info.documentType !== "TEXT";
-    const metadata = maskedMetadata(extraction.lines); record.holderMasked = metadata.holder; record.accountMasked = metadata.account;
+    const metadata = maskedMetadata(extraction.lines); const holderIdentity = extractAccountHolderIdentity(extraction.lines); record.holderIdentity = holderIdentity; record.holderMasked = holderIdentity ? maskIdentityName(holderIdentity.name) : metadata.holder; record.accountMasked = metadata.account;
     let bankCode = detectPdfBank(extraction.lines); record.bank = supportedBank(bankCode);
     let lines = extraction.lines; let method: "PDF_TEXT" | "PDF_OCR" = "PDF_TEXT";
     if (extraction.info.documentType === "SCANNED" || (record.bank === "CAIXA" && extraction.info.textCharacters < 100)) {
-      emit(onProgress, record, 4, "Executando OCR local"); lines = await processPdfWithOcr(document, pages, (progress) => emit(onProgress, record, 4, progress.label, progress.pageNumber, progress.totalPages), signal); method = "PDF_OCR"; record.needsOcr = true;
+      emit(onProgress, record, 4, "Executando OCR local"); lines = await processPdfWithOcr(document, pages, (progress) => emit(onProgress, record, 4, progress.label, progress.pageNumber, progress.totalPages), signal); method = "PDF_OCR"; record.needsOcr = true; const ocrHolder = extractAccountHolderIdentity(lines); if (ocrHolder) { record.holderIdentity = ocrHolder; record.holderMasked = maskIdentityName(ocrHolder.name); }
     }
     const platformDetection = detectPlatformDocument(lines);
     if (platformDetection.platform) {

@@ -18,6 +18,7 @@ export const RECONCILIATION_STATUS_LABELS: Record<ReconciliationStatus, string> 
 export const TRANSACTION_CLASSIFICATION_LABELS: Record<NormalizedTransactionClassification, string> = {
   INCLUDED_INCOME: "Considerada como renda",
   EXCLUDED_SAME_OWNER: "Desconsiderada — mesma titularidade",
+  EXCLUDED_SPOUSE: "Desconsiderada — transferência de cônjuge",
   EXCLUDED_RELATED_PERSON: "Desconsiderada — pessoa relacionada",
   EXCLUDED_INTERNAL_TRANSFER: "Desconsiderada — transferência entre contas analisadas",
   EXCLUDED_INVESTMENT_REDEMPTION: "Desconsiderada — resgate ou movimentação de aplicação",
@@ -86,6 +87,7 @@ export function buildClassificationExplanation(classification: NormalizedTransac
     case "INCLUDED_INCOME": return singular ? "1 entrada foi considerada como renda confirmada." : `${count} entradas foram consideradas como renda confirmada.`;
     case "PENDING_REVIEW": return singular ? "1 movimentação precisa de revisão." : `${count} movimentações precisam de revisão.`;
     case "EXCLUDED_SAME_OWNER": return singular ? "1 movimentação foi desconsiderada por ser de mesma titularidade." : `${count} movimentações foram desconsideradas por serem de mesma titularidade.`;
+    case "EXCLUDED_SPOUSE": return singular ? "1 movimentação foi desconsiderada por ser uma transferência recebida de cônjuge." : `${count} movimentações foram desconsideradas por serem transferências recebidas de cônjuge.`;
     case "EXCLUDED_RELATED_PERSON": return singular ? "1 movimentação foi desconsiderada por ser de uma pessoa relacionada." : `${count} movimentações foram desconsideradas por serem de pessoas relacionadas.`;
     case "EXCLUDED_INTERNAL_TRANSFER": return singular ? "1 movimentação foi desconsiderada por ser uma transferência entre contas analisadas." : `${count} movimentações foram desconsideradas por serem transferências entre contas analisadas.`;
     case "EXCLUDED_INVESTMENT_REDEMPTION": return singular ? "1 movimentação foi desconsiderada por ser resgate ou movimentação de aplicação." : `${count} movimentações foram desconsideradas por serem resgates ou movimentações de aplicação.`;

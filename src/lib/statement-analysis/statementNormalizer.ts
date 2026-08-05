@@ -1,6 +1,7 @@
 import type { ParsedPdfTransaction, PdfBankCode } from "../../types/pdfImport";
 import type { ExtractionMethod, NormalizedBankTransaction, SupportedBank } from "../../types/statementAnalysis";
 import { normalizeText } from "../income-analysis/formatters";
+import { extractCounterpartyName } from "./relatedPartyClassifier";
 
 export function supportedBank(bank: PdfBankCode): SupportedBank {
   return ["CAIXA", "BRADESCO", "ITAU", "SANTANDER", "INTER", "NUBANK", "MERCADO_PAGO"].includes(bank) ? bank as SupportedBank : "OTHER";
@@ -34,7 +35,7 @@ export function normalizePdfTransactions(params: {
       time: null,
       competence: item.competence,
       description: item.description,
-      counterparty: item.payer,
+      counterparty: item.payer || extractCounterpartyName(item.description) || "",
       amount: item.amount,
       direction: item.direction,
       balance: item.balance ?? null,
@@ -49,6 +50,14 @@ export function normalizePdfTransactions(params: {
       classificationConfidence: 0,
       warnings: [...item.warnings],
       fingerprint: "",
+      counterpartyIdentity: item.counterpartyDocumentType ? {
+        rawName: item.payer || extractCounterpartyName(item.description),
+        normalizedName: null,
+        documentType: item.counterpartyDocumentType,
+        documentNumber: item.counterpartyDocumentNumber || null,
+        entityType: "UNKNOWN",
+        confidence: item.counterpartyDocumentType === "UNKNOWN" ? 0.5 : 0.98,
+      } : null,
     };
     if (item.classificationHint === "SAME_OWNERSHIP") {
       base.classification = "EXCLUDED_SAME_OWNER";

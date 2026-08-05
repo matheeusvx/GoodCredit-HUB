@@ -1,15 +1,14 @@
-import type { NormalizedBankTransaction, RelatedPerson } from "../../types/statementAnalysis";
+import type { IncomeAnalysisParties, NormalizedBankTransaction } from "../../types/statementAnalysis";
 import { normalizeText } from "../income-analysis/formatters";
+import { applyRelatedPartyIncomeRule, createRelatedPartyIdentity } from "./relatedPartyClassifier";
 
 type Decision = Pick<NormalizedBankTransaction, "classification" | "classificationReason" | "classificationConfidence">;
 const decision = (classification: Decision["classification"], classificationReason: string, classificationConfidence: number): Decision => ({ classification, classificationReason, classificationConfidence });
 
-export function classifyTransaction(transaction: NormalizedBankTransaction, relatedPeople: RelatedPerson[] = []): Decision {
+export function classifyTransaction(transaction: NormalizedBankTransaction): Decision {
   if (transaction.direction === "DEBIT") return decision("EXCLUDED_OTHER", "Débito identificado; não compõe renda.", 1);
   if (transaction.classification !== "PENDING_REVIEW") return decision(transaction.classification, transaction.classificationReason, transaction.classificationConfidence);
   const text = normalizeText(`${transaction.description} ${transaction.counterparty}`);
-  const related = relatedPeople.find((person) => normalizeText(person.name).length >= 4 && text.includes(normalizeText(person.name)));
-  if (related) return decision("EXCLUDED_RELATED_PERSON", `Transferência de pessoa relacionada confirmada: ${related.relationship}.`, 0.96);
   if (/rendimento|rend pago aplic|juros|correcao monetaria|rentabilidade/.test(text)) return decision("EXCLUDED_FINANCIAL_YIELD", "Rendimento financeiro não operacional.", 0.96);
   if (/resgate|aplicacao|investimento|baixa de investimento/.test(text)) return decision("EXCLUDED_INVESTMENT_REDEMPTION", "Resgate ou baixa de investimento.", 0.94);
   if (/reembolso/.test(text)) return decision("EXCLUDED_REFUND", "Reembolso identificado.", 0.95);
@@ -33,14 +32,25 @@ export function classifyTransaction(transaction: NormalizedBankTransaction, rela
   return decision("PENDING_REVIEW", "Crédito sem origem recorrente confirmada.", 0.48);
 }
 
-export function classifyTransactions(transactions: NormalizedBankTransaction[], relatedPeople: RelatedPerson[] = []): NormalizedBankTransaction[] {
-  const initially = transactions.map((item) => ({ ...item, ...classifyTransaction(item, relatedPeople) }));
+function effectiveParties(transactions: NormalizedBankTransaction[], parties?: IncomeAnalysisParties): IncomeAnalysisParties {
+  if (parties?.accountHolder || parties?.spouses.length) return parties;
+  const holder = transactions.map((item) => item.accountHolder).find((value) => value && !value.includes("*") && normalizeText(value) !== "nao identificado");
+  return { accountHolder: holder ? createRelatedPartyIdentity(holder) : null, spouses: parties?.spouses || [] };
+}
+
+export function classifyTransactions(transactions: NormalizedBankTransaction[], parties?: IncomeAnalysisParties): NormalizedBankTransaction[] {
+  const analysisParties = effectiveParties(transactions, parties);
+  const initially = transactions.map((item) => {
+    const relatedPartyResult = applyRelatedPartyIncomeRule(item, analysisParties);
+    if (relatedPartyResult.relatedPartyClassification?.decision === "REVIEW_REQUIRED") return relatedPartyResult;
+    return { ...relatedPartyResult, ...classifyTransaction(relatedPartyResult) };
+  });
   const recurrence = new Map<string, Set<string>>();
-  initially.filter((item) => item.direction === "CREDIT" && item.counterparty && item.competence).forEach((item) => {
+  initially.filter((item) => item.direction === "CREDIT" && item.counterparty && item.competence && ["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification) && item.relatedPartyClassification?.decision !== "REVIEW_REQUIRED").forEach((item) => {
     const key = normalizeText(item.counterparty); const months = recurrence.get(key) || new Set<string>(); months.add(item.competence!); recurrence.set(key, months);
   });
   return initially.map((item) => {
-    if (item.classification !== "PENDING_REVIEW" || !item.counterparty) return item;
+    if (item.classification !== "PENDING_REVIEW" || !item.counterparty || item.relatedPartyClassification?.decision === "REVIEW_REQUIRED") return item;
     const months = recurrence.get(normalizeText(item.counterparty))?.size || 0;
     if (months >= 3) return { ...item, classification: "INCLUDED_INCOME" as const, classificationReason: `Recebimento externo recorrente em ${months} competências.`, classificationConfidence: 0.82 };
     return item;

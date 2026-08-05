@@ -57,6 +57,7 @@ function statementFile(
     pageCount: 2,
     bank: "NUBANK",
     holderMasked: "C****** T****",
+    holderIdentity: null,
     accountMasked: "****0000",
     periodStart: NUBANK_JUNE_2026_EXPECTED.periodStart,
     periodEnd: NUBANK_JUNE_2026_EXPECTED.periodEnd,

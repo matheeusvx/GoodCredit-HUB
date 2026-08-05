@@ -59,6 +59,9 @@ export function transaction(params: {
   if (!params.date) warnings.push("Data não identificada.");
   if (params.amount === null) warnings.push("Valor não identificado.");
   if (params.direction === "UNKNOWN") warnings.push("Natureza da movimentação não identificada.");
+  const counterpartySource = `${params.payer || ""} ${params.description}`;
+  const cnpj = counterpartySource.match(/(?:CNPJ\s*:?[\s-]*)?(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/i)?.[1] || null;
+  const cpf = counterpartySource.match(/(?:CPF\s*:?[\s-]*)?(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/i)?.[1] || null;
   const description = sanitizeBankText(params.description) || "Descrição não identificada";
   return {
     id: `pdf-${params.parserId}-${params.page}-${params.index}-${Date.now()}`,
@@ -67,6 +70,8 @@ export function transaction(params: {
     competence: params.date ? competenceFromDate(params.date) : null,
     description,
     payer: sanitizeBankText(params.payer || ""),
+    counterpartyDocumentType: cnpj ? "CNPJ" : cpf ? "CPF" : "UNKNOWN",
+    counterpartyDocumentNumber: (cnpj || cpf)?.replace(/\D/g, "") || null,
     amount: params.amount,
     direction: params.direction,
     account: maskAccount(params.context.account),

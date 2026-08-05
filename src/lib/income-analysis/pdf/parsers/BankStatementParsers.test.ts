@@ -17,6 +17,19 @@ describe("parsers bancários sanitizados", () => {
     const result = BradescoStatementParser.parse(lines, context("BRADESCO")); expect(result.transactions).toHaveLength(2); expect(result.transactions.map((value) => value.direction)).toEqual(["CREDIT", "DEBIT"]);
   });
 
+  it("associa o remetente que aparece após o valor no Bradesco", () => {
+    const lines = [
+      line("Data Histórico Documento Crédito Débito Saldo", 1, [item("Crédito", 420), item("Débito", 490), item("Saldo", 550)]),
+      line("01/04/2026 RECEBIMENTO TED D 500,00 700,00", 1, [item("01/04/2026", 30), item("RECEBIMENTO TED D", 100), item("500,00", 420), item("700,00", 550)]),
+      line("REMET. MARIA HELENA SOUZA"),
+      line("02/04/2026 PIX RECEBIDO 100,00 800,00", 1, [item("02/04/2026", 30), item("PIX RECEBIDO", 100), item("100,00", 420), item("800,00", 550)]),
+    ];
+    const result = BradescoStatementParser.parse(lines, context("BRADESCO"));
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0].payer).toContain("MARIA HELENA SOUZA");
+    expect(result.transactions[1].description).not.toContain("MARIA HELENA SOUZA");
+  });
+
   it("usa sinal do Mercado Pago e ignora saldo", () => {
     const lines = [line("Data Descrição ID da operação Valor Saldo"), line("01-04-2026 Pagamento recebido OP100 250,00 300,00"), line("02-04-2026 Pagamento efetuado OP101 -75,00 225,00")];
     const result = MercadoPagoStatementParser.parse(lines, context("MERCADO_PAGO")); expect(result.transactions.map((value) => [value.direction, value.amount])).toEqual([["CREDIT", 250], ["DEBIT", 75]]);

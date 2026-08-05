@@ -18,6 +18,7 @@ export type StatementFileStatus =
 export type NormalizedTransactionClassification =
   | "INCLUDED_INCOME"
   | "EXCLUDED_SAME_OWNER"
+  | "EXCLUDED_SPOUSE"
   | "EXCLUDED_RELATED_PERSON"
   | "EXCLUDED_INTERNAL_TRANSFER"
   | "EXCLUDED_INVESTMENT_REDEMPTION"
@@ -61,6 +62,9 @@ export interface NormalizedBankTransaction {
   fingerprint: string;
   linkedTransactionId?: string;
   manuallyReviewed?: boolean;
+  counterpartyIdentity?: CounterpartyIdentity | null;
+  relatedPartyClassification?: RelatedPartyClassification | null;
+  reviewAudit?: RelatedPartyReviewAudit[];
 }
 
 export interface StatementFileRecord {
@@ -72,6 +76,7 @@ export interface StatementFileRecord {
   pageCount: number | null;
   bank: SupportedBank | "AUTO";
   holderMasked: string;
+  holderIdentity: RelatedPartyIdentity | null;
   accountMasked: string;
   periodStart: string | null;
   periodEnd: string | null;
@@ -117,6 +122,64 @@ export interface RelatedPerson {
   id: string;
   name: string;
   relationship: string;
+}
+
+export type PartyDocumentType = "CPF" | "CNPJ" | "UNKNOWN";
+export type CounterpartyEntityType = "INDIVIDUAL" | "COMPANY" | "UNKNOWN";
+export type RelatedPartyType = "ACCOUNT_HOLDER" | "SPOUSE" | "THIRD_PARTY" | "UNKNOWN";
+export type RelatedPartyDecision =
+  | "EXCLUDE_SAME_HOLDER"
+  | "EXCLUDE_SPOUSE"
+  | "CONTINUE_COMPANY_CLASSIFICATION"
+  | "CONTINUE_THIRD_PARTY_CLASSIFICATION"
+  | "REVIEW_REQUIRED";
+
+export interface RelatedPartyIdentity {
+  name: string;
+  normalizedName: string;
+  documentType: PartyDocumentType;
+  documentNumber: string | null;
+  aliases: string[];
+}
+
+export interface IncomeAnalysisParties {
+  accountHolder: RelatedPartyIdentity | null;
+  spouses: RelatedPartyIdentity[];
+}
+
+export interface CounterpartyIdentity {
+  rawName: string | null;
+  normalizedName: string | null;
+  documentType: PartyDocumentType;
+  documentNumber: string | null;
+  entityType: CounterpartyEntityType;
+  confidence: number;
+}
+
+export interface RelatedPartyClassification {
+  relationship: RelatedPartyType;
+  decision: RelatedPartyDecision;
+  reason: string;
+  confidence: number;
+  evidence: string[];
+}
+
+export interface RelatedPartyReviewAudit {
+  previousClassification: NormalizedTransactionClassification;
+  newClassification: NormalizedTransactionClassification;
+  previousRelationship: RelatedPartyType;
+  newRelationship: RelatedPartyType;
+  reason: string;
+  reviewedAt: string;
+  reviewedBy: string;
+}
+
+export interface RelatedPartyExclusionSummary {
+  sameHolderAmount: number;
+  spouseAmount: number;
+  homonymousCompanyAmount: number;
+  reviewAmount: number;
+  spouseValidationApplied: boolean;
 }
 
 export interface MonthlyStatementAnalysis {
@@ -173,11 +236,12 @@ export interface AutomatedIncomeResult {
   analysisType: "BANK_STATEMENT" | "PLATFORM_INCOME";
   platformIncomeResult: PlatformIncomeResult | null;
   canSendToSimulation: boolean;
+  relatedPartySummary: RelatedPartyExclusionSummary;
 }
 
 export interface AutomatedIncomeState {
   clientName: string;
-  relatedPeople: RelatedPerson[];
+  parties: IncomeAnalysisParties;
   files: StatementFileRecord[];
   transactions: NormalizedBankTransaction[];
   result: AutomatedIncomeResult | null;

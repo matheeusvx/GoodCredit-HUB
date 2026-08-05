@@ -1,10 +1,13 @@
-import type { AutomatedIncomeResult, NormalizedBankTransaction, NormalizedTransactionClassification, StatementFileRecord } from "../../types/statementAnalysis";
+import type { AutomatedIncomeResult, IncomeAnalysisParties, NormalizedBankTransaction, NormalizedTransactionClassification, StatementFileRecord } from "../../types/statementAnalysis";
 import type { PlatformIncomeResult } from "../../types/platformIncome";
 import { formatCompetence, formatCurrencyBR } from "../income-analysis/formatters";
 import { buildMonthlyAnalysis } from "./monthlyAnalysis";
 import { analyzePayerConcentration } from "./payerConcentration";
 import { buildClassificationExplanation } from "./presentationLabels";
 import { analyzeStability, median } from "./stabilityAnalyzer";
+import { calculateRelatedPartyExclusions } from "./relatedPartyClassifier";
+
+const EMPTY_PARTIES: IncomeAnalysisParties = { accountHolder: null, spouses: [] };
 
 function calculatePlatformAutomatedIncome(
   clientName: string,
@@ -80,6 +83,7 @@ function calculatePlatformAutomatedIncome(
     analysisType: "PLATFORM_INCOME",
     platformIncomeResult: platformResult,
     canSendToSimulation: platformResult.canSendToSimulation,
+    relatedPartySummary: { sameHolderAmount: 0, spouseAmount: 0, homonymousCompanyAmount: 0, reviewAmount: 0, spouseValidationApplied: false },
   };
 }
 
@@ -87,7 +91,8 @@ export function calculateAutomatedIncome(
   clientName: string,
   files: StatementFileRecord[],
   transactions: NormalizedBankTransaction[],
-  platformResult: PlatformIncomeResult | null = null
+  platformResult: PlatformIncomeResult | null = null,
+  parties: IncomeAnalysisParties = EMPTY_PARTIES
 ): AutomatedIncomeResult {
   if (platformResult) {
     return calculatePlatformAutomatedIncome(clientName, files, platformResult);
@@ -108,13 +113,18 @@ export function calculateAutomatedIncome(
   const excludedGroups = new Map<NormalizedTransactionClassification, number>();
   credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).forEach((item) => excludedGroups.set(item.classification, (excludedGroups.get(item.classification) || 0) + 1));
   const analyzedMonths = complete.length || months.length;
+  const relatedPartySummary = calculateRelatedPartyExclusions(transactions, parties);
   const explanation = [
     ...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []),
     credits.length === 1 ? "Foi identificada 1 entrada bancária." : `Foram identificadas ${credits.length} entradas bancárias.`,
     buildClassificationExplanation("INCLUDED_INCOME", included.length),
     ...[...excludedGroups.entries()].map(([classification, count]) => buildClassificationExplanation(classification, count)),
     buildClassificationExplanation("PENDING_REVIEW", pending.length),
+    ...(relatedPartySummary.sameHolderAmount > 0 ? ["Transferências entre contas da mesma titularidade não foram consideradas como renda.", `Mesma titularidade excluída: ${formatCurrencyBR(relatedPartySummary.sameHolderAmount)}.`] : []),
+    ...(parties.spouses.length > 0 ? ["Transferências recebidas do cônjuge informado também foram desconsideradas.", `Transferências de cônjuge excluídas: ${formatCurrencyBR(relatedPartySummary.spouseAmount)}.`] : ["Não houve validação de transferências conjugais porque nenhum cônjuge foi informado."]),
+    ...(relatedPartySummary.homonymousCompanyAmount > 0 ? ["Créditos originados de pessoa jurídica não foram excluídos apenas pela semelhança entre o nome empresarial e o nome do titular ou do cônjuge.", `Empresas homônimas encaminhadas ao classificador: ${formatCurrencyBR(relatedPartySummary.homonymousCompanyAmount)}.`] : []),
+    ...(relatedPartySummary.reviewAmount > 0 ? [`Partes relacionadas com revisão pendente: ${formatCurrencyBR(relatedPartySummary.reviewAmount)}.`] : []),
     `A média utiliza ${analyzedMonths} ${analyzedMonths === 1 ? "competência" : "competências"} ${complete.length ? (analyzedMonths === 1 ? "completa" : "completas") : (analyzedMonths === 1 ? "disponível" : "disponíveis")}.`,
   ];
-  return { clientName, transactions, files, months, confirmedIncomeTotal, potentialIncomeTotal, confirmedMonthlyIncome: confirmedIncomeTotal / divisor, potentialMonthlyIncome: potentialIncomeTotal / divisor, medianIncome: median(complete.map((item) => item.confirmedIncome)), totalCredits: credits.reduce((sum, item) => sum + item.amount, 0), totalDebits: transactions.filter((item) => item.direction === "DEBIT").reduce((sum, item) => sum + item.amount, 0), totalExcluded: credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).reduce((sum, item) => sum + item.amount, 0), totalPending: pending.reduce((sum, item) => sum + item.amount, 0), completeMonths: complete.length, incompleteMonths: months.length - complete.length, ...stability, payerConcentration: concentration, topPayerShare: concentration[0]?.share || 0, topThreePayerShare: concentration.slice(0, 3).reduce((sum, item) => sum + item.share, 0), extractionConfidence, classificationConfidence, reconciliationStatus, explanation, generatedAt: new Date().toISOString(), analysisType: "BANK_STATEMENT", platformIncomeResult: null, canSendToSimulation: confirmedIncomeTotal > 0 };
+  return { clientName, transactions, files, months, confirmedIncomeTotal, potentialIncomeTotal, confirmedMonthlyIncome: confirmedIncomeTotal / divisor, potentialMonthlyIncome: potentialIncomeTotal / divisor, medianIncome: median(complete.map((item) => item.confirmedIncome)), totalCredits: credits.reduce((sum, item) => sum + item.amount, 0), totalDebits: transactions.filter((item) => item.direction === "DEBIT").reduce((sum, item) => sum + item.amount, 0), totalExcluded: credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).reduce((sum, item) => sum + item.amount, 0), totalPending: pending.reduce((sum, item) => sum + item.amount, 0), completeMonths: complete.length, incompleteMonths: months.length - complete.length, ...stability, payerConcentration: concentration, topPayerShare: concentration[0]?.share || 0, topThreePayerShare: concentration.slice(0, 3).reduce((sum, item) => sum + item.share, 0), extractionConfidence, classificationConfidence, reconciliationStatus, explanation, generatedAt: new Date().toISOString(), analysisType: "BANK_STATEMENT", platformIncomeResult: null, canSendToSimulation: confirmedIncomeTotal > 0, relatedPartySummary };
 }
