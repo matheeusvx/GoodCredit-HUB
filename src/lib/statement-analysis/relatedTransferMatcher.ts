@@ -24,7 +24,7 @@ export function matchInternalTransfers(transactions: NormalizedBankTransaction[]
 export function markTransitoryPairs(transactions: NormalizedBankTransaction[]): NormalizedBankTransaction[] {
   const result = transactions.map((item) => ({ ...item }));
   for (let index = 0; index < result.length; index += 1) {
-    const credit = result[index]; if (credit.direction !== "CREDIT" || credit.linkedTransactionId || !credit.date) continue;
+    const credit = result[index]; if (credit.direction !== "CREDIT" || credit.linkedTransactionId || !credit.date || credit.parserId === "shopee-pay") continue;
     const pairIndex = result.findIndex((item, candidate) => candidate !== index && item.direction === "DEBIT" && !item.linkedTransactionId && item.date === credit.date && Math.abs(item.amount - credit.amount) <= 0.01 && normalizeText(item.counterparty || item.description) === normalizeText(credit.counterparty || credit.description));
     if (pairIndex < 0) continue;
     const debit = result[pairIndex];

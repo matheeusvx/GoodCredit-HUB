@@ -9,6 +9,16 @@ export function classifyTransaction(transaction: NormalizedBankTransaction): Dec
   if (transaction.direction === "DEBIT") return decision("EXCLUDED_OTHER", "Débito identificado; não compõe renda.", 1);
   if (transaction.classification !== "PENDING_REVIEW") return decision(transaction.classification, transaction.classificationReason, transaction.classificationConfidence);
   const text = normalizeText(`${transaction.description} ${transaction.counterparty}`);
+  if (
+    transaction.parserId === "shopee-pay"
+    && normalizeText(transaction.description) === "saldo creditado"
+  ) {
+    return decision(
+      "INCLUDED_INCOME",
+      "Saldo creditado identificado no extrato ShopeePay.",
+      0.99
+    );
+  }
   if (/rendimento|rend pago aplic|juros|correcao monetaria|rentabilidade/.test(text)) return decision("EXCLUDED_FINANCIAL_YIELD", "Rendimento financeiro não operacional.", 0.96);
   if (/resgate|aplicacao|investimento|baixa de investimento/.test(text)) return decision("EXCLUDED_INVESTMENT_REDEMPTION", "Resgate ou baixa de investimento.", 0.94);
   if (/reembolso/.test(text)) return decision("EXCLUDED_REFUND", "Reembolso identificado.", 0.95);
@@ -41,6 +51,10 @@ function effectiveParties(transactions: NormalizedBankTransaction[], parties?: I
 export function classifyTransactions(transactions: NormalizedBankTransaction[], parties?: IncomeAnalysisParties): NormalizedBankTransaction[] {
   const analysisParties = effectiveParties(transactions, parties);
   const initially = transactions.map((item) => {
+    if (item.parserId === "shopee-pay" && item.direction === "DEBIT") {
+      if (item.classification !== "PENDING_REVIEW") return item;
+      return { ...item, ...classifyTransaction(item) };
+    }
     const relatedPartyResult = applyRelatedPartyIncomeRule(item, analysisParties);
     if (relatedPartyResult.relatedPartyClassification?.decision === "REVIEW_REQUIRED") return relatedPartyResult;
     return { ...relatedPartyResult, ...classifyTransaction(relatedPartyResult) };

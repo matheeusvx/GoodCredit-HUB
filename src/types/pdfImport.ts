@@ -39,6 +39,7 @@ export interface ParsedPdfTransaction {
   id: string;
   selected: boolean;
   date: string | null;
+  time?: string | null;
   competence: string | null;
   description: string;
   payer: string;
@@ -67,6 +68,7 @@ export type PdfBankCode =
   | "INTER"
   | "NUBANK"
   | "MERCADO_PAGO"
+  | "SHOPEE_PAY"
   | "C6"
   | "OTHER";
 
@@ -86,6 +88,14 @@ export interface PdfParseResult {
   parserId?: string;
   parserLabel?: string;
   bankCode?: PdfBankCode;
+  statementMetadata?: {
+    holderName: string | null;
+    holderCpf: string | null;
+    agency: string | null;
+    account: string | null;
+    periodStart: string | null;
+    periodEnd: string | null;
+  };
   parserAudit?: {
     requestedBank: PdfBankCode;
     selectedParserId: string;

@@ -4,11 +4,11 @@ import { normalizeText } from "../income-analysis/formatters";
 import { extractCounterpartyName } from "./relatedPartyClassifier";
 
 export function supportedBank(bank: PdfBankCode): SupportedBank {
-  return ["CAIXA", "BRADESCO", "ITAU", "SANTANDER", "INTER", "NUBANK", "MERCADO_PAGO"].includes(bank) ? bank as SupportedBank : "OTHER";
+  return ["CAIXA", "BRADESCO", "ITAU", "SANTANDER", "INTER", "NUBANK", "MERCADO_PAGO", "SHOPEE_PAY"].includes(bank) ? bank as SupportedBank : "OTHER";
 }
 
-export function transactionFingerprint(transaction: Pick<NormalizedBankTransaction, "date" | "amount" | "direction" | "description" | "documentId">): string {
-  const source = `${transaction.date}|${transaction.amount.toFixed(2)}|${transaction.direction}|${normalizeText(transaction.description).slice(0, 48)}|${transaction.documentId}`;
+export function transactionFingerprint(transaction: Pick<NormalizedBankTransaction, "date" | "time" | "amount" | "direction" | "description" | "documentId">): string {
+  const source = `${transaction.date}|${transaction.time || ""}|${transaction.amount.toFixed(2)}|${transaction.direction}|${normalizeText(transaction.description).slice(0, 48)}|${transaction.documentId}`;
   let hash = 2166136261;
   for (let index = 0; index < source.length; index += 1) { hash ^= source.charCodeAt(index); hash = Math.imul(hash, 16777619); }
   return `tx-${(hash >>> 0).toString(16)}`;
@@ -32,7 +32,7 @@ export function normalizePdfTransactions(params: {
       accountHolder: params.holder,
       maskedAccount: params.account,
       date: item.date,
-      time: null,
+      time: item.time ?? null,
       competence: item.competence,
       description: item.description,
       counterparty: item.payer || extractCounterpartyName(item.description) || "",

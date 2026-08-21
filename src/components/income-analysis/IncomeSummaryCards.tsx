@@ -3,6 +3,19 @@ import { getReconciliationStatusLabel, getStabilityLabel } from "../../lib/state
 import type { AutomatedIncomeResult } from "../../types/statementAnalysis";
 
 export function IncomeSummaryCards({ result }: { result: AutomatedIncomeResult }) {
+  if (result.analysisType === "SHOPEE_PAY") {
+    const cards = [
+      ["Renda confirmada", formatCurrencyBR(result.confirmedMonthlyIncome), "text-emerald-700"],
+      ["Renda potencial", formatCurrencyBR(result.potentialMonthlyIncome), "text-goodblue-700"],
+      ["Emissor", "ShopeePay", "text-goodblue-700"],
+      ["Competências consideradas", `${result.months.length} de 3`, "text-slate-900"],
+      ["Total analisado", formatCurrencyBR(result.confirmedIncomeTotal), "text-slate-900"],
+      ["Mediana (referência)", formatCurrencyBR(result.medianIncome), "text-slate-900"],
+      ["Método", "Média dos 3 meses mais recentes", "text-goodblue-700"],
+      ["Situação", result.canSendToSimulation ? "Análise concluída" : "Dados insuficientes", result.canSendToSimulation ? "text-emerald-700" : "text-amber-700"],
+    ];
+    return <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-semibold text-slate-500">{label}</p><p className={`mt-2 text-xl font-bold ${tone}`}>{value}</p></div>)}</section>;
+  }
   if (result.analysisType === "PLATFORM_INCOME" && result.platformIncomeResult) {
     const platform = result.platformIncomeResult;
     const statusLabels = {

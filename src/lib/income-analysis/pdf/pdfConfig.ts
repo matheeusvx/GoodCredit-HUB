@@ -22,6 +22,7 @@ export const PDF_BANK_OPTIONS: Array<{ value: PdfBankCode; label: string }> = [
   { value: "INTER", label: "Inter" },
   { value: "NUBANK", label: "Nubank" },
   { value: "MERCADO_PAGO", label: "Mercado Pago" },
+  { value: "SHOPEE_PAY", label: "ShopeePay" },
   { value: "C6", label: "C6" },
   { value: "OTHER", label: "Outro" },
 ];
@@ -75,5 +76,6 @@ export const PDF_BANK_MARKERS: Record<Exclude<PdfBankCode, "AUTO" | "OTHER">, st
   INTER: ["banco inter", "inter.co"],
   NUBANK: ["nubank", "nu pagamentos"],
   MERCADO_PAGO: ["mercado pago", "mercadopago"],
+  SHOPEE_PAY: ["shopeepay", "shpp brasil", "38.372.267/0001-82"],
   C6: ["c6 bank", "banco c6"],
 };

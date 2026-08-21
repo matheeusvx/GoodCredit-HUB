@@ -13,7 +13,7 @@ import type { ReconstructedPdfLine } from "../../types/pdfImport";
 import { detectPlatformDocument } from "../income-analysis/platforms/detectPlatformDocument";
 import { parsePlatformIncomeDocument } from "../income-analysis/platforms/parsers/platformParserRegistry";
 import { maskHolderName } from "../income-analysis/platforms/platformUtils";
-import { extractAccountHolderIdentity } from "./relatedPartyClassifier";
+import { createRelatedPartyIdentity, extractAccountHolderIdentity } from "./relatedPartyClassifier";
 
 export const PROCESSING_STEPS = ["Validando arquivos", "Identificando o banco", "Verificando a camada de texto", "Extraindo páginas", "Executando OCR quando necessário", "Reconstruindo linhas e colunas", "Identificando movimentações", "Separando entradas e saídas", "Removendo saldos e totais", "Detectando duplicidades", "Detectando transferências internas", "Classificando as entradas", "Conciliando valores", "Calculando a renda mensal", "Gerando o diagnóstico"];
 
@@ -103,9 +103,54 @@ export async function processStatementFile(fileRecord: StatementFileRecord, onPr
     const parsed = parsePdfTransactions(lines, { bankCode, account: record.accountMasked, source: method });
     const resolvedBankCode = parsed.bankCode || bankCode;
     record.bank = supportedBank(resolvedBankCode);
-    const transactions = normalizePdfTransactions({ sourceFileId: record.id, bank: resolvedBankCode, holder: record.holderMasked, account: maskAccount(record.accountMasked), parserId: parsed.parserId || "generic", extractionMethod: method, transactions: parsed.transactions });
-    const period = derivePeriod(transactions); const reconciliation = reconciliationFromPdf(parsed.reconciliation, transactions.length); const requiresReview = parsed.ambiguousLines.length > 0 || reconciliation.status === "DIVERGENCE" || parsed.parserId === "generic";
+    let transactions = normalizePdfTransactions({ sourceFileId: record.id, bank: resolvedBankCode, holder: record.holderMasked, account: maskAccount(record.accountMasked), parserId: parsed.parserId || "generic", extractionMethod: method, transactions: parsed.transactions });
+    const statementMetadata = parsed.statementMetadata;
+    if (statementMetadata?.holderName) {
+      record.holderIdentity = createRelatedPartyIdentity(
+        statementMetadata.holderName,
+        statementMetadata.holderCpf || ""
+      );
+      record.holderMasked = maskIdentityName(statementMetadata.holderName);
+    }
+    if (statementMetadata?.account) record.accountMasked = maskAccount(statementMetadata.account);
+    if (statementMetadata?.holderName || statementMetadata?.account) {
+      transactions = transactions.map((item) => ({
+        ...item,
+        accountHolder: statementMetadata.holderName
+          ? maskIdentityName(statementMetadata.holderName)
+          : item.accountHolder,
+        maskedAccount: statementMetadata.account
+          ? maskAccount(statementMetadata.account)
+          : item.maskedAccount,
+      }));
+    }
+    const transactionPeriod = derivePeriod(transactions);
+    const period = {
+      start: statementMetadata?.periodStart || transactionPeriod.start,
+      end: statementMetadata?.periodEnd || transactionPeriod.end,
+    };
+    const reconciliation = reconciliationFromPdf(parsed.reconciliation, transactions.length);
+    const isShopeePay = parsed.parserId === "shopee-pay";
+    const shopeeCreditCompetences = new Set(
+      transactions
+        .filter((item) =>
+          item.direction === "CREDIT"
+          && item.description === "Saldo creditado"
+          && item.competence
+        )
+        .map((item) => item.competence!)
+    );
+    const shopeeMetadataComplete = Boolean(
+      statementMetadata?.holderName
+      && statementMetadata.holderCpf
+      && statementMetadata.periodStart
+      && statementMetadata.periodEnd
+    );
+    const requiresReview = parsed.ambiguousLines.length > 0
+      || reconciliation.status === "DIVERGENCE"
+      || parsed.parserId === "generic"
+      || (isShopeePay && (!shopeeMetadataComplete || shopeeCreditCompetences.size < 3));
     emit(onProgress, record, 12, "Conferindo totais e saldos");
-    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []), ...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : [])], contentKind: "BANK_STATEMENT", processingTimeMs: performance.now() - started };
+    return { ...record, status: !transactions.length ? "UNRECOGNIZED" : reconciliation.status === "DIVERGENCE" ? "DIVERGENT" : requiresReview ? "REVIEW_REQUIRED" : "COMPLETED", parserId: parsed.parserId || "generic", extractionMethod: method, transactions, reconciliation, periodStart: period.start, periodEnd: period.end, warnings: [...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []), ...(parsed.reconciliation?.warnings || []), ...(parsed.ambiguousLines.length ? [`${parsed.ambiguousLines.length} linhas precisam de revisão.`] : []), ...(isShopeePay && !shopeeMetadataComplete ? ["Revise a identificação do titular e o período do extrato ShopeePay."] : []), ...(isShopeePay && shopeeCreditCompetences.size < 3 ? ["São necessárias três competências com Saldo creditado para concluir a análise ShopeePay."] : [])], contentKind: "BANK_STATEMENT", processingTimeMs: performance.now() - started };
   } finally { await document?.loadingTask.destroy().catch(() => undefined); }
 }

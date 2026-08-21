@@ -233,7 +233,7 @@ export interface AutomatedIncomeResult {
   reconciliationStatus: ReconciliationStatus;
   explanation: string[];
   generatedAt: string;
-  analysisType: "BANK_STATEMENT" | "PLATFORM_INCOME";
+  analysisType: "BANK_STATEMENT" | "PLATFORM_INCOME" | "SHOPEE_PAY";
   platformIncomeResult: PlatformIncomeResult | null;
   canSendToSimulation: boolean;
   relatedPartySummary: RelatedPartyExclusionSummary;

@@ -78,6 +78,7 @@ function bankCodeFromParserId(
     inter: "INTER",
     itau: "ITAU",
     "mercado-pago": "MERCADO_PAGO",
+    "shopee-pay": "SHOPEE_PAY",
     santander: "SANTANDER",
   };
   return parserBanks[parserId] || fallback;

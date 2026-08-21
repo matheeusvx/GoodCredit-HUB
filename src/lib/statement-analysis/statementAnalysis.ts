@@ -9,6 +9,177 @@ import { calculateRelatedPartyExclusions } from "./relatedPartyClassifier";
 
 const EMPTY_PARTIES: IncomeAnalysisParties = { accountHolder: null, spouses: [] };
 
+function cents(value: number): number {
+  return Math.round(value * 100);
+}
+
+function calculateShopeePayAutomatedIncome(
+  clientName: string,
+  files: StatementFileRecord[],
+  transactions: NormalizedBankTransaction[]
+): AutomatedIncomeResult {
+  const shopeeTransactions = transactions.filter(
+    (transaction) => transaction.parserId === "shopee-pay"
+  );
+  const includedCredits = shopeeTransactions.filter(
+    (transaction) =>
+      transaction.direction === "CREDIT"
+      && transaction.classification === "INCLUDED_INCOME"
+      && transaction.competence
+  );
+  const competenceTotals = new Map<string, number>();
+  includedCredits.forEach((transaction) => {
+    const competence = transaction.competence!;
+    competenceTotals.set(
+      competence,
+      (competenceTotals.get(competence) || 0) + cents(transaction.amount)
+    );
+  });
+  const selectedCompetences = [...competenceTotals.keys()]
+    .sort((left, right) => right.localeCompare(left))
+    .slice(0, 3)
+    .sort();
+  const months = selectedCompetences.map((competence) => {
+    const items = shopeeTransactions.filter(
+      (transaction) => transaction.competence === competence
+    );
+    const credits = items.filter((transaction) => transaction.direction === "CREDIT");
+    const debits = items.filter((transaction) => transaction.direction === "DEBIT");
+    const confirmedIncome = (competenceTotals.get(competence) || 0) / 100;
+    const pendingAmount = credits
+      .filter((transaction) => transaction.classification === "PENDING_REVIEW")
+      .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100;
+    const excludedAmount = credits
+      .filter((transaction) =>
+        !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(transaction.classification)
+      )
+      .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100;
+    return {
+      competence,
+      totalCredits: credits.reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100,
+      totalDebits: debits.reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100,
+      confirmedIncome,
+      potentialIncome: confirmedIncome + pendingAmount,
+      excludedAmount,
+      pendingAmount,
+      transactionCount: items.length,
+      payerCount: confirmedIncome > 0 ? 1 : 0,
+      topPayers: confirmedIncome > 0
+        ? [{ name: "ShopeePay", total: confirmedIncome }]
+        : [],
+      complete: true,
+      reconciliationStatus: "NO_SUMMARY" as const,
+    };
+  });
+  const confirmedIncomeCents = months.reduce(
+    (sum, month) => sum + cents(month.confirmedIncome),
+    0
+  );
+  const potentialIncomeCents = months.reduce(
+    (sum, month) => sum + cents(month.potentialIncome),
+    0
+  );
+  const totalPending = shopeeTransactions
+    .filter((transaction) =>
+      transaction.direction === "CREDIT"
+      && transaction.classification === "PENDING_REVIEW"
+    )
+    .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100;
+  const metadataComplete = files
+    .filter((file) => file.parserId === "shopee-pay")
+    .every((file) =>
+      file.status === "COMPLETED"
+      && Boolean(file.holderIdentity)
+      && Boolean(file.periodStart)
+      && Boolean(file.periodEnd)
+    );
+  const canSendToSimulation = metadataComplete
+    && months.length === 3
+    && confirmedIncomeCents > 0
+    && totalPending === 0;
+  const confirmedMonthlyIncome = canSendToSimulation
+    ? Math.round(confirmedIncomeCents / months.length) / 100
+    : 0;
+  const potentialMonthlyIncome = canSendToSimulation
+    ? Math.round(potentialIncomeCents / months.length) / 100
+    : 0;
+  const concentration = analyzePayerConcentration(shopeeTransactions);
+  const stability = analyzeStability(months, concentration);
+  const explanation = [
+    "O documento foi identificado como extrato ShopeePay.",
+    "Foram considerados exclusivamente os valores classificados como \"Saldo creditado\".",
+    ...months.map((month) =>
+      `${formatCompetence(month.competence)}: ${formatCurrencyBR(month.confirmedIncome)}.`
+    ),
+    `Total analisado: ${formatCurrencyBR(confirmedIncomeCents / 100)}.`,
+    canSendToSimulation
+      ? `Renda mensal considerada: ${formatCurrencyBR(confirmedMonthlyIncome)}.`
+      : "A renda mensal ainda não pôde ser definida: são necessárias três competências válidas e os metadados completos do extrato.",
+    "A renda considerada corresponde à média dos créditos mensais provenientes da Shopee no período analisado.",
+    "Transferências Pix enviadas não foram consideradas como renda nem subtraídas dos créditos recebidos.",
+  ];
+  const confidence = shopeeTransactions.length
+    ? shopeeTransactions.reduce(
+      (sum, transaction) => sum + transaction.extractionConfidence,
+      0
+    ) / shopeeTransactions.length
+    : 0;
+
+  return {
+    clientName,
+    transactions: shopeeTransactions,
+    files,
+    months,
+    confirmedIncomeTotal: confirmedIncomeCents / 100,
+    potentialIncomeTotal: potentialIncomeCents / 100,
+    confirmedMonthlyIncome,
+    potentialMonthlyIncome,
+    medianIncome: median(months.map((month) => month.confirmedIncome)),
+    totalCredits: shopeeTransactions
+      .filter((transaction) => transaction.direction === "CREDIT")
+      .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100,
+    totalDebits: shopeeTransactions
+      .filter((transaction) => transaction.direction === "DEBIT")
+      .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100,
+    totalExcluded: shopeeTransactions
+      .filter((transaction) =>
+        transaction.direction === "CREDIT"
+        && !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(transaction.classification)
+      )
+      .reduce((sum, transaction) => sum + cents(transaction.amount), 0) / 100,
+    totalPending,
+    completeMonths: canSendToSimulation ? 3 : months.length,
+    incompleteMonths: canSendToSimulation ? 0 : Math.max(0, 3 - months.length),
+    ...stability,
+    payerConcentration: concentration,
+    topPayerShare: concentration[0]?.share || 0,
+    topThreePayerShare: concentration.slice(0, 3).reduce(
+      (sum, payer) => sum + payer.share,
+      0
+    ),
+    extractionConfidence: confidence,
+    classificationConfidence: shopeeTransactions.length
+      ? shopeeTransactions.reduce(
+        (sum, transaction) => sum + transaction.classificationConfidence,
+        0
+      ) / shopeeTransactions.length
+      : 0,
+    reconciliationStatus: "NO_SUMMARY",
+    explanation,
+    generatedAt: new Date().toISOString(),
+    analysisType: "SHOPEE_PAY",
+    platformIncomeResult: null,
+    canSendToSimulation,
+    relatedPartySummary: {
+      sameHolderAmount: 0,
+      spouseAmount: 0,
+      homonymousCompanyAmount: 0,
+      reviewAmount: totalPending,
+      spouseValidationApplied: false,
+    },
+  };
+}
+
 function calculatePlatformAutomatedIncome(
   clientName: string,
   files: StatementFileRecord[],
@@ -113,6 +284,12 @@ export function calculateAutomatedIncome(
 ): AutomatedIncomeResult {
   if (platformResult) {
     return calculatePlatformAutomatedIncome(clientName, files, platformResult);
+  }
+  if (
+    files.some((file) => file.parserId === "shopee-pay")
+    && files.every((file) => file.parserId === "shopee-pay")
+  ) {
+    return calculateShopeePayAutomatedIncome(clientName, files, transactions);
   }
   const months = buildMonthlyAnalysis(transactions, files);
   const complete = months.filter((month) => month.complete);

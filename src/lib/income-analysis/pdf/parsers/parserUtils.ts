@@ -46,6 +46,7 @@ export function transaction(params: {
   index: number;
   page: number;
   date: string | null;
+  time?: string | null;
   description: string;
   amount: number | null;
   direction: TransactionDirection;
@@ -67,6 +68,7 @@ export function transaction(params: {
     id: `pdf-${params.parserId}-${params.page}-${params.index}-${Date.now()}`,
     selected: Boolean(params.date && params.amount !== null && params.direction !== "UNKNOWN"),
     date: params.date,
+    time: params.time ?? null,
     competence: params.date ? competenceFromDate(params.date) : null,
     description,
     payer: sanitizeBankText(params.payer || ""),

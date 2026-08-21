@@ -60,10 +60,12 @@ const FILE_FORMAT_LABELS: Record<StatementFileFormat, string> = { PDF: "Document
 const BANK_LABELS: Record<SupportedBank | "AUTO", string> = {
   AUTO: "Banco identificado automaticamente", CAIXA: "Caixa", INTER: "Banco Inter", BRADESCO: "Bradesco",
   ITAU: "Itaú", SANTANDER: "Santander", NUBANK: "Nubank", MERCADO_PAGO: "Mercado Pago", OTHER: "Outro banco",
+  SHOPEE_PAY: "ShopeePay",
 };
 const PARSER_LABELS: Record<string, string> = {
   nubank: "Nubank", bradesco: "Bradesco", caixa: "Caixa", inter: "Banco Inter", itau: "Itaú",
   santander: "Santander", "mercado-pago": "Mercado Pago", generic: "Formato bancário genérico",
+  "shopee-pay": "ShopeePay",
   "spreadsheet-auto": "Mapeamento automático de planilha", mixed: "Leitura combinada",
 };
 

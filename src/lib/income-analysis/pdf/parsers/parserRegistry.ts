@@ -9,8 +9,10 @@ import { InterStatementParser } from "./InterStatementParser";
 import { ItauStatementParser } from "./ItauStatementParser";
 import { MercadoPagoStatementParser } from "./MercadoPagoStatementParser";
 import { SantanderStatementParser } from "./SantanderStatementParser";
+import { ShopeePayStatementParser } from "./ShopeePayStatementParser";
 
 const PARSERS: BankStatementParser[] = [
+  ShopeePayStatementParser,
   NubankStatementParser,
   BradescoStatementParser,
   MercadoPagoStatementParser,
@@ -52,6 +54,11 @@ const INSTITUTIONAL_PATTERNS: Partial<
   ],
   MERCADO_PAGO: [
     { pattern: /\bmercado pago\b/, label: "Mercado Pago" }
+  ],
+  SHOPEE_PAY: [
+    { pattern: /\bshopeepay\b/, label: "ShopeePay" },
+    { pattern: /\bshpp brasil instituicao de pagamento e servicos de pagamentos ltda\b/, label: "SHPP Brasil" },
+    { pattern: /\b38\.372\.267\/0001-82\b/, label: "CNPJ institucional" }
   ],
   BANCO_DO_BRASIL: [
     { pattern: /\bbanco do brasil\b/, label: "Banco do Brasil" }
@@ -151,6 +158,35 @@ export function detectPdfBankDetailed(
     nubankStructure
       .filter(([marker]) => normalizedText.includes(marker))
       .forEach(([, label]) => signals.add(`NUBANK:${label}`));
+  }
+
+  const shopeeInstitutionalCount = [
+    "shpp brasil instituicao de pagamento e servicos de pagamentos ltda",
+    "38.372.267/0001-82",
+  ].filter((marker) => normalizedText.includes(marker)).length;
+  const shopeeStructure = [
+    ["periodo extrato", "período do extrato"],
+    ["tipo de transacao", "coluna de tipo de transação"],
+    ["valor transacao", "coluna de valor da transação"],
+    ["saldo creditado", "movimentação Saldo creditado"],
+  ] as const;
+  const shopeeStructureCount = shopeeStructure.filter(([marker]) =>
+    normalizedText.includes(marker)
+  ).length;
+  if (shopeeInstitutionalCount >= 1 && shopeeStructureCount >= 3) {
+    incrementScore(
+      scores,
+      "SHOPEE_PAY",
+      30 + shopeeInstitutionalCount * 10 + shopeeStructureCount * 4
+    );
+    shopeeStructure
+      .filter(([marker]) => normalizedText.includes(marker))
+      .forEach(([, label]) => signals.add(`SHOPEE_PAY:${label}`));
+  } else {
+    delete scores.SHOPEE_PAY;
+    [...signals]
+      .filter((signal) => signal.startsWith("SHOPEE_PAY:"))
+      .forEach((signal) => signals.delete(signal));
   }
 
   const ranking = Object.entries(scores)
