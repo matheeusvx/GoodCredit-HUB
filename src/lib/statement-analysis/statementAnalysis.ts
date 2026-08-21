@@ -32,17 +32,32 @@ function calculatePlatformAutomatedIncome(
     }))
     .sort((left, right) => left.competence.localeCompare(right.competence));
   const grossValues = months.map((month) => month.confirmedIncome);
-  const consideredIncome = platformResult.consideredGrossIncome || 0;
+  const consideredIncome = platformResult.consideredGrossIncome ?? 0;
+  const totalGrossIncome = grossValues.reduce(
+    (sum, value) => sum + Math.round(value * 100),
+    0
+  ) / 100;
+  const incomeRuleExplanation = platformResult.calculationMethod === "FOUR_MONTH_AVERAGE"
+    ? platformResult.status === "COMPLETE"
+      ? [
+        `Total das rendas brutas: ${formatCurrencyBR(totalGrossIncome)}.`,
+        `Renda considerada: ${formatCurrencyBR(consideredIncome)}.`,
+        "Conforme a regra aplicável, a renda considerada corresponde à média aritmética das quatro rendas brutas.",
+      ]
+      : ["A renda considerada ainda não pôde ser definida."]
+    : [
+      platformResult.determiningCompetence && consideredIncome > 0
+        ? `${formatCompetence(platformResult.determiningCompetence)} determinou a renda considerada de ${formatCurrencyBR(consideredIncome)}.`
+        : "A renda considerada ainda não pôde ser definida.",
+      `Conforme a regra aplicável, a renda considerada corresponde ao menor valor bruto entre as competências apresentadas. ${platformResult.method}`,
+    ];
   const explanation = [
     `Foram analisados os ${platformResult.selectedDocuments.length} comprovantes mensais mais recentes da ${platformResult.platform}.`,
     ...months.map(
       (month) =>
         `${formatCompetence(month.competence)}: renda bruta de ${formatCurrencyBR(month.confirmedIncome)}.`
     ),
-    platformResult.determiningCompetence && consideredIncome > 0
-      ? `${formatCompetence(platformResult.determiningCompetence)} determinou a renda considerada de ${formatCurrencyBR(consideredIncome)}.`
-      : "A renda considerada ainda não pôde ser definida.",
-    `Conforme a regra aplicável, a renda considerada corresponde ao menor valor bruto entre as competências apresentadas. ${platformResult.method}`,
+    ...incomeRuleExplanation,
     ...platformResult.ignoredDocuments
       .filter((document) => document.documentPeriod === "ANNUAL")
       .map(() => "O resumo anual foi reconhecido, mas não substitui os comprovantes mensais e não foi dividido por 12."),
@@ -66,7 +81,9 @@ function calculatePlatformAutomatedIncome(
     completeMonths: months.length,
     incompleteMonths: 0,
     stability: "INSUFFICIENT",
-    stabilityLabel: "Regra do menor valor bruto",
+    stabilityLabel: platformResult.calculationMethod === "FOUR_MONTH_AVERAGE"
+      ? "Média de 4 meses"
+      : "Regra do menor valor bruto",
     payerConcentration: [],
     topPayerShare: 0,
     topThreePayerShare: 0,

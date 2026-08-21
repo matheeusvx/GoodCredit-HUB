@@ -75,15 +75,16 @@ describe("comprovantes de rendimentos da Uber", () => {
     expect(annual.invalidReason).toContain("anual");
   });
 
-  it("usa o menor bruto dos quatro comprovantes mais recentes", () => {
+  it("usa a média bruta dos quatro comprovantes mais recentes", () => {
     const documents = UBER_MONTHLY_FIXTURES.map((fixture, index) =>
       parseFixture(fixture, `month-${index}`)
     );
     const result = calculatePlatformIncomeResult(documents);
     expect(result).toMatchObject({
       status: "COMPLETE",
-      consideredGrossIncome: 930.93,
-      determiningCompetence: "2026-06",
+      consideredGrossIncome: 6991.67,
+      determiningCompetence: null,
+      calculationMethod: "FOUR_MONTH_AVERAGE",
       canSendToSimulation: true,
     });
     expect(result?.selectedDocuments.map((document) => document.competence)).toEqual([
@@ -94,7 +95,7 @@ describe("comprovantes de rendimentos da Uber", () => {
     ]);
   });
 
-  it("entrega a menor renda bruta ao resultado consolidado e à simulação", () => {
+  it("entrega a média da renda bruta ao resultado consolidado e à simulação", () => {
     const documents = UBER_MONTHLY_FIXTURES.map((fixture, index) =>
       parseFixture(fixture, `month-${index}`)
     );
@@ -107,8 +108,8 @@ describe("comprovantes de rendimentos da Uber", () => {
       platformResult
     );
     expect(result.analysisType).toBe("PLATFORM_INCOME");
-    expect(result.confirmedMonthlyIncome).toBe(930.93);
-    expect(result.confirmedIncomeTotal).toBe(930.93);
+    expect(result.confirmedMonthlyIncome).toBe(6991.67);
+    expect(result.confirmedIncomeTotal).toBe(6991.67);
     expect(result.canSendToSimulation).toBe(true);
   });
 
@@ -120,7 +121,7 @@ describe("comprovantes de rendimentos da Uber", () => {
       parseFixture(UBER_ANNUAL_FIXTURE, "annual"),
     ];
     const result = calculatePlatformIncomeResult(documents);
-    expect(result?.consideredGrossIncome).toBe(930.93);
+    expect(result?.consideredGrossIncome).toBe(6991.67);
     expect(result?.ignoredDocuments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ documentPeriod: "ANNUAL", grossIncome: 112301.89 }),
@@ -142,7 +143,7 @@ describe("comprovantes de rendimentos da Uber", () => {
       "2026-04",
       "2026-03",
     ]);
-    expect(result?.consideredGrossIncome).toBe(930.93);
+    expect(result?.consideredGrossIncome).toBe(6991.67);
     expect(result?.ignoredDocuments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ competence: "2026-02" }),

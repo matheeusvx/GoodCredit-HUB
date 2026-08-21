@@ -16,14 +16,24 @@ export function IncomeSummaryCards({ result }: { result: AutomatedIncomeResult }
     const statusTone = platform.status === "COMPLETE"
       ? "text-emerald-700"
       : "text-amber-700";
+    const firstCompetence = result.months[0]?.competence;
+    const lastCompetence = result.months.at(-1)?.competence;
+    const periodLabel = firstCompetence && lastCompetence
+      ? `${formatCompetence(firstCompetence)} → ${formatCompetence(lastCompetence)}`
+      : "Não definido";
+    const methodLabel = platform.calculationMethod === "FOUR_MONTH_AVERAGE"
+      ? "Média de 4 meses"
+      : "Menor renda bruta";
     const cards = [
       ["Renda considerada", formatCurrencyBR(result.confirmedMonthlyIncome), "text-emerald-700"],
       ["Plataforma", platform.platform, "text-goodblue-700"],
-      ["Competência determinante", platform.determiningCompetence ? formatCompetence(platform.determiningCompetence) : "Não definida", "text-slate-900"],
+      platform.calculationMethod === "FOUR_MONTH_AVERAGE"
+        ? ["Período considerado", periodLabel, "text-slate-900"]
+        : ["Competência determinante", platform.determiningCompetence ? formatCompetence(platform.determiningCompetence) : "Não definida", "text-slate-900"],
       ["Comprovantes selecionados", `${platform.selectedDocuments.length} de 4`, "text-slate-900"],
       ["Competências analisadas", String(result.months.length), "text-slate-900"],
       ["Mediana (referência)", formatCurrencyBR(result.medianIncome), "text-slate-900"],
-      ["Método", "Menor renda bruta", "text-goodblue-700"],
+      ["Método", methodLabel, "text-goodblue-700"],
       ["Situação", statusLabels[platform.status], statusTone],
     ];
     return <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, tone]) => <div key={label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs font-semibold text-slate-500">{label}</p><p className={`mt-2 text-xl font-bold ${tone}`}>{value}</p></div>)}</section>;

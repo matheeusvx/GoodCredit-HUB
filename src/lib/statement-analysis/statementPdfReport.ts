@@ -38,13 +38,30 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
       VALUE_DIVERGENCE: "Valores divergentes",
       REVIEW_REQUIRED: "Revisão necessária",
     }[platform.status];
+    const usesAverage = platform.calculationMethod === "FOUR_MONTH_AVERAGE";
+    const firstCompetence = result.months[0]?.competence;
+    const lastCompetence = result.months.at(-1)?.competence;
+    const competenceFact = usesAverage
+      ? [
+        "Período considerado",
+        firstCompetence && lastCompetence
+          ? `${formatCompetence(firstCompetence)} a ${formatCompetence(lastCompetence)}`
+          : "Não definido",
+      ]
+      : [
+        "Competência determinante",
+        platform.determiningCompetence
+          ? formatCompetence(platform.determiningCompetence)
+          : "Não definida",
+      ];
     const facts = [
       ["Plataforma", platform.platform],
       ["Titular", maskHolderName(platform.holderName)],
       ["CPF", maskCpf(platform.holderCpf)],
       ["Comprovantes selecionados", `${platform.selectedDocuments.length} de 4`],
       ["Renda considerada", formatCurrencyBR(result.confirmedMonthlyIncome)],
-      ["Competência determinante", platform.determiningCompetence ? formatCompetence(platform.determiningCompetence) : "Não definida"],
+      competenceFact,
+      ["Método", usesAverage ? "Média de 4 meses" : "Menor renda bruta"],
       ["Situação", platformStatus],
     ];
     facts.forEach(([label, value]) => {
@@ -61,7 +78,7 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
     pdf.setFont("helvetica", "normal");
     platform.selectedDocuments.forEach((document) => {
       if (y > 274) { pdf.addPage(); y = 15; }
-      const marker = document.competence === platform.determiningCompetence
+      const marker = !usesAverage && document.competence === platform.determiningCompetence
         ? " - menor renda bruta"
         : "";
       pdf.text(
@@ -98,7 +115,9 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
     pdf.setTextColor(71, 85, 105);
     pdf.text(
       pdf.splitTextToSize(
-        "Indicador interno de apoio à análise. A renda considerada corresponde ao menor valor bruto entre os quatro comprovantes mensais mais recentes da mesma plataforma. Não representa aprovação bancária.",
+        usesAverage
+          ? "Indicador interno de apoio à análise. A renda considerada corresponde à média aritmética das rendas brutas dos quatro comprovantes mensais mais recentes da mesma plataforma. Não representa aprovação bancária."
+          : "Indicador interno de apoio à análise. A renda considerada corresponde ao menor valor bruto entre os quatro comprovantes mensais mais recentes da mesma plataforma. Não representa aprovação bancária.",
         180
       ),
       margin,

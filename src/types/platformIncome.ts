@@ -1,4 +1,8 @@
-export type PlatformProvider = "UBER" | "99" | "LALAMOVE" | "RAPPI";
+export type PlatformProvider = "UBER" | "99" | "LALAMOVE" | "RAPPI" | "IFOOD";
+
+export type PlatformIncomeCalculationMethod =
+  | "FOUR_MONTH_AVERAGE"
+  | "LOWEST_GROSS_INCOME";
 
 export type PlatformDocumentPeriod = "MONTHLY" | "ANNUAL" | "UNKNOWN";
 
@@ -48,6 +52,7 @@ export interface PlatformIncomeResult {
   ignoredDocuments: PlatformIncomeDocument[];
   consideredGrossIncome: number | null;
   determiningCompetence: string | null;
+  calculationMethod: PlatformIncomeCalculationMethod;
   status: PlatformIncomeStatus;
   method: string;
   warnings: string[];
