@@ -4,6 +4,7 @@ import {
   COMPLIANCE_CHECKLIST_STORAGE_KEY,
   COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY,
   createInitialComplianceChecklistState,
+  getComplianceChecklistTemporaryDraftKey,
   markLegacyComplianceChecklistMigrated,
   readLegacyComplianceChecklist,
   readTemporaryComplianceChecklistDraft,
@@ -30,14 +31,15 @@ describe("migração do checklist local", () => {
       JSON.stringify({ version: 1, state })
     );
 
-    expect(readLegacyComplianceChecklist(storage)?.clientName).toBe(
+    expect(readLegacyComplianceChecklist(storage, "user-a")?.clientName).toBe(
       "Cliente de teste"
     );
-    markLegacyComplianceChecklistMigrated(storage);
-    expect(storage.getItem(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY)).toBe(
-      "true"
-    );
-    expect(readLegacyComplianceChecklist(storage)).toBeNull();
+    markLegacyComplianceChecklistMigrated(storage, "user-a");
+    expect(
+      storage.getItem(`${COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY}:user-a`)
+    ).toBe("true");
+    expect(readLegacyComplianceChecklist(storage, "user-a")).toBeNull();
+    expect(readLegacyComplianceChecklist(storage, "user-b")).toBeNull();
   });
 
   it("mantém rascunho temporário com vínculo e versão", () => {
@@ -48,15 +50,42 @@ describe("migração do checklist local", () => {
       storage,
       state,
       "checklist-id",
-      "2026-07-27T12:00:00.000Z"
+      "2026-07-27T12:00:00.000Z",
+      null,
+      "user-a"
     );
 
-    expect(storage.values.has(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY)).toBe(true);
-    expect(readTemporaryComplianceChecklistDraft(storage)).toMatchObject({
+    expect(
+      storage.values.has(getComplianceChecklistTemporaryDraftKey("user-a"))
+    ).toBe(true);
+    expect(storage.values.has(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY)).toBe(false);
+    expect(readTemporaryComplianceChecklistDraft(storage, "user-a")).toMatchObject({
       checklistId: "checklist-id",
       pendingCreationId: null,
       expectedUpdatedAt: "2026-07-27T12:00:00.000Z",
       state: { clientName: "Rascunho" }
     });
+    expect(readTemporaryComplianceChecklistDraft(storage, "user-b")).toBeNull();
+  });
+
+  it("vincula um rascunho antigo sem escopo ao primeiro usuário que o recupera", () => {
+    const storage = createMemoryStorage();
+    const state = createInitialComplianceChecklistState("2026-07-27");
+    state.clientName = "Rascunho legado";
+    storage.setItem(
+      COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY,
+      JSON.stringify({
+        version: 2,
+        checklistId: null,
+        pendingCreationId: "creation-id",
+        expectedUpdatedAt: null,
+        state,
+        savedAt: "2026-07-27T12:00:00.000Z"
+      })
+    );
+
+    expect(readTemporaryComplianceChecklistDraft(storage, "user-a")?.state.clientName)
+      .toBe("Rascunho legado");
+    expect(readTemporaryComplianceChecklistDraft(storage, "user-b")).toBeNull();
   });
 });

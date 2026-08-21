@@ -20,10 +20,16 @@ import type {
 
 export class ComplianceChecklistConflictError extends Error {
   constructor() {
-    super("Este checklist foi atualizado por outro usuário.");
+    super("O checklist não está mais disponível ou foi atualizado.");
     this.name = "ComplianceChecklistConflictError";
   }
 }
+
+export const COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE =
+  "Checklist não encontrado ou indisponível para esta conta.";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function sanitizeFilterValue(value: string): string {
   return value.replace(/[%_(),]/g, " ").replace(/\s+/g, " ").trim();
@@ -37,6 +43,23 @@ async function authenticatedUser() {
   } = await client.auth.getUser();
   if (error || !user) throw new Error("Sessão expirada. Entre novamente.");
   return user;
+}
+
+async function requireOwnedChecklist(id: string): Promise<string> {
+  if (!UUID_PATTERN.test(id)) {
+    throw new Error(COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE);
+  }
+  const client = requireSupabase();
+  const user = await authenticatedUser();
+  const { data, error } = await client
+    .from("compliance_checklists")
+    .select("id")
+    .eq("id", id)
+    .eq("created_by", user.id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE);
+  return user.id;
 }
 
 async function getUserLabels(userIds: string[]): Promise<Map<string, string>> {
@@ -65,11 +88,13 @@ export async function listComplianceChecklists(
   filters: ComplianceChecklistListFilters
 ): Promise<ComplianceChecklistListResult> {
   const client = requireSupabase();
+  const user = await authenticatedUser();
   const from = (filters.page - 1) * filters.pageSize;
   const to = from + filters.pageSize - 1;
   let query = client
     .from("compliance_checklists")
-    .select("*", { count: "exact" });
+    .select("*", { count: "exact" })
+    .eq("created_by", user.id);
 
   if (filters.archive === "ACTIVE") query = query.is("archived_at", null);
   if (filters.archive === "ARCHIVED") query = query.not("archived_at", "is", null);
@@ -123,16 +148,23 @@ export async function getComplianceChecklistById(
   id: string
 ): Promise<ComplianceChecklistDetail> {
   const client = requireSupabase();
-  const [checklistResult, itemsResult] = await Promise.all([
-    client.from("compliance_checklists").select("*").eq("id", id).single(),
-    client
-      .from("compliance_checklist_items")
-      .select("*")
-      .eq("checklist_id", id)
-      .order("item_order", { ascending: true })
-  ]);
-
+  const userId = await requireOwnedChecklist(id);
+  const checklistResult = await client
+    .from("compliance_checklists")
+    .select("*")
+    .eq("id", id)
+    .eq("created_by", userId)
+    .maybeSingle();
   if (checklistResult.error) throw new Error(checklistResult.error.message);
+  if (!checklistResult.data) {
+    throw new Error(COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE);
+  }
+
+  const itemsResult = await client
+    .from("compliance_checklist_items")
+    .select("*")
+    .eq("checklist_id", id)
+    .order("item_order", { ascending: true });
   if (itemsResult.error) throw new Error(itemsResult.error.message);
 
   const row = checklistResult.data as ComplianceChecklistDatabaseRow;
@@ -187,11 +219,11 @@ export async function saveComplianceChecklistItems(
   state: ComplianceChecklistState
 ): Promise<void> {
   const client = requireSupabase();
-  const user = await authenticatedUser();
+  const userId = await requireOwnedChecklist(checklistId);
   const rows = itemPayload(state).map((item) => ({
     checklist_id: checklistId,
     ...item,
-    updated_by: user.id
+    updated_by: userId
   }));
   const { error } = await client
     .from("compliance_checklist_items")
@@ -212,7 +244,7 @@ export async function updateComplianceChecklist(
   expectedUpdatedAt: string
 ): Promise<ComplianceChecklistRecord> {
   const client = requireSupabase();
-  await authenticatedUser();
+  await requireOwnedChecklist(checklistId);
   const summary = calculateComplianceChecklistSummary(state.items);
   const { data, error } = await client
     .rpc("update_compliance_checklist_with_items", {
@@ -240,22 +272,30 @@ export async function updateComplianceChecklist(
 
 export async function archiveComplianceChecklist(id: string): Promise<void> {
   const client = requireSupabase();
-  const user = await authenticatedUser();
-  const { error } = await client
+  const userId = await requireOwnedChecklist(id);
+  const { data, error } = await client
     .from("compliance_checklists")
-    .update({ archived_at: new Date().toISOString(), updated_by: user.id })
-    .eq("id", id);
+    .update({ archived_at: new Date().toISOString(), updated_by: userId })
+    .eq("id", id)
+    .eq("created_by", userId)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error(COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE);
 }
 
 export async function restoreComplianceChecklist(id: string): Promise<void> {
   const client = requireSupabase();
-  const user = await authenticatedUser();
-  const { error } = await client
+  const userId = await requireOwnedChecklist(id);
+  const { data, error } = await client
     .from("compliance_checklists")
-    .update({ archived_at: null, updated_by: user.id })
-    .eq("id", id);
+    .update({ archived_at: null, updated_by: userId })
+    .eq("id", id)
+    .eq("created_by", userId)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error(COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE);
 }
 
 export async function duplicateComplianceChecklist(
@@ -282,9 +322,11 @@ export async function duplicateComplianceChecklist(
 
 export async function getComplianceChecklistMetrics(): Promise<ComplianceChecklistMetrics> {
   const client = requireSupabase();
+  const user = await authenticatedUser();
   const { data, error } = await client
     .from("compliance_checklists")
-    .select("overall_status,archived_at");
+    .select("overall_status,archived_at")
+    .eq("created_by", user.id);
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as Array<{
@@ -303,9 +345,11 @@ export async function getComplianceChecklistMetrics(): Promise<ComplianceCheckli
 
 export async function listComplianceChecklistAnalysts(): Promise<string[]> {
   const client = requireSupabase();
+  const user = await authenticatedUser();
   const { data, error } = await client
     .from("compliance_checklists")
     .select("analyst_name")
+    .eq("created_by", user.id)
     .not("analyst_name", "is", null);
   if (error) throw new Error(error.message);
   return [

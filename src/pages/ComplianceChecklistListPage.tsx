@@ -57,7 +57,7 @@ export function ComplianceChecklistListPage() {
   const [duplicateRecord, setDuplicateRecord] =
     useState<ComplianceChecklistRecord | null>(null);
   const [legacyState, setLegacyState] = useState<ComplianceChecklistState | null>(
-    () => readLegacyComplianceChecklist(localStorage)
+    () => (user ? readLegacyComplianceChecklist(localStorage, user.id) : null)
   );
   const [importing, setImporting] = useState(false);
 
@@ -142,15 +142,19 @@ export function ComplianceChecklistListPage() {
   }
 
   async function handleImportLocal() {
+    if (!user) return;
     if (!legacyState?.clientName.trim()) {
       setNotice("Informe o nome do cliente no checklist local antes de importá-lo.");
       return;
     }
     setImporting(true);
     try {
-      const migrationId = getLegacyComplianceChecklistMigrationId(localStorage);
+      const migrationId = getLegacyComplianceChecklistMigrationId(
+        localStorage,
+        user.id
+      );
       const id = await importLocalComplianceChecklist(legacyState, migrationId);
-      markLegacyComplianceChecklistMigrated(localStorage);
+      markLegacyComplianceChecklistMigrated(localStorage, user.id);
       setLegacyState(null);
       navigateComplianceChecklist(complianceChecklistEditorPath(id));
     } catch {
@@ -161,8 +165,9 @@ export function ComplianceChecklistListPage() {
   }
 
   function handleRemoveLocal() {
+    if (!user) return;
     if (!window.confirm("Deseja remover os dados locais deste checklist?")) return;
-    removeLegacyComplianceChecklist(localStorage);
+    removeLegacyComplianceChecklist(localStorage, user.id);
     setLegacyState(null);
     setNotice("Os dados locais foram removidos.");
   }

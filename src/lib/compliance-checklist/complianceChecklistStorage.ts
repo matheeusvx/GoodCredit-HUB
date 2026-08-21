@@ -14,6 +14,31 @@ export const COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY =
   "goodcredit_compliance_checklist_migration_id";
 export const COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY =
   "goodcredit_compliance_checklist_temporary_draft";
+export const COMPLIANCE_CHECKLIST_LOCAL_OWNER_KEY =
+  "goodcredit_compliance_checklist_local_owner";
+
+function scopedStorageKey(baseKey: string, userId: string): string {
+  if (!userId) throw new Error("Usuário obrigatório para armazenamento local.");
+  return `${baseKey}:${userId}`;
+}
+
+export function getComplianceChecklistStorageKey(userId: string): string {
+  return scopedStorageKey(COMPLIANCE_CHECKLIST_STORAGE_KEY, userId);
+}
+
+export function getComplianceChecklistTemporaryDraftKey(userId: string): string {
+  return scopedStorageKey(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY, userId);
+}
+
+function claimUnscopedLegacyData(
+  storage: Pick<Storage, "getItem" | "setItem">,
+  userId: string
+): boolean {
+  const owner = storage.getItem(COMPLIANCE_CHECKLIST_LOCAL_OWNER_KEY);
+  if (owner) return owner === userId;
+  storage.setItem(COMPLIANCE_CHECKLIST_LOCAL_OWNER_KEY, userId);
+  return true;
+}
 
 const VALID_STATUSES = new Set<ComplianceChecklistStatus>([
   "PENDING",
@@ -93,9 +118,10 @@ export function normalizeComplianceChecklistState(
 }
 
 export function readComplianceChecklistState(
-  storage: Pick<Storage, "getItem">
+  storage: Pick<Storage, "getItem">,
+  userId: string
 ): ComplianceChecklistState {
-  const raw = storage.getItem(COMPLIANCE_CHECKLIST_STORAGE_KEY);
+  const raw = storage.getItem(getComplianceChecklistStorageKey(userId));
   if (!raw) return createInitialComplianceChecklistState();
 
   try {
@@ -107,13 +133,14 @@ export function readComplianceChecklistState(
 
 export function saveComplianceChecklistState(
   storage: Pick<Storage, "setItem">,
-  state: ComplianceChecklistState
+  state: ComplianceChecklistState,
+  userId: string
 ): void {
   const stored: StoredComplianceChecklistState = {
     version: 1,
     state: normalizeComplianceChecklistState(state, state.reviewDate)
   };
-  storage.setItem(COMPLIANCE_CHECKLIST_STORAGE_KEY, JSON.stringify(stored));
+  storage.setItem(getComplianceChecklistStorageKey(userId), JSON.stringify(stored));
 }
 
 export function resetComplianceChecklistItems(
@@ -134,12 +161,23 @@ export function createNewComplianceChecklist(
 }
 
 export function readLegacyComplianceChecklist(
-  storage: Pick<Storage, "getItem">
+  storage: Pick<Storage, "getItem" | "setItem">,
+  userId: string
 ): ComplianceChecklistState | null {
-  if (storage.getItem(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY) === "true") {
+  const completedKey = scopedStorageKey(
+    COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY,
+    userId
+  );
+  if (storage.getItem(completedKey) === "true") {
     return null;
   }
-  const raw = storage.getItem(COMPLIANCE_CHECKLIST_STORAGE_KEY);
+  const scopedState = storage.getItem(getComplianceChecklistStorageKey(userId));
+  const unscopedState = storage.getItem(COMPLIANCE_CHECKLIST_STORAGE_KEY);
+  const raw =
+    scopedState ??
+    (unscopedState && claimUnscopedLegacyData(storage, userId)
+      ? unscopedState
+      : null);
   if (!raw) return null;
   try {
     const state = normalizeComplianceChecklistState(JSON.parse(raw));
@@ -157,27 +195,40 @@ export function readLegacyComplianceChecklist(
 }
 
 export function markLegacyComplianceChecklistMigrated(
-  storage: Pick<Storage, "setItem" | "removeItem">
+  storage: Pick<Storage, "setItem" | "removeItem">,
+  userId: string
 ): void {
-  storage.setItem(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY, "true");
-  storage.removeItem(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY);
+  storage.setItem(
+    scopedStorageKey(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY, userId),
+    "true"
+  );
+  storage.removeItem(scopedStorageKey(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY, userId));
 }
 
 export function removeLegacyComplianceChecklist(
-  storage: Pick<Storage, "removeItem" | "setItem">
+  storage: Pick<Storage, "getItem" | "removeItem" | "setItem">,
+  userId: string
 ): void {
-  storage.removeItem(COMPLIANCE_CHECKLIST_STORAGE_KEY);
-  storage.removeItem(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY);
-  storage.setItem(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY, "true");
+  storage.removeItem(getComplianceChecklistStorageKey(userId));
+  storage.removeItem(scopedStorageKey(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY, userId));
+  if (storage.getItem(COMPLIANCE_CHECKLIST_LOCAL_OWNER_KEY) === userId) {
+    storage.removeItem(COMPLIANCE_CHECKLIST_STORAGE_KEY);
+  }
+  storage.setItem(
+    scopedStorageKey(COMPLIANCE_CHECKLIST_MIGRATION_COMPLETED_KEY, userId),
+    "true"
+  );
 }
 
 export function getLegacyComplianceChecklistMigrationId(
-  storage: Pick<Storage, "getItem" | "setItem">
+  storage: Pick<Storage, "getItem" | "setItem">,
+  userId: string
 ): string {
-  const current = storage.getItem(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY);
+  const key = scopedStorageKey(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY, userId);
+  const current = storage.getItem(key);
   if (current) return current;
   const id = crypto.randomUUID();
-  storage.setItem(COMPLIANCE_CHECKLIST_MIGRATION_ID_KEY, id);
+  storage.setItem(key, id);
   return id;
 }
 
@@ -186,7 +237,8 @@ export function saveTemporaryComplianceChecklistDraft(
   state: ComplianceChecklistState,
   checklistId: string | null,
   expectedUpdatedAt: string | null,
-  pendingCreationId: string | null = null
+  pendingCreationId: string | null,
+  userId: string
 ): void {
   const draft: ComplianceChecklistTemporaryDraft = {
     version: 2,
@@ -196,13 +248,25 @@ export function saveTemporaryComplianceChecklistDraft(
     state: normalizeComplianceChecklistState(state, state.reviewDate),
     savedAt: new Date().toISOString()
   };
-  storage.setItem(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY, JSON.stringify(draft));
+  storage.setItem(
+    getComplianceChecklistTemporaryDraftKey(userId),
+    JSON.stringify(draft)
+  );
 }
 
 export function readTemporaryComplianceChecklistDraft(
-  storage: Pick<Storage, "getItem">
+  storage: Pick<Storage, "getItem" | "setItem">,
+  userId: string
 ): ComplianceChecklistTemporaryDraft | null {
-  const raw = storage.getItem(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY);
+  const scopedKey = getComplianceChecklistTemporaryDraftKey(userId);
+  let raw = storage.getItem(scopedKey);
+  if (!raw) {
+    const unscopedDraft = storage.getItem(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY);
+    if (unscopedDraft && claimUnscopedLegacyData(storage, userId)) {
+      raw = unscopedDraft;
+      storage.setItem(scopedKey, unscopedDraft);
+    }
+  }
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<ComplianceChecklistTemporaryDraft>;
@@ -229,7 +293,11 @@ export function readTemporaryComplianceChecklistDraft(
 }
 
 export function clearTemporaryComplianceChecklistDraft(
-  storage: Pick<Storage, "removeItem">
+  storage: Pick<Storage, "getItem" | "removeItem">,
+  userId: string
 ): void {
-  storage.removeItem(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY);
+  storage.removeItem(getComplianceChecklistTemporaryDraftKey(userId));
+  if (storage.getItem(COMPLIANCE_CHECKLIST_LOCAL_OWNER_KEY) === userId) {
+    storage.removeItem(COMPLIANCE_CHECKLIST_TEMPORARY_DRAFT_KEY);
+  }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import {
   clearTemporaryComplianceChecklistDraft,
   saveTemporaryComplianceChecklistDraft
@@ -37,13 +38,16 @@ export function useComplianceChecklistAutosave({
   onSaved,
   onDirtyChange
 }: AutosaveOptions) {
+  const { user } = useAuth();
   const [status, setStatus] = useState<ComplianceChecklistSaveStatus>("IDLE");
   const [message, setMessage] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const savingRef = useRef(false);
 
   const saveNow = useCallback(async () => {
-    if (!enabled || savingRef.current || !state.clientName.trim()) return false;
+    if (!enabled || !user || savingRef.current || !state.clientName.trim()) {
+      return false;
+    }
     savingRef.current = true;
     setStatus("SAVING");
     setMessage("");
@@ -52,7 +56,8 @@ export function useComplianceChecklistAutosave({
       state,
       checklistId,
       expectedUpdatedAt,
-      pendingCreationId
+      pendingCreationId,
+      user.id
     );
 
     try {
@@ -61,7 +66,7 @@ export function useComplianceChecklistAutosave({
           state,
           pendingCreationId ?? undefined
         );
-        clearTemporaryComplianceChecklistDraft(localStorage);
+        clearTemporaryComplianceChecklistDraft(localStorage, user.id);
         onDirtyChange(false);
         setStatus("SAVED");
         setSavedAt(new Date().toISOString());
@@ -79,7 +84,7 @@ export function useComplianceChecklistAutosave({
         state,
         expectedUpdatedAt
       );
-      clearTemporaryComplianceChecklistDraft(localStorage);
+      clearTemporaryComplianceChecklistDraft(localStorage, user.id);
       onDirtyChange(false);
       setStatus("SAVED");
       setSavedAt(new Date().toISOString());
@@ -89,7 +94,7 @@ export function useComplianceChecklistAutosave({
       if (reason instanceof ComplianceChecklistConflictError) {
         setStatus("CONFLICT");
         setMessage(
-          "Este checklist foi atualizado por outro usuário. Recarregue os dados antes de continuar."
+          "O checklist não está mais disponível ou foi atualizado. Volte à lista ou recarregue os dados."
         );
       } else {
         setStatus("ERROR");
@@ -109,7 +114,8 @@ export function useComplianceChecklistAutosave({
     onDirtyChange,
     onSaved,
     pendingCreationId,
-    state
+    state,
+    user
   ]);
 
   useEffect(() => {

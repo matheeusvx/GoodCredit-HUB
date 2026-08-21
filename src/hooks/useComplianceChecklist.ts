@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { createBlankEditorState } from "../lib/compliance-checklist/complianceChecklistMapper";
 import { readTemporaryComplianceChecklistDraft } from "../lib/compliance-checklist/complianceChecklistStorage";
 import { getComplianceChecklistById } from "../services/complianceChecklistService";
@@ -8,6 +9,7 @@ import type {
 } from "../types/complianceChecklist";
 
 export function useComplianceChecklist(checklistId: string | null) {
+  const { user } = useAuth();
   const [detail, setDetail] = useState<ComplianceChecklistDetail | null>(null);
   const [state, setState] = useState<ComplianceChecklistState>(() =>
     createBlankEditorState()
@@ -17,8 +19,16 @@ export function useComplianceChecklist(checklistId: string | null) {
   const [recoveredDraft, setRecoveredDraft] = useState(false);
 
   const load = useCallback(async () => {
+    if (!user) {
+      setDetail(null);
+      setState(createBlankEditorState());
+      setRecoveredDraft(false);
+      setLoading(false);
+      setError("Sessão expirada. Entre novamente.");
+      return;
+    }
     if (!checklistId) {
-      const draft = readTemporaryComplianceChecklistDraft(localStorage);
+      const draft = readTemporaryComplianceChecklistDraft(localStorage, user.id);
       setDetail(null);
       setState(
         draft && !draft.checklistId ? draft.state : createBlankEditorState()
@@ -33,7 +43,7 @@ export function useComplianceChecklist(checklistId: string | null) {
     setError("");
     try {
       const nextDetail = await getComplianceChecklistById(checklistId);
-      const draft = readTemporaryComplianceChecklistDraft(localStorage);
+      const draft = readTemporaryComplianceChecklistDraft(localStorage, user.id);
       const shouldRecover =
         draft?.checklistId === checklistId &&
         new Date(draft.savedAt).getTime() >
@@ -50,7 +60,7 @@ export function useComplianceChecklist(checklistId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [checklistId]);
+  }, [checklistId, user]);
 
   useEffect(() => {
     void load();

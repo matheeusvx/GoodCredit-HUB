@@ -3,6 +3,7 @@ import {
   COMPLIANCE_CHECKLIST_STORAGE_KEY,
   createInitialComplianceChecklistState,
   createNewComplianceChecklist,
+  getComplianceChecklistStorageKey,
   normalizeComplianceChecklistState,
   readComplianceChecklistState,
   resetComplianceChecklistItems,
@@ -55,13 +56,31 @@ describe("complianceChecklistStorage", () => {
       observation: "Conferido"
     };
 
-    saveComplianceChecklistState(storage, state);
-    const restored = readComplianceChecklistState(storage);
+    saveComplianceChecklistState(storage, state, "user-a");
+    const restored = readComplianceChecklistState(storage, "user-a");
 
-    expect(memory.has(COMPLIANCE_CHECKLIST_STORAGE_KEY)).toBe(true);
+    expect(memory.has(getComplianceChecklistStorageKey("user-a"))).toBe(true);
+    expect(memory.has(COMPLIANCE_CHECKLIST_STORAGE_KEY)).toBe(false);
     expect(restored.clientName).toBe("Cliente exemplo");
     expect(restored.items[0].status).toBe("COMPLIANT");
     expect(restored.items[0].observation).toBe("Conferido");
+  });
+
+  it("não restaura o estado persistido de outro usuário", () => {
+    const memory = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => memory.set(key, value)
+    };
+    const state = createInitialComplianceChecklistState("2026-07-24");
+    state.clientName = "Cliente do usuário A";
+
+    saveComplianceChecklistState(storage, state, "user-a");
+
+    expect(readComplianceChecklistState(storage, "user-a").clientName).toBe(
+      "Cliente do usuário A"
+    );
+    expect(readComplianceChecklistState(storage, "user-b").clientName).toBe("");
   });
 
   it("limpa somente as verificações sem apagar a identificação", () => {

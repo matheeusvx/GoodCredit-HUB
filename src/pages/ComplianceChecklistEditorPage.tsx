@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { ComplianceChecklistActions } from "../components/compliance-checklist/ComplianceChecklistActions";
 import { ComplianceChecklistFilters } from "../components/compliance-checklist/ComplianceChecklistFilters";
 import { ComplianceChecklistHeader } from "../components/compliance-checklist/ComplianceChecklistHeader";
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export function ComplianceChecklistEditorPage({ checklistId }: Props) {
+  const { user } = useAuth();
   const {
     detail,
     setDetail,
@@ -56,8 +58,10 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pendingCreationId] = useState<string | null>(() => {
     if (checklistId) return null;
+    if (!user) return crypto.randomUUID();
     return (
-      readTemporaryComplianceChecklistDraft(localStorage)?.pendingCreationId ??
+      readTemporaryComplianceChecklistDraft(localStorage, user.id)
+        ?.pendingCreationId ??
       crypto.randomUUID()
     );
   });
@@ -96,15 +100,17 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
 
   const persistTemporary = useCallback(
     (nextState: ComplianceChecklistState) => {
+      if (!user) return;
       saveTemporaryComplianceChecklistDraft(
         localStorage,
         nextState,
         checklistId,
         detail?.record.updatedAt ?? null,
-        pendingCreationId
+        pendingCreationId,
+        user.id
       );
     },
-    [checklistId, detail?.record.updatedAt, pendingCreationId]
+    [checklistId, detail?.record.updatedAt, pendingCreationId, user]
   );
 
   function replaceState(nextState: ComplianceChecklistState) {
