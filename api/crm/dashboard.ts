@@ -8,6 +8,7 @@ import {
   type ApiResponse,
 } from "../_lib/http.js";
 import { runCrmSync } from "../_lib/sync.js";
+import { parseCrmAnalyticsPeriodQuery } from "../../src/lib/crm/time.js";
 import {
   authenticateSupabaseRequest,
   createSupabaseAdmin,
@@ -29,6 +30,16 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     return;
   }
 
+  let periodRequest;
+  try {
+    periodRequest = parseCrmAnalyticsPeriodQuery(request.query);
+  } catch (error) {
+    sendJson(response, 400, {
+      error: error instanceof Error ? error.message : "Período inválido.",
+    });
+    return;
+  }
+
   let config;
   try {
     config = assertDashboardConfig();
@@ -37,7 +48,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     sendJson(
       response,
       503,
-      emptyCrmDashboard(fallback.metricsStartAt, "NOT_CONFIGURED")
+      emptyCrmDashboard(fallback.metricsStartAt, "NOT_CONFIGURED", undefined, periodRequest)
     );
     return;
   }
@@ -54,7 +65,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     sendJson(
       response,
       200,
-      emptyCrmDashboard(config.metricsStartAt, "NOT_CONFIGURED")
+      emptyCrmDashboard(config.metricsStartAt, "NOT_CONFIGURED", undefined, periodRequest)
     );
     return;
   }
@@ -84,6 +95,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       hubUser,
       metricsStartAt: config.metricsStartAt,
       excludedUserIds: config.excludedBlessUserIds,
+      periodRequest,
     });
     sendJson(response, 200, dashboard);
   } catch {

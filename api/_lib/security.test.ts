@@ -101,4 +101,17 @@ describe("segurança da integração CRM", () => {
     expect(record.status).toBe(401);
     expect(record.body).toEqual({ error: "Não autorizado." });
   });
+
+  it("retorna 400 para período custom inválido antes de consultar dados", async () => {
+    const { record, response } = responseRecorder();
+    await dashboardHandler({
+      method: "GET",
+      headers: { authorization: "Bearer token-sintetico" },
+      query: { period: "custom", from: "2026-08-20", to: "2026-08-05" },
+    }, response);
+    expect(record.status).toBe(400);
+    expect(record.body).toEqual({
+      error: "A data inicial não pode ser posterior à final.",
+    });
+  });
 });
