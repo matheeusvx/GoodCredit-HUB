@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+import dashboardHandler from "../crm/dashboard";
+import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config";
+import { bearerToken, hasForbiddenIdentityParameter, type ApiRequest, type ApiResponse } from "./http";
+import { resolveAutomaticMappingRows } from "./sync";
+
+function responseRecorder() {
+  const record = { status: 0, body: null as unknown };
+  const response: ApiResponse = {
+    status(statusCode) { record.status = statusCode; return response; },
+    json(body) { record.body = body; },
+    setHeader() { return undefined; },
+  };
+  return { record, response };
+}
+
+describe("segurança da integração CRM", () => {
+  it("mantém o usuário excluído obrigatório e não cria mapping para ele", () => {
+    const excluded = getExcludedBlessUserIds();
+    expect(excluded.has(REQUIRED_BLESS_EXCLUDED_USER_ID)).toBe(true);
+    const rows = resolveAutomaticMappingRows({
+      agents: [{ userId: REQUIRED_BLESS_EXCLUDED_USER_ID, name: "NÃO PERSISTIR", email: "excluded@example.com" }],
+      hubUsers: [{ id: "hub-a", email: "excluded@example.com" }] as never[],
+      existing: [],
+      excludedUserIds: excluded,
+      seenAt: "2026-08-25T12:00:00Z",
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it("vincula somente e-mail exato e não ambíguo, nunca por nome", () => {
+    const rows = resolveAutomaticMappingRows({
+      agents: [
+        { userId: "11111111-1111-4111-8111-111111111111", name: "MESMO NOME", email: "agent@example.com" },
+        { userId: "22222222-2222-4222-8222-222222222222", name: "OUTRO", email: "ambiguous@example.com" },
+        { userId: "33333333-3333-4333-8333-333333333333", name: "OUTRO", email: "ambiguous@example.com" },
+      ],
+      hubUsers: [
+        { id: "hub-a", email: "AGENT@example.com" },
+        { id: "hub-name-only", email: "different@example.com", user_metadata: { name: "MESMO NOME" } },
+        { id: "hub-ambiguous", email: "ambiguous@example.com" },
+      ] as never[],
+      existing: [],
+      excludedUserIds: new Set(),
+      seenAt: "2026-08-25T12:00:00Z",
+    });
+    expect(rows.find((row) => row.bless_user_id.startsWith("1111"))?.hub_user_id).toBe("hub-a");
+    expect(rows.filter((row) => row.bless_user_id.startsWith("2222") || row.bless_user_id.startsWith("3333")).every((row) => row.hub_user_id === null)).toBe(true);
+  });
+
+  it("rejeita identidade arbitrária e extrai somente o Bearer token", () => {
+    const request: ApiRequest = {
+      method: "GET",
+      headers: { authorization: "Bearer token-sintetico" },
+      query: { userId: "outro-usuario" },
+    };
+    expect(hasForbiddenIdentityParameter(request)).toBe(true);
+    expect(bearerToken(request)).toBe("token-sintetico");
+  });
+
+  it("retorna 401 para chamada anônima antes de consultar configuração ou dados", async () => {
+    const { record, response } = responseRecorder();
+    await dashboardHandler({ method: "GET", headers: {}, query: {} }, response);
+    expect(record.status).toBe(401);
+    expect(record.body).toEqual({ error: "Não autorizado." });
+  });
+});

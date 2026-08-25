@@ -5,6 +5,7 @@ import { HomeHero } from "./HomeHero";
 import { ImportantNotice } from "./ImportantNotice";
 import { ModuleCard } from "./ModuleCard";
 import { ModuleStatus } from "./ModuleStatus";
+import { CrmDashboardPanel } from "./CrmDashboardPanel";
 
 interface Props {
   onNavigate: (view: HubView) => void;
@@ -64,6 +65,7 @@ const modules = [
 export function HomePage({ onNavigate }: Props) {
   return (
     <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
+      <CrmDashboardPanel />
       <HomeHero />
 
       <section>
