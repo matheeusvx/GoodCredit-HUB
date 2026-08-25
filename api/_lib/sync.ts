@@ -9,7 +9,12 @@ import {
   type CrmMessageActivity,
   type CrmSessionSnapshot,
 } from "../../src/lib/crm/domain.js";
-import { BlessClient, type BlessAgentDetails, type BlessSession } from "./blessClient.js";
+import {
+  BlessClient,
+  type BlessAgentDetails,
+  type BlessDirectoryAgent,
+  type BlessSession,
+} from "./blessClient.js";
 import { assertSyncConfig } from "./config.js";
 import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./supabaseAdmin.js";
 
@@ -123,17 +128,9 @@ async function mapWithConcurrency<T, R>(
   return result;
 }
 
-function uniqueAgents(sessions: BlessSession[]): BlessAgentDetails[] {
-  const agents = new Map<string, BlessAgentDetails>();
-  sessions.forEach((session) => {
-    if (session.agentDetails) agents.set(session.agentDetails.userId, session.agentDetails);
-  });
-  return [...agents.values()];
-}
-
 async function synchronizeAgentMappings(
   supabase: SupabaseClient,
-  agents: BlessAgentDetails[],
+  agents: BlessDirectoryAgent[],
   excludedUserIds: ReadonlySet<string>,
   seenAt: string
 ): Promise<void> {
@@ -323,7 +320,11 @@ export async function runCrmSync(options: {
         blessClient.listSessions({ updatedAfter: syncState.last_success_at })
       );
     }
-    const sessions = deduplicateSessions(await Promise.all(sessionQueries));
+    const [sessionGroups, directoryAgents] = await Promise.all([
+      Promise.all(sessionQueries),
+      blessClient.listAgents(),
+    ]);
+    const sessions = deduplicateSessions(sessionGroups);
     const previousById = await loadStoredSessions(
       supabase,
       sessions.map((session) => session.sessionId)
@@ -372,7 +373,7 @@ export async function runCrmSync(options: {
 
     await synchronizeAgentMappings(
       supabase,
-      uniqueAgents(sessions),
+      directoryAgents,
       config.excludedBlessUserIds,
       startedAt
     );

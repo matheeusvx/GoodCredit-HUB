@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import dashboardHandler from "../crm/dashboard.js";
+import { isCrmDashboardMappingEligible } from "./dashboard.js";
 import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config.js";
 import { bearerToken, hasForbiddenIdentityParameter, type ApiRequest, type ApiResponse } from "./http.js";
 import { resolveAutomaticMappingRows } from "./sync.js";
@@ -46,6 +47,42 @@ describe("segurança da integração CRM", () => {
     });
     expect(rows.find((row) => row.bless_user_id.startsWith("1111"))?.hub_user_id).toBe("hub-a");
     expect(rows.filter((row) => row.bless_user_id.startsWith("2222") || row.bless_user_id.startsWith("3333")).every((row) => row.hub_user_id === null)).toBe(true);
+  });
+
+  it("enriquece mapping explícito existente mesmo sem correspondência de e-mail", () => {
+    const rows = resolveAutomaticMappingRows({
+      agents: [{
+        userId: "11111111-1111-4111-8111-111111111111",
+        name: "NOME DO DIRETÓRIO",
+        email: "directory@example.com",
+      }],
+      hubUsers: [{ id: "hub-a", email: "different@example.com" }] as never[],
+      existing: [{
+        id: "mapping-a",
+        hub_user_id: "hub-a",
+        bless_user_id: "11111111-1111-4111-8111-111111111111",
+        agent_email: null,
+      }],
+      excludedUserIds: new Set(),
+      seenAt: "2026-08-25T12:00:00Z",
+    });
+
+    expect(rows).toEqual([{
+      bless_user_id: "11111111-1111-4111-8111-111111111111",
+      hub_user_id: "hub-a",
+      agent_name: "NOME DO DIRETÓRIO",
+      agent_email: "directory@example.com",
+      last_seen_at: "2026-08-25T12:00:00Z",
+    }]);
+  });
+
+  it("não libera dashboard para conta Bless sem hub_user_id", () => {
+    expect(isCrmDashboardMappingEligible({
+      hub_user_id: null,
+      bless_user_id: "11111111-1111-4111-8111-111111111111",
+      agent_name: "AGENTE SEM HUB",
+      agent_email: "agent@example.com",
+    }, "hub-a", new Set())).toBe(false);
   });
 
   it("rejeita identidade arbitrária e extrai somente o Bearer token", () => {

@@ -9,6 +9,11 @@ export interface BlessAgentDetails {
   email: string | null;
 }
 
+export interface BlessDirectoryAgent extends BlessAgentDetails {
+  agentId: string | null;
+  profile: string | null;
+}
+
 export interface BlessSession {
   sessionId: string;
   contactId: string | null;
@@ -68,16 +73,37 @@ function arrayPage(payload: unknown): {
   const source = Object.keys(nested).length ? nested : root;
   const items = Array.isArray(source.items)
     ? source.items
-    : Array.isArray(source.data)
-      ? source.data
-      : Array.isArray(payload)
-        ? payload
-        : [];
+    : Array.isArray(source.agents)
+      ? source.agents
+      : Array.isArray(source.data)
+        ? source.data
+        : Array.isArray(payload)
+          ? payload
+          : [];
   return {
     items,
     hasMorePages: source.hasMorePages === true || source.hasNextPage === true,
     totalItems: source.totalItems === undefined ? null : numberValue(source.totalItems),
   };
+}
+
+function explicitNextUrl(payload: unknown, linkHeader: string | null): string | null {
+  const linkMatch = linkHeader?.match(/<([^>]+)>\s*;\s*rel\s*=\s*["']?next["']?/i);
+  if (linkMatch?.[1]) return linkMatch[1];
+  const root = object(payload);
+  const nested = object(root.data);
+  const links = object(root.links);
+  const nestedLinks = object(nested.links);
+  return stringValue(
+    root.nextPageUrl
+    ?? root.nextUrl
+    ?? root.next
+    ?? links.next
+    ?? nested.nextPageUrl
+    ?? nested.nextUrl
+    ?? nested.next
+    ?? nestedLinks.next
+  );
 }
 
 function normalizeStatus(value: unknown): CrmSessionStatus {
@@ -135,6 +161,19 @@ export function normalizeBlessMessage(
   };
 }
 
+export function normalizeBlessDirectoryAgent(value: unknown): BlessDirectoryAgent | null {
+  const item = object(value);
+  const userId = stringValue(item.userId)?.toLowerCase() || null;
+  if (!userId) return null;
+  return {
+    userId,
+    agentId: stringValue(item.id ?? item.agentId)?.toLowerCase() || null,
+    name: stringValue(item.name),
+    email: stringValue(item.email)?.toLowerCase() || null,
+    profile: stringValue(item.profile)?.toUpperCase() || null,
+  };
+}
+
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -152,18 +191,31 @@ export class BlessClient {
     this.timeoutMs = options.timeoutMs || 15_000;
   }
 
-  private async request(path: string, params: URLSearchParams): Promise<unknown> {
-    const url = `${this.baseUrl}${path}?${params.toString()}`;
+  private async requestPage(
+    path: string,
+    params = new URLSearchParams()
+  ): Promise<{ payload: unknown; nextUrl: string | null }> {
+    const url = new URL(path, `${this.baseUrl}/`);
+    if (url.origin !== new URL(this.baseUrl).origin) {
+      throw new Error("Bless API pagination URL has an unexpected origin.");
+    }
+    params.forEach((value, key) => url.searchParams.append(key, value));
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        const response = await this.fetchImpl(url, {
+        const response = await this.fetchImpl(url.toString(), {
           method: "GET",
           headers: { Authorization: this.token },
           signal: controller.signal,
         });
-        if (response.ok) return await response.json();
+        if (response.ok) {
+          const payload = await response.json();
+          return {
+            payload,
+            nextUrl: explicitNextUrl(payload, response.headers.get("link")),
+          };
+        }
         if (response.status !== 429 && response.status < 500) {
           throw new Error(`Bless API request failed with status ${response.status}.`);
         }
@@ -188,6 +240,36 @@ export class BlessClient {
       }
     }
     throw new Error("Bless API request failed.");
+  }
+
+  private async request(path: string, params: URLSearchParams): Promise<unknown> {
+    return (await this.requestPage(path, params)).payload;
+  }
+
+  async listAgents(): Promise<BlessDirectoryAgent[]> {
+    const agents = new Map<string, BlessDirectoryAgent>();
+    let nextPath: string | null = "/core/v1/agent";
+    for (let page = 0; nextPath && page < 1000; page += 1) {
+      const response = await this.requestPage(nextPath);
+      const parsed = arrayPage(response.payload);
+      parsed.items
+        .map(normalizeBlessDirectoryAgent)
+        .filter((agent): agent is BlessDirectoryAgent => Boolean(agent))
+        .forEach((agent) => agents.set(agent.userId, agent));
+      if (!response.nextUrl) {
+        const incomplete = parsed.hasMorePages
+          || (parsed.totalItems !== null && agents.size < parsed.totalItems);
+        if (incomplete) {
+          throw new Error(
+            "Bless agent directory indicates more pages without an explicit next-page URL."
+          );
+        }
+        nextPath = null;
+      } else {
+        nextPath = response.nextUrl;
+      }
+    }
+    return [...agents.values()];
   }
 
   async listSessions(query: SessionQuery = {}): Promise<BlessSession[]> {

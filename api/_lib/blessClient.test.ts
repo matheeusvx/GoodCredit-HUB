@@ -1,14 +1,73 @@
 import { describe, expect, it } from "vitest";
 import { BlessClient } from "./blessClient.js";
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = {}
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
   });
 }
 
 describe("BlessClient", () => {
+  it("lista o diretório oficial usando userId, sem substituir por id/agentId", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (input: string | URL | Request) => {
+      const url = String(input);
+      calls.push(url);
+      if (calls.length === 1) {
+        return jsonResponse({ items: [{
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          userId: "11111111-1111-4111-8111-111111111111",
+          name: "AGENTE DIRETÓRIO",
+          email: "AGENTE@EXAMPLE.COM",
+          phoneNumber: "+5500000000000",
+          profile: "ADMIN",
+        }, {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          name: "SEM USER ID",
+          email: "invalid@example.com",
+        }] }, 200, {
+          link: '<https://api.example.test/core/v1/agent?cursor=next>; rel="next"',
+        });
+      }
+      return jsonResponse([{
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        userId: "22222222-2222-4222-8222-222222222222",
+        name: "SEGUNDO AGENTE",
+        email: "second@example.com",
+        profile: "AGENT",
+      }]);
+    }) as typeof fetch;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl,
+    });
+
+    const agents = await client.listAgents();
+
+    expect(agents).toEqual([{
+      userId: "11111111-1111-4111-8111-111111111111",
+      agentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "AGENTE DIRETÓRIO",
+      email: "agente@example.com",
+      profile: "ADMIN",
+    }, {
+      userId: "22222222-2222-4222-8222-222222222222",
+      agentId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      name: "SEGUNDO AGENTE",
+      email: "second@example.com",
+      profile: "AGENT",
+    }]);
+    expect(agents[0]).not.toHaveProperty("phoneNumber");
+    expect(new URL(calls[0]).search).toBe("");
+    expect(calls[1]).toBe("https://api.example.test/core/v1/agent?cursor=next");
+  });
+
   it("pagina sessões com PageSize 100 e não filtra a carteira por CreatedAt", async () => {
     const calls: Array<{ url: string; authorization: string | null }> = [];
     const firstPage = Array.from({ length: 100 }, (_, index) => ({

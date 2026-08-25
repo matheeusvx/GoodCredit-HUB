@@ -15,6 +15,25 @@ import { throwOnSupabaseError } from "./supabaseAdmin.js";
 
 const OPEN_STATUSES: CrmSessionStatus[] = ["STARTED", "PENDING", "IN_PROGRESS"];
 
+interface DashboardMapping {
+  hub_user_id: string | null;
+  bless_user_id: string;
+  agent_name: string | null;
+  agent_email: string | null;
+}
+
+export function isCrmDashboardMappingEligible(
+  mapping: DashboardMapping | null,
+  hubUserId: string,
+  excludedUserIds: ReadonlySet<string>
+): mapping is DashboardMapping {
+  return Boolean(
+    mapping?.hub_user_id
+    && mapping.hub_user_id === hubUserId
+    && !excludedUserIds.has(mapping.bless_user_id.toLowerCase())
+  );
+}
+
 export function emptyCrmMetrics() {
   return {
     currentPortfolio: 0,
@@ -69,19 +88,16 @@ export async function buildCrmDashboard(options: {
   } | null;
   const { data: mappingData, error: mappingError } = await options.supabase
     .from("crm_user_mappings")
-    .select("bless_user_id,agent_name,agent_email")
+    .select("hub_user_id,bless_user_id,agent_name,agent_email")
     .eq("hub_user_id", options.hubUser.id)
     .maybeSingle();
   throwOnSupabaseError("Unable to resolve CRM user mapping", mappingError);
-  const mapping = mappingData as {
-    bless_user_id: string;
-    agent_name: string | null;
-    agent_email: string | null;
-  } | null;
-  if (
-    !mapping
-    || options.excludedUserIds.has(mapping.bless_user_id.toLowerCase())
-  ) {
+  const mapping = mappingData as DashboardMapping | null;
+  if (!isCrmDashboardMappingEligible(
+    mapping,
+    options.hubUser.id,
+    options.excludedUserIds
+  )) {
     return emptyCrmDashboard(options.metricsStartAt, "UNLINKED", state || undefined);
   }
 
