@@ -1,87 +1,22 @@
-import { BadgeDollarSign, BarChart3, CheckSquare, FileClock, PiggyBank, WalletCards } from "lucide-react";
 import { HubView } from "../Sidebar";
 import { FinancingFlow } from "./FinancingFlow";
-import { HomeHero } from "./HomeHero";
 import { ImportantNotice } from "./ImportantNotice";
-import { ModuleCard } from "./ModuleCard";
-import { ModuleStatus } from "./ModuleStatus";
 import { CrmDashboardPanel } from "./CrmDashboardPanel";
+import { QuickAccess } from "./QuickAccess";
 
 interface Props {
   onNavigate: (view: HubView) => void;
 }
 
-const modules = [
-  {
-    title: "Simulação de Financiamento",
-    description: "Calcule valor financiado, taxa, parcela, LTV e comprometimento de renda com base nas regras comerciais configuradas.",
-    status: "Ativo" as const,
-    actionLabel: "Acessar Simulação",
-    icon: WalletCards,
-    target: "simulation" as const
-  },
-  {
-    title: "Planilha de Amortização",
-    description: "Simule SAC, PRICE, aportes manuais, uso de FGTS, economia de juros e redução de prazo.",
-    status: "Ativo" as const,
-    actionLabel: "Acessar Amortização",
-    icon: BarChart3,
-    target: "amortization" as const
-  },
-  {
-    title: "Cálculo de Pró-Soluto",
-    description: "Apure quanto falta para o vendedor receber o valor acordado após considerar financiamento, FGTS e entrada já paga.",
-    status: "Ativo" as const,
-    actionLabel: "Calcular Pró-Soluto",
-    icon: BadgeDollarSign,
-    target: "pro-soluto" as const
-  },
-  {
-    title: "Checklist Documental",
-    description: "Gere checklists por perfil documental, como comprador CLT, autônomo e vendedor pessoa jurídica.",
-    status: "Ativo" as const,
-    actionLabel: "Gerar Checklist",
-    icon: CheckSquare,
-    target: "checklist" as const
-  },
-  {
-    title: "Apuração de Renda",
-    description: "Analise movimentações, classifique entradas e calcule média, mediana e recorrência de renda.",
-    status: "Ativo" as const,
-    actionLabel: "Apurar Renda",
-    icon: FileClock,
-    target: "income-analysis" as const
-  },
-  {
-    title: "Uso de FGTS",
-    description: "Analise elegibilidade, estime renda, planeje amortizações e organize documentos para uso do FGTS.",
-    status: "Ativo" as const,
-    actionLabel: "Acessar FGTS",
-    icon: PiggyBank,
-    target: "fgts" as const
-  }
-];
-
 export function HomePage({ onNavigate }: Props) {
   return (
-    <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
+    <main className="mx-auto flex max-w-[1700px] flex-col gap-7 px-4 py-5 sm:px-6 sm:py-6 xl:px-8">
       <CrmDashboardPanel />
-      <HomeHero />
-
-      <section>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-slate-950">Ferramentas disponíveis</h2>
-          <p className="mt-1 text-sm text-slate-500">Acesse os módulos ativos ou acompanhe o que está em desenvolvimento.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {modules.map((module) => (
-            <ModuleCard key={module.title} {...module} onNavigate={onNavigate} />
-          ))}
-        </div>
-      </section>
-
-      <FinancingFlow />
-      <ModuleStatus />
+      <QuickAccess onNavigate={onNavigate} />
+      <details className="group rounded-xl border border-slate-200/80 bg-white shadow-sm">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500">Fluxo do financiamento <span className="ml-2 text-xs font-medium text-slate-500 group-open:hidden">Ver etapas</span><span className="ml-2 hidden text-xs font-medium text-slate-500 group-open:inline">Ocultar etapas</span></summary>
+        <div className="border-t border-slate-100 p-3"><FinancingFlow /></div>
+      </details>
       <ImportantNotice />
     </main>
   );
