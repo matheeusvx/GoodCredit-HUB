@@ -4,14 +4,14 @@ import {
   type CrmAssignmentEvent,
   type CrmMessageActivity,
   type CrmResponseEvent,
-} from "../../src/lib/crm/domain";
-import { getSaoPauloDayRange } from "../../src/lib/crm/time";
+} from "../../src/lib/crm/domain.js";
+import { getSaoPauloDayRange } from "../../src/lib/crm/time.js";
 import type {
   CrmDashboardResponse,
   CrmDashboardSession,
   CrmSessionStatus,
-} from "../../src/types/crmDashboard";
-import { throwOnSupabaseError } from "./supabaseAdmin";
+} from "../../src/types/crmDashboard.js";
+import { throwOnSupabaseError } from "./supabaseAdmin.js";
 
 const OPEN_STATUSES: CrmSessionStatus[] = ["STARTED", "PENDING", "IN_PROGRESS"];
 

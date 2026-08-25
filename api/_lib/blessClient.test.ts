@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BlessClient } from "./blessClient";
+import { BlessClient } from "./blessClient.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

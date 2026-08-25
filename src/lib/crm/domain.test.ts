@@ -7,8 +7,8 @@ import {
   sanitizeCrmOwner,
   type CrmMessageActivity,
   type CrmSessionSnapshot,
-} from "./domain";
-import { getSaoPauloDayRange } from "./time";
+} from "./domain.js";
+import { getSaoPauloDayRange } from "./time.js";
 
 const AGENT_A = "11111111-1111-4111-8111-111111111111";
 const AGENT_B = "22222222-2222-4222-8222-222222222222";

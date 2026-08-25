@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import dashboardHandler from "../crm/dashboard";
-import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config";
-import { bearerToken, hasForbiddenIdentityParameter, type ApiRequest, type ApiResponse } from "./http";
-import { resolveAutomaticMappingRows } from "./sync";
+import dashboardHandler from "../crm/dashboard.js";
+import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config.js";
+import { bearerToken, hasForbiddenIdentityParameter, type ApiRequest, type ApiResponse } from "./http.js";
+import { resolveAutomaticMappingRows } from "./sync.js";
 
 function responseRecorder() {
   const record = { status: 0, body: null as unknown };

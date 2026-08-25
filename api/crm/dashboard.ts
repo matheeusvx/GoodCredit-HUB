@@ -1,17 +1,17 @@
-import { buildCrmDashboard, emptyCrmDashboard } from "../_lib/dashboard";
-import { assertDashboardConfig, getServerConfig } from "../_lib/config";
+import { buildCrmDashboard, emptyCrmDashboard } from "../_lib/dashboard.js";
+import { assertDashboardConfig, getServerConfig } from "../_lib/config.js";
 import {
   bearerToken,
   hasForbiddenIdentityParameter,
   sendJson,
   type ApiRequest,
   type ApiResponse,
-} from "../_lib/http";
-import { runCrmSync } from "../_lib/sync";
+} from "../_lib/http.js";
+import { runCrmSync } from "../_lib/sync.js";
 import {
   authenticateSupabaseRequest,
   createSupabaseAdmin,
-} from "../_lib/supabaseAdmin";
+} from "../_lib/supabaseAdmin.js";
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   if (request.method !== "GET") {

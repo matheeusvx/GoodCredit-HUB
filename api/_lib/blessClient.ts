@@ -1,5 +1,5 @@
-import type { CrmSessionStatus } from "../../src/types/crmDashboard";
-import type { CrmRawMessageIdentity } from "../../src/lib/crm/domain";
+import type { CrmSessionStatus } from "../../src/types/crmDashboard.js";
+import type { CrmRawMessageIdentity } from "../../src/lib/crm/domain.js";
 
 type JsonRecord = Record<string, unknown>;
 

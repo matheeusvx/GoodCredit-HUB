@@ -2,8 +2,8 @@ import type {
   CrmDashboardMetrics,
   CrmDashboardSession,
   CrmSessionStatus,
-} from "../../types/crmDashboard";
-import { getSaoPauloDayRange, isInsideRange } from "./time";
+} from "../../types/crmDashboard.js";
+import { getSaoPauloDayRange, isInsideRange } from "./time.js";
 
 export type CrmActorType = "CUSTOMER" | "AGENT" | "EXCLUDED" | "UNKNOWN";
 export type CrmAssignmentScope = "VALID" | "EXCLUDED" | "UNASSIGNED" | "UNKNOWN";

@@ -8,10 +8,10 @@ import {
   type CrmAssignmentEvent,
   type CrmMessageActivity,
   type CrmSessionSnapshot,
-} from "../../src/lib/crm/domain";
-import { BlessClient, type BlessAgentDetails, type BlessSession } from "./blessClient";
-import { assertSyncConfig } from "./config";
-import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./supabaseAdmin";
+} from "../../src/lib/crm/domain.js";
+import { BlessClient, type BlessAgentDetails, type BlessSession } from "./blessClient.js";
+import { assertSyncConfig } from "./config.js";
+import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./supabaseAdmin.js";
 
 const OPEN_STATUSES = ["STARTED", "PENDING", "IN_PROGRESS"] as const;
 const SYNC_ID = "bless-primary";

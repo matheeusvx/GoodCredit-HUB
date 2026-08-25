@@ -1,12 +1,12 @@
-import { assertSyncConfig } from "../_lib/config";
+import { assertSyncConfig } from "../_lib/config.js";
 import {
   bearerToken,
   headerValue,
   sendJson,
   type ApiRequest,
   type ApiResponse,
-} from "../_lib/http";
-import { runCrmSync } from "../_lib/sync";
+} from "../_lib/http.js";
+import { runCrmSync } from "../_lib/sync.js";
 
 async function secureEqual(left: string, right: string): Promise<boolean> {
   if (!left || !right) return false;
