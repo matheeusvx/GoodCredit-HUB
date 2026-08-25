@@ -280,13 +280,13 @@ export class BlessClient {
         PageNumber: String(pageNumber),
         PageSize: "100",
       });
-      query.statuses?.forEach((status) => params.append("Status[]", status));
+      query.statuses?.forEach((status) => params.append("Status", status));
       if (query.lastInteractionAfter) {
         params.set("LastInteractionAt.After", query.lastInteractionAfter);
       }
       if (query.updatedAfter) params.set("UpdatedAt.After", query.updatedAfter);
-      params.append("IncludeDetails[]", "AgentDetails");
-      params.append("IncludeDetails[]", "ContactDetails");
+      params.append("IncludeDetails", "AgentDetails");
+      params.append("IncludeDetails", "ContactDetails");
       const page = arrayPage(await this.request("/chat/v2/session", params));
       result.push(
         ...page.items

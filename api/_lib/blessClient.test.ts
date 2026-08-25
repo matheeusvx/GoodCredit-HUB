@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BlessClient } from "./blessClient.js";
+import { BlessClient, normalizeBlessSession } from "./blessClient.js";
 
 function jsonResponse(
   body: unknown,
@@ -103,7 +103,33 @@ describe("BlessClient", () => {
     expect(calls.every((call) => call.authorization === "synthetic-api-credential")).toBe(true);
     expect(calls.every((call) => call.url.includes("PageSize=100"))).toBe(true);
     expect(calls.every((call) => !call.url.includes("CreatedAt"))).toBe(true);
-    expect(calls[0].url).toContain("IncludeDetails%5B%5D=AgentDetails");
+    calls.forEach((call) => {
+      const params = new URL(call.url).searchParams;
+      expect(params.getAll("Status")).toEqual(["STARTED", "PENDING", "IN_PROGRESS"]);
+      expect(params.getAll("IncludeDetails")).toEqual(["AgentDetails", "ContactDetails"]);
+      expect(params.has("Status[]")).toBe(false);
+      expect(params.has("IncludeDetails[]")).toBe(false);
+    });
+  });
+
+  it("prioriza o nome sanitizado retornado em contactDetails", () => {
+    const session = normalizeBlessSession({
+      id: "SESSION_1",
+      contactId: "CONTACT_1",
+      contactName: "Nome alternativo",
+      contactDetails: {
+        id: "CONTACT_1",
+        name: "Cliente Teste",
+        phoneNumber: "+5500000000000",
+      },
+    });
+
+    expect(session).toMatchObject({
+      sessionId: "SESSION_1",
+      contactId: "CONTACT_1",
+      contactName: "Cliente Teste",
+    });
+    expect(session).not.toHaveProperty("phoneNumber");
   });
 
   it("pagina mensagens e preserva userId sem utilizar senderId", async () => {
