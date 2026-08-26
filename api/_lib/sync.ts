@@ -21,10 +21,12 @@ import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./su
 const OPEN_STATUSES = ["STARTED", "PENDING", "IN_PROGRESS"] as const;
 const SYNC_ID = "bless-primary";
 const MESSAGE_CONCURRENCY = 3;
+export const AGENT_DIRECTORY_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
 interface SyncStateRow {
   initialized_at: string | null;
   last_success_at: string | null;
+  last_error_at: string | null;
   status: string;
 }
 
@@ -41,6 +43,13 @@ interface StoredSessionRow {
   last_actor_type: CrmMessageActivity["actorType"] | null;
 }
 
+interface AgentMappingFreshnessRow {
+  id: string;
+  agent_name: string | null;
+  agent_email: string | null;
+  last_seen_at: string | null;
+}
+
 export interface CrmSyncSummary {
   status: "COMPLETED" | "ALREADY_RUNNING";
   baseline: boolean;
@@ -49,6 +58,8 @@ export interface CrmSyncSummary {
   activitiesStored: number;
   responseEventsStored: number;
   assignmentEventsDetected: number;
+  agentDirectoryRefreshed: boolean;
+  agentDirectoryWarning: boolean;
 }
 
 export function safeErrorMessage(error: unknown): string {
@@ -170,6 +181,92 @@ async function synchronizeAgentMappings(
     .from("crm_user_mappings")
     .upsert(rows, { onConflict: "bless_user_id" });
   throwOnSupabaseError("Unable to store CRM user mappings", error);
+}
+
+export function shouldRefreshAgentDirectory(
+  mappings: AgentMappingFreshnessRow[],
+  now: Date,
+  lastDirectoryFailureAt?: string | null,
+): boolean {
+  if (!mappings.length) {
+    const lastFailure = lastDirectoryFailureAt
+      ? new Date(lastDirectoryFailureAt).getTime()
+      : Number.NaN;
+    return !Number.isFinite(lastFailure)
+      || now.getTime() - lastFailure >= AGENT_DIRECTORY_REFRESH_INTERVAL_MS;
+  }
+
+  const latestRefreshAt = mappings.reduce((latest, mapping) => {
+    const timestamp = mapping.last_seen_at
+      ? new Date(mapping.last_seen_at).getTime()
+      : Number.NaN;
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, Number.NEGATIVE_INFINITY);
+
+  if (!Number.isFinite(latestRefreshAt)) return true;
+  return now.getTime() - latestRefreshAt >= AGENT_DIRECTORY_REFRESH_INTERVAL_MS;
+}
+
+async function refreshAgentDirectoryIfDue(options: {
+  supabase: SupabaseClient;
+  blessClient: BlessClient;
+  excludedUserIds: ReadonlySet<string>;
+  now: Date;
+  seenAt: string;
+  lastDirectoryFailureAt: string | null;
+}): Promise<{ refreshed: boolean; warning: boolean }> {
+  const { data, error } = await options.supabase
+    .from("crm_user_mappings")
+    .select("id,agent_name,agent_email,last_seen_at");
+  throwOnSupabaseError("Unable to load CRM agent directory freshness", error);
+
+  const mappings = (data || []) as AgentMappingFreshnessRow[];
+  if (!shouldRefreshAgentDirectory(
+    mappings,
+    options.now,
+    options.lastDirectoryFailureAt,
+  )) {
+    return { refreshed: false, warning: false };
+  }
+
+  // Reserve the six-hour refresh window before the external call. This keeps a
+  // failed/rate-limited directory request from being repeated by every sync.
+  for (const mappingIds of chunks(mappings.map((mapping) => mapping.id), 250)) {
+    const { error: markerError } = await options.supabase
+      .from("crm_user_mappings")
+      .update({ last_seen_at: options.seenAt })
+      .in("id", mappingIds);
+    throwOnSupabaseError("Unable to store CRM agent directory refresh marker", markerError);
+  }
+
+  let agents: BlessDirectoryAgent[];
+  try {
+    agents = await options.blessClient.listAgents();
+  } catch (error) {
+    console.warn(
+      "[Bless CRM] Agent directory refresh failed; operational sync will continue:",
+      safeErrorMessage(error),
+    );
+    const { error: warningMarkerError } = await options.supabase
+      .from("crm_sync_state")
+      .update({ last_error_at: options.seenAt })
+      .eq("id", SYNC_ID);
+    if (warningMarkerError) {
+      console.warn(
+        "[Bless CRM] Unable to persist agent directory cooldown marker:",
+        safeErrorMessage(warningMarkerError),
+      );
+    }
+    return { refreshed: false, warning: true };
+  }
+
+  await synchronizeAgentMappings(
+    options.supabase,
+    agents,
+    options.excludedUserIds,
+    options.seenAt,
+  );
+  return { refreshed: true, warning: false };
 }
 
 export function resolveAutomaticMappingRows(options: {
@@ -294,7 +391,7 @@ export async function runCrmSync(options: {
   const startedAt = now.toISOString();
   const { data: syncStateData, error: syncStateError } = await supabase
     .from("crm_sync_state")
-    .select("initialized_at,last_success_at,status")
+    .select("initialized_at,last_success_at,last_error_at,status")
     .eq("id", SYNC_ID)
     .single();
   throwOnSupabaseError("Unable to load CRM sync state", syncStateError);
@@ -313,6 +410,8 @@ export async function runCrmSync(options: {
       activitiesStored: 0,
       responseEventsStored: 0,
       assignmentEventsDetected: 0,
+      agentDirectoryRefreshed: false,
+      agentDirectoryWarning: false,
     };
   }
 
@@ -327,10 +426,7 @@ export async function runCrmSync(options: {
         blessClient.listSessions({ updatedAfter: syncState.last_success_at })
       );
     }
-    const [sessionGroups, directoryAgents] = await Promise.all([
-      Promise.all(sessionQueries),
-      blessClient.listAgents(),
-    ]);
+    const sessionGroups = await Promise.all(sessionQueries);
     const sessions = deduplicateSessions(sessionGroups);
     const previousById = await loadStoredSessions(
       supabase,
@@ -377,13 +473,6 @@ export async function runCrmSync(options: {
       });
       throwOnSupabaseError("Unable to apply CRM session snapshots", error);
     }
-
-    await synchronizeAgentMappings(
-      supabase,
-      directoryAgents,
-      config.excludedBlessUserIds,
-      startedAt
-    );
 
     const forceMessages = baseline || options.mode === "bootstrap";
     const sessionsToFetch = sessions.filter((session) =>
@@ -454,6 +543,15 @@ export async function runCrmSync(options: {
       }
     );
 
+    const agentDirectory = await refreshAgentDirectoryIfDue({
+      supabase,
+      blessClient,
+      excludedUserIds: config.excludedBlessUserIds,
+      now,
+      seenAt: startedAt,
+      lastDirectoryFailureAt: syncState.last_error_at,
+    });
+
     const { error: finishError } = await supabase.rpc("crm_finish_sync", {
       p_sync_id: SYNC_ID,
       p_lock_token: lockToken,
@@ -470,6 +568,8 @@ export async function runCrmSync(options: {
       activitiesStored,
       responseEventsStored,
       assignmentEventsDetected: assignmentEvents.length,
+      agentDirectoryRefreshed: agentDirectory.refreshed,
+      agentDirectoryWarning: agentDirectory.warning,
     };
   } catch (error) {
     await supabase.rpc("crm_finish_sync", {
