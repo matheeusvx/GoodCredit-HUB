@@ -34,12 +34,17 @@ interface BlessClientOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   waitImpl?: (milliseconds: number) => Promise<void>;
+  messageRequestIntervalMs?: number;
 }
 
 interface SessionQuery {
   statuses?: CrmSessionStatus[];
   lastInteractionAfter?: string;
   updatedAfter?: string;
+}
+
+interface MessageQuery {
+  createdAfter?: string;
 }
 
 function object(value: unknown): JsonRecord {
@@ -180,6 +185,7 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export const DEFAULT_BLESS_TIMEOUT_MS = 30_000;
+export const DEFAULT_MESSAGE_REQUEST_INTERVAL_MS = 400;
 
 const MAX_ATTEMPTS = 3;
 const MAX_RETRY_AFTER_MS = 10_000;
@@ -238,6 +244,8 @@ export class BlessClient {
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
   private readonly waitImpl: (milliseconds: number) => Promise<void>;
+  private readonly messageRequestIntervalMs: number;
+  private hasRequestedMessages = false;
 
   constructor(options: BlessClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -245,6 +253,8 @@ export class BlessClient {
     this.fetchImpl = options.fetchImpl || fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_BLESS_TIMEOUT_MS;
     this.waitImpl = options.waitImpl ?? wait;
+    this.messageRequestIntervalMs = options.messageRequestIntervalMs
+      ?? DEFAULT_MESSAGE_REQUEST_INTERVAL_MS;
   }
 
   private async requestPage(
@@ -259,6 +269,13 @@ export class BlessClient {
     const endpoint = sanitizeEndpoint(url.pathname);
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      if (endpoint === "/chat/v1/session/[session]/message") {
+        if (this.hasRequestedMessages && this.messageRequestIntervalMs > 0) {
+          await this.waitImpl(this.messageRequestIntervalMs);
+        }
+        this.hasRequestedMessages = true;
+      }
+
       const controller = new AbortController();
       let timedOut = false;
       const timeout = setTimeout(() => {
@@ -366,13 +383,19 @@ export class BlessClient {
     return result;
   }
 
-  async listMessages(sessionId: string): Promise<CrmRawMessageIdentity[]> {
+  async listMessages(
+    sessionId: string,
+    query: MessageQuery = {},
+  ): Promise<CrmRawMessageIdentity[]> {
     const result: CrmRawMessageIdentity[] = [];
     for (let pageNumber = 1; pageNumber <= 1000; pageNumber += 1) {
       const params = new URLSearchParams({
         PageNumber: String(pageNumber),
         PageSize: "100",
       });
+      if (query.createdAfter) {
+        params.set("CreatedAt.After", query.createdAfter);
+      }
       const page = arrayPage(
         await this.request(
           `/chat/v1/session/${encodeURIComponent(sessionId)}/message`,

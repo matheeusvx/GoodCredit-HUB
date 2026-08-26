@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BlessClient,
   DEFAULT_BLESS_TIMEOUT_MS,
+  DEFAULT_MESSAGE_REQUEST_INTERVAL_MS,
   normalizeBlessSession,
 } from "./blessClient.js";
 
@@ -50,6 +51,7 @@ describe("BlessClient", () => {
       baseUrl: "https://api.example.test",
       token: "synthetic-api-credential",
       fetchImpl,
+      messageRequestIntervalMs: 0,
     });
 
     const agents = await client.listAgents();
@@ -171,6 +173,46 @@ describe("BlessClient", () => {
       senderId: "sender-0",
     });
     expect(result[0]).not.toHaveProperty("text");
+  });
+
+  it("aplica throttling global entre requests HTTP de mensagens", async () => {
+    const waits: number[] = [];
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => jsonResponse({ items: [], hasMorePages: false })) as typeof fetch,
+      waitImpl: async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+    });
+
+    await client.listMessages("session-a");
+    await client.listMessages("session-b");
+
+    expect(DEFAULT_MESSAGE_REQUEST_INTERVAL_MS).toBe(400);
+    expect(waits).toEqual([400]);
+  });
+
+  it("envia CreatedAt.After sem assumir ordenação para paginação incremental", async () => {
+    const calls: string[] = [];
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async (input: string | URL | Request) => {
+        calls.push(String(input));
+        return jsonResponse({ items: [], hasMorePages: false });
+      }) as typeof fetch,
+      messageRequestIntervalMs: 0,
+    });
+
+    await client.listMessages("session-a", {
+      createdAfter: "2026-08-25T14:30:00.000Z",
+    });
+
+    const params = new URL(calls[0]).searchParams;
+    expect(params.get("CreatedAt.After")).toBe("2026-08-25T14:30:00.000Z");
+    expect(params.has("OrderBy")).toBe(false);
+    expect(params.has("OrderDirection")).toBe(false);
   });
 
   it("usa timeout padrão de 30 segundos", () => {

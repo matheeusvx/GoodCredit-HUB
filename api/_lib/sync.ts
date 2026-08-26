@@ -20,7 +20,8 @@ import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./su
 
 const OPEN_STATUSES = ["STARTED", "PENDING", "IN_PROGRESS"] as const;
 const SYNC_ID = "bless-primary";
-const MESSAGE_CONCURRENCY = 3;
+export const MESSAGE_CONCURRENCY = 1;
+export const MESSAGE_SESSION_BATCH_SIZE = 20;
 export const AGENT_DIRECTORY_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
 interface SyncStateRow {
@@ -58,6 +59,9 @@ export interface CrmSyncSummary {
   activitiesStored: number;
   responseEventsStored: number;
   assignmentEventsDetected: number;
+  messageSessionsPending: number;
+  messageSessionsProcessed: number;
+  messageSyncWarning: boolean;
   agentDirectoryRefreshed: boolean;
   agentDirectoryWarning: boolean;
 }
@@ -116,14 +120,68 @@ async function loadStoredSessions(
   return result;
 }
 
-function changedForMessageSync(
+function validTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function needsMessageSync(
   previous: StoredSessionRow | undefined,
   current: BlessSession,
-  force: boolean
 ): boolean {
-  if (force || !previous || !previous.last_message_synced_at) return true;
-  return previous.updated_at !== current.updatedAt
-    || previous.last_interaction_at !== current.lastInteractionAt;
+  if (!previous?.last_message_synced_at) return true;
+  const watermark = validTimestamp(previous.last_message_synced_at);
+  if (watermark === null) return true;
+
+  const lastInteractionAt = validTimestamp(current.lastInteractionAt);
+  const updatedAt = validTimestamp(current.updatedAt);
+  return (lastInteractionAt !== null && lastInteractionAt > watermark)
+    || (updatedAt !== null && updatedAt > watermark);
+}
+
+export function selectMessageSyncBatch(
+  sessions: BlessSession[],
+  previousById: ReadonlyMap<string, StoredSessionRow>,
+  limit = MESSAGE_SESSION_BATCH_SIZE,
+): BlessSession[] {
+  const recentFirst = [...sessions].sort((left, right) =>
+    (validTimestamp(right.lastInteractionAt) || validTimestamp(right.updatedAt) || 0)
+    - (validTimestamp(left.lastInteractionAt) || validTimestamp(left.updatedAt) || 0)
+  );
+  if (recentFirst.length <= limit) return recentFirst;
+
+  const backlogSlots = Math.max(1, Math.floor(limit / 4));
+  const oldestWatermarks = [...sessions].sort((left, right) => {
+    const leftWatermark = validTimestamp(
+      previousById.get(left.sessionId)?.last_message_synced_at,
+    ) || 0;
+    const rightWatermark = validTimestamp(
+      previousById.get(right.sessionId)?.last_message_synced_at,
+    ) || 0;
+    return leftWatermark - rightWatermark;
+  }).slice(0, backlogSlots);
+  const backlogIds = new Set(oldestWatermarks.map((session) => session.sessionId));
+  const recent = recentFirst
+    .filter((session) => !backlogIds.has(session.sessionId))
+    .slice(0, limit - oldestWatermarks.length);
+
+  return [...recent, ...oldestWatermarks];
+}
+
+export function isRecoverableMessageSyncError(error: unknown): boolean {
+  const message = safeErrorMessage(error);
+  const status = message.match(/ returned (\d{3})\./)?.[1];
+  if (status) {
+    const code = Number(status);
+    return code === 408 || code === 425 || code === 429 || (code >= 500 && code <= 599);
+  }
+  return message.endsWith(" timed out.")
+    || message.endsWith(" failed due to a network error.");
+}
+
+function isMessageRateLimitError(error: unknown): boolean {
+  return / returned 429\.$/.test(safeErrorMessage(error));
 }
 
 async function mapWithConcurrency<T, R>(
@@ -410,6 +468,9 @@ export async function runCrmSync(options: {
       activitiesStored: 0,
       responseEventsStored: 0,
       assignmentEventsDetected: 0,
+      messageSessionsPending: 0,
+      messageSessionsProcessed: 0,
+      messageSyncWarning: false,
       agentDirectoryRefreshed: false,
       agentDirectoryWarning: false,
     };
@@ -474,17 +535,39 @@ export async function runCrmSync(options: {
       throwOnSupabaseError("Unable to apply CRM session snapshots", error);
     }
 
-    const forceMessages = baseline || options.mode === "bootstrap";
-    const sessionsToFetch = sessions.filter((session) =>
-      changedForMessageSync(previousById.get(session.sessionId), session, forceMessages)
+    const sessionsNeedingMessages = sessions.filter((session) =>
+      needsMessageSync(previousById.get(session.sessionId), session)
+    );
+    const sessionsToFetch = selectMessageSyncBatch(
+      sessionsNeedingMessages,
+      previousById,
     );
     let activitiesStored = 0;
     let responseEventsStored = 0;
+    let messageSessionsProcessed = 0;
+    let messageSyncWarning = false;
+    let messageCircuitOpen = false;
     await mapWithConcurrency(
       sessionsToFetch,
       MESSAGE_CONCURRENCY,
       async (session) => {
-        const rawMessages = await blessClient.listMessages(session.sessionId);
+        if (messageCircuitOpen) return;
+        const previous = previousById.get(session.sessionId);
+        let rawMessages: Awaited<ReturnType<BlessClient["listMessages"]>>;
+        try {
+          rawMessages = await blessClient.listMessages(session.sessionId, {
+            createdAfter: previous?.last_message_synced_at || undefined,
+          });
+        } catch (error) {
+          if (!isRecoverableMessageSyncError(error)) throw error;
+          messageSyncWarning = true;
+          console.warn(
+            "[Bless CRM] Message refresh failed; operational sync will continue:",
+            safeErrorMessage(error),
+          );
+          if (isMessageRateLimitError(error)) messageCircuitOpen = true;
+          return;
+        }
         const allActivities = rawMessages.map((message) =>
           classifyCrmMessage(message, config.excludedBlessUserIds)
         );
@@ -535,12 +618,17 @@ export async function runCrmSync(options: {
         const { error: sessionError } = await supabase
           .from("crm_sessions")
           .update({
-            last_actor_type: latest?.actorType || null,
+            last_actor_type: latest?.actorType || previous?.last_actor_type || null,
             last_message_synced_at: startedAt,
           })
           .eq("session_id", session.sessionId);
         throwOnSupabaseError("Unable to update CRM message snapshot", sessionError);
+        messageSessionsProcessed += 1;
       }
+    );
+    const messageSessionsPending = Math.max(
+      0,
+      sessionsNeedingMessages.length - messageSessionsProcessed,
     );
 
     const agentDirectory = await refreshAgentDirectoryIfDue({
@@ -564,10 +652,13 @@ export async function runCrmSync(options: {
       status: "COMPLETED",
       baseline,
       sessionsDiscovered: sessions.length,
-      sessionsWithMessagesFetched: sessionsToFetch.length,
+      sessionsWithMessagesFetched: messageSessionsProcessed,
       activitiesStored,
       responseEventsStored,
       assignmentEventsDetected: assignmentEvents.length,
+      messageSessionsPending,
+      messageSessionsProcessed,
+      messageSyncWarning,
       agentDirectoryRefreshed: agentDirectory.refreshed,
       agentDirectoryWarning: agentDirectory.warning,
     };
