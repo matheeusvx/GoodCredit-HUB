@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, BriefcaseBusiness, Clock3 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getCrmDashboard } from "../../../services/crmDashboardService";
 import type { CrmAnalyticsPeriodKey, CrmDashboardResponse } from "../../../types/crmDashboard";
@@ -12,7 +12,15 @@ import { CrmPerformanceChart, type MainChartMetric, type MainChartType } from ".
 import { CrmPortfolioHealth } from "./CrmPortfolioHealth";
 import { CrmPrioritySessions } from "./CrmPrioritySessions";
 import { CrmResponseChart } from "./CrmResponseChart";
-import { formatDuration, formatMetricNumber, generateCrmInsights, type SessionFilter, validateCustomDateRange } from "./crmDashboardUtils";
+import {
+  formatDuration,
+  formatMetricNumber,
+  generateCrmInsights,
+  retainDashboardAfterRefreshError,
+  type SessionFilter,
+  validateCustomDateRange,
+} from "./crmDashboardUtils";
+import { CRM_CLOCK_TICK_MS, startCrmAutoRefresh } from "./crmRefresh";
 
 function localToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -26,6 +34,8 @@ export function CrmDashboard() {
   const { session, user } = useAuth();
   const [dashboard, setDashboard] = useState<CrmDashboardResponse | null>(null);
   const [fetching, setFetching] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [clockNow, setClockNow] = useState(() => new Date());
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<CrmAnalyticsPeriodKey>("today");
   const [customFrom, setCustomFrom] = useState(localToday);
@@ -35,10 +45,26 @@ export function CrmDashboard() {
   const [chartType, setChartType] = useState<MainChartType>("area");
   const [sessionFilter, setSessionFilter] = useState<SessionFilter>("all");
   const [sessionSearch, setSessionSearch] = useState("");
+  const mountedRef = useRef(false);
+  const requestInFlightRef = useRef(false);
+  const pendingRequestRef = useRef<{ refresh: boolean } | null>(null);
+  const initialRefreshDoneRef = useRef(false);
+  const lastSyncAtRef = useRef<string | null>(null);
+  const loadRef = useRef<(refresh: boolean) => Promise<void>>(async () => undefined);
 
-  const load = useCallback(async (refresh: boolean, signal?: AbortSignal) => {
+  lastSyncAtRef.current = dashboard?.meta.lastSyncAt || null;
+
+  const load = useCallback(async (refresh: boolean) => {
     if (!session?.access_token || (period === "custom" && !appliedCustom)) return;
+    if (requestInFlightRef.current) {
+      pendingRequestRef.current = {
+        refresh: Boolean(pendingRequestRef.current?.refresh || refresh),
+      };
+      return;
+    }
+    requestInFlightRef.current = true;
     setFetching(true);
+    setRefreshing(refresh);
     setError(null);
     try {
       const next = await getCrmDashboard(session.access_token, {
@@ -46,23 +72,57 @@ export function CrmDashboard() {
         from: appliedCustom?.from,
         to: appliedCustom?.to,
         refresh,
-        signal,
       });
-      setDashboard(next);
+      if (mountedRef.current) {
+        setDashboard(next);
+        if (refresh) initialRefreshDoneRef.current = true;
+      }
     } catch (loadError) {
-      if (loadError instanceof DOMException && loadError.name === "AbortError") return;
-      setError(loadError instanceof Error ? loadError.message : "Não foi possível atualizar os indicadores.");
+      if (mountedRef.current) {
+        setDashboard((current) => retainDashboardAfterRefreshError(current));
+        setError(loadError instanceof Error ? loadError.message : "Não foi possível atualizar os indicadores.");
+      }
     } finally {
-      if (!signal?.aborted) setFetching(false);
+      requestInFlightRef.current = false;
+      if (mountedRef.current) {
+        setFetching(false);
+        setRefreshing(false);
+        const pending = pendingRequestRef.current;
+        pendingRequestRef.current = null;
+        if (pending) queueMicrotask(() => void loadRef.current(pending.refresh));
+      }
     }
   }, [appliedCustom, period, session?.access_token]);
 
   useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      pendingRequestRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (period === "custom" && !appliedCustom) return;
-    const controller = new AbortController();
-    void load(false, controller.signal);
-    return () => controller.abort();
+    void load(!initialRefreshDoneRef.current);
   }, [appliedCustom, load, period]);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    return startCrmAutoRefresh({
+      refresh: () => void loadRef.current(true),
+      getLastSyncAt: () => lastSyncAtRef.current,
+    });
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), CRM_CLOCK_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const displayName = dashboard?.user?.name || String(user?.user_metadata?.name || "").trim() || user?.email?.split("@")[0] || "usuário";
   const insights = useMemo(() => dashboard ? generateCrmInsights(dashboard) : [], [dashboard]);
@@ -92,7 +152,7 @@ export function CrmDashboard() {
 
   return (
     <section className="space-y-5" aria-labelledby="crm-dashboard-title">
-      <CrmDashboardHeader name={displayName} status={dashboard?.meta.integrationStatus || null} lastSyncAt={dashboard?.meta.lastSyncAt || null} refreshing={fetching} onRefresh={() => void load(true)} period={period} onPeriodChange={changePeriod} customFrom={customFrom} customTo={customTo} onCustomFromChange={setCustomFrom} onCustomToChange={setCustomTo} onApplyCustom={applyCustom} />
+      <CrmDashboardHeader name={displayName} status={error ? "SYNC_ERROR" : dashboard?.meta.integrationStatus || null} lastSyncAt={dashboard?.meta.lastSyncAt || null} refreshing={refreshing} busy={fetching} now={clockNow} onRefresh={() => void load(true)} period={period} onPeriodChange={changePeriod} customFrom={customFrom} customTo={customTo} onCustomFromChange={setCustomFrom} onCustomToChange={setCustomTo} onApplyCustom={applyCustom} />
       {error && <StateNotice tone="red"><span className="flex items-center gap-2"><AlertCircle className="h-4 w-4" />{error}{dashboard && " Os últimos dados permanecem visíveis."}</span></StateNotice>}
       {dashboard?.meta.integrationStatus === "NOT_CONFIGURED" && <StateNotice>Integração CRM ainda não configurada.</StateNotice>}
       {dashboard?.meta.integrationStatus === "UNLINKED" && <StateNotice>Seu usuário do CRM ainda não está vinculado ao GoodCredit Hub.</StateNotice>}

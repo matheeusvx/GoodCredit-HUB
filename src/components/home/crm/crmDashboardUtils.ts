@@ -2,9 +2,72 @@ import type {
   CrmAnalyticsMetricComparison,
   CrmDashboardResponse,
   CrmDashboardSession,
+  CrmIntegrationStatus,
 } from "../../../types/crmDashboard";
+import { CRM_STALE_AFTER_MS, isSyncOlderThan } from "./crmRefresh";
 
 export type SessionFilter = "all" | "awaiting" | "unread" | "inactive";
+export type CrmConnectionVisualStatus =
+  | "connected"
+  | "updating"
+  | "stale"
+  | "unavailable"
+  | "unlinked"
+  | "not_configured";
+
+export function getCrmConnectionVisualStatus(options: {
+  integrationStatus: CrmIntegrationStatus | null;
+  lastSyncAt: string | null;
+  refreshing: boolean;
+  now?: Date;
+}): { key: CrmConnectionVisualStatus; label: string } {
+  if (options.integrationStatus === "NOT_CONFIGURED") {
+    return { key: "not_configured", label: "CRM não configurado" };
+  }
+  if (options.integrationStatus === "UNLINKED") {
+    return { key: "unlinked", label: "CRM não vinculado" };
+  }
+  if (options.refreshing) return { key: "updating", label: "Atualizando CRM" };
+  if (options.integrationStatus === "SYNC_ERROR") {
+    return { key: "unavailable", label: "CRM indisponível" };
+  }
+  if (
+    options.integrationStatus === "READY"
+    && !isSyncOlderThan(options.lastSyncAt, CRM_STALE_AFTER_MS, options.now)
+  ) {
+    return { key: "connected", label: "CRM conectado" };
+  }
+  if (options.integrationStatus === "READY") {
+    return { key: "stale", label: "CRM desatualizado" };
+  }
+  return { key: "unavailable", label: "CRM indisponível" };
+}
+
+export function formatUpdatedLabel(value: string | null, now = new Date()): string {
+  if (!value) return "Ainda não sincronizado";
+  const minutes = Math.max(0, Math.floor((now.getTime() - new Date(value).getTime()) / 60_000));
+  if (minutes < 1) return "Atualizado agora";
+  if (minutes < 60) return `Atualizado há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Atualizado há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `Atualizado há ${days} dia${days === 1 ? "" : "s"}`;
+}
+
+export function normalizeSparklineValues(
+  values: Array<number | null | undefined>
+): Array<{ index: number; metric: number }> {
+  const valid = values
+    .map((metric, index) => ({ index, metric }))
+    .filter((point): point is { index: number; metric: number } =>
+      typeof point.metric === "number" && Number.isFinite(point.metric)
+    );
+  return valid.length >= 2 ? valid : [];
+}
+
+export function retainDashboardAfterRefreshError<T>(current: T): T {
+  return current;
+}
 
 export function formatMetricNumber(value: number | null): string {
   return value === null ? "—" : new Intl.NumberFormat("pt-BR").format(value);

@@ -6,8 +6,12 @@ import {
   formatDuration,
   formatMetricNumber,
   formatRelativeTime,
+  formatUpdatedLabel,
   generateCrmInsights,
+  getCrmConnectionVisualStatus,
   metricDeltaPresentation,
+  normalizeSparklineValues,
+  retainDashboardAfterRefreshError,
   validateCustomDateRange,
 } from "./crmDashboardUtils";
 
@@ -31,6 +35,44 @@ describe("lógica visual do dashboard CRM", () => {
     expect(formatDuration(null)).toBe("—");
     expect(formatChartDate("2026-08-25")).toContain("25");
     expect(formatRelativeTime("2026-08-23T15:00:00Z", new Date("2026-08-25T15:00:00Z"))).toBe("há 2 dias");
+    expect(formatUpdatedLabel("2026-08-25T14:00:00Z", new Date("2026-08-25T15:00:00Z"))).toBe("Atualizado há 1 h");
+  });
+
+  it("distingue CRM conectado, desatualizado e indisponível", () => {
+    const now = new Date("2026-08-25T15:00:00Z");
+    expect(getCrmConnectionVisualStatus({
+      integrationStatus: "READY",
+      lastSyncAt: "2026-08-25T14:45:00Z",
+      refreshing: false,
+      now,
+    })).toEqual({ key: "connected", label: "CRM conectado" });
+    expect(getCrmConnectionVisualStatus({
+      integrationStatus: "READY",
+      lastSyncAt: "2026-08-25T14:39:59Z",
+      refreshing: false,
+      now,
+    })).toEqual({ key: "stale", label: "CRM desatualizado" });
+    expect(getCrmConnectionVisualStatus({
+      integrationStatus: "SYNC_ERROR",
+      lastSyncAt: "2026-08-25T14:59:00Z",
+      refreshing: false,
+      now,
+    })).toEqual({ key: "unavailable", label: "CRM indisponível" });
+  });
+
+  it("só prepara sparkline com pelo menos dois números válidos", () => {
+    expect(normalizeSparklineValues([13])).toEqual([]);
+    expect(normalizeSparklineValues([null, 13, undefined, Number.NaN])).toEqual([]);
+    expect(normalizeSparklineValues([null, 13, Number.NaN, 25])).toEqual([
+      { index: 1, metric: 13 },
+      { index: 3, metric: 25 },
+    ]);
+    expect(normalizeSparklineValues([null, 13, 25]).some((point) => point.metric === 0)).toBe(false);
+  });
+
+  it("preserva o dashboard anterior quando o refresh falha", () => {
+    const previous = { metrics: { currentPortfolio: 7 }, meta: { integrationStatus: "READY" } };
+    expect(retainDashboardAfterRefreshError(previous)).toBe(previous);
   });
 
   it("valida período custom sem requisitar intervalos incompletos", () => {
