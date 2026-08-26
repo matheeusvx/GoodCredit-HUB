@@ -33,6 +33,7 @@ interface BlessClientOptions {
   token: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  waitImpl?: (milliseconds: number) => Promise<void>;
 }
 
 interface SessionQuery {
@@ -178,17 +179,72 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+export const DEFAULT_BLESS_TIMEOUT_MS = 30_000;
+
+const MAX_ATTEMPTS = 3;
+const MAX_RETRY_AFTER_MS = 10_000;
+const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+type RequestFailure =
+  | { type: "http"; status: number }
+  | { type: "timeout" }
+  | { type: "network" };
+
+function sanitizeEndpoint(pathname: string): string {
+  return pathname.replace(
+    /^\/chat\/v1\/session\/[^/]+\/message\/?$/i,
+    "/chat/v1/session/[session]/message",
+  );
+}
+
+function getRetryDelay(response: Response | null, attempt: number): number {
+  const retryAfter = response?.headers.get("retry-after")?.trim();
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.min(seconds * 1_000, MAX_RETRY_AFTER_MS);
+    }
+
+    const retryAt = Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) {
+      return Math.min(Math.max(retryAt - Date.now(), 0), MAX_RETRY_AFTER_MS);
+    }
+  }
+
+  return 750 * 2 ** (attempt - 1);
+}
+
+function createRequestError(
+  method: "GET",
+  endpoint: string,
+  attempts: number,
+  failure: RequestFailure,
+): Error {
+  const attemptLabel = attempts === 1 ? "attempt" : "attempts";
+  const prefix = `Bless API request failed after ${attempts} ${attemptLabel}: ${method} ${endpoint}`;
+
+  if (failure.type === "http") {
+    return new Error(`${prefix} returned ${failure.status}.`);
+  }
+  if (failure.type === "timeout") {
+    return new Error(`${prefix} timed out.`);
+  }
+  return new Error(`${prefix} failed due to a network error.`);
+}
+
 export class BlessClient {
   private readonly baseUrl: string;
   private readonly token: string;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
+  private readonly waitImpl: (milliseconds: number) => Promise<void>;
 
   constructor(options: BlessClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
     this.token = options.token;
     this.fetchImpl = options.fetchImpl || fetch;
-    this.timeoutMs = options.timeoutMs || 15_000;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_BLESS_TIMEOUT_MS;
+    this.waitImpl = options.waitImpl ?? wait;
   }
 
   private async requestPage(
@@ -200,9 +256,15 @@ export class BlessClient {
       throw new Error("Bless API pagination URL has an unexpected origin.");
     }
     params.forEach((value, key) => url.searchParams.append(key, value));
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    const endpoint = sanitizeEndpoint(url.pathname);
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, this.timeoutMs);
       try {
         const response = await this.fetchImpl(url.toString(), {
           method: "GET",
@@ -216,30 +278,32 @@ export class BlessClient {
             nextUrl: explicitNextUrl(payload, response.headers.get("link")),
           };
         }
-        if (response.status !== 429 && response.status < 500) {
-          throw new Error(`Bless API request failed with status ${response.status}.`);
+        const failure: RequestFailure = { type: "http", status: response.status };
+        if (!RETRYABLE_HTTP_STATUSES.has(response.status) || attempt === MAX_ATTEMPTS) {
+          throw createRequestError("GET", endpoint, attempt, failure);
         }
-        if (attempt === 2) {
-          throw new Error(`Bless API unavailable with status ${response.status}.`);
-        }
-        const retryAfter = Number(response.headers.get("retry-after"));
-        await wait(Number.isFinite(retryAfter)
-          ? Math.min(5_000, Math.max(250, retryAfter * 1000))
-          : 500 * (attempt + 1));
+        await this.waitImpl(getRetryDelay(response, attempt));
       } catch (error) {
         if (
           error instanceof Error
-          && error.message.startsWith("Bless API request failed with status")
+          && error.message.startsWith("Bless API request failed after")
         ) {
           throw error;
         }
-        if (attempt === 2) throw new Error("Bless API request failed after retries.");
-        await wait(500 * (attempt + 1));
+
+        const failure: RequestFailure =
+          timedOut || (error instanceof Error && error.name === "AbortError")
+            ? { type: "timeout" }
+            : { type: "network" };
+        if (attempt === MAX_ATTEMPTS) {
+          throw createRequestError("GET", endpoint, attempt, failure);
+        }
+        await this.waitImpl(getRetryDelay(null, attempt));
       } finally {
         clearTimeout(timeout);
       }
     }
-    throw new Error("Bless API request failed.");
+    throw createRequestError("GET", endpoint, MAX_ATTEMPTS, { type: "network" });
   }
 
   private async request(path: string, params: URLSearchParams): Promise<unknown> {

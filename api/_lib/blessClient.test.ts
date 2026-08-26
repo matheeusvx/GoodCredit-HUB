@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { BlessClient, normalizeBlessSession } from "./blessClient.js";
+import {
+  BlessClient,
+  DEFAULT_BLESS_TIMEOUT_MS,
+  normalizeBlessSession,
+} from "./blessClient.js";
 
 function jsonResponse(
   body: unknown,
@@ -169,20 +173,195 @@ describe("BlessClient", () => {
     expect(result[0]).not.toHaveProperty("text");
   });
 
-  it("repete chamadas limitadamente após 429", async () => {
+  it("usa timeout padrão de 30 segundos", () => {
+    expect(DEFAULT_BLESS_TIMEOUT_MS).toBe(30_000);
+  });
+
+  it.each([401, 403])("não repete chamadas após status %s", async (status) => {
     let attempts = 0;
     const fetchImpl = (async () => {
       attempts += 1;
-      return attempts === 1
-        ? new Response("", { status: 429, headers: { "retry-after": "0" } })
-        : jsonResponse({ items: [], hasMorePages: false });
+      return new Response("", { status });
     }) as typeof fetch;
     const client = new BlessClient({
       baseUrl: "https://api.example.test",
       token: "synthetic-api-credential",
       fetchImpl,
+      waitImpl: async () => undefined,
     });
+
+    await expect(client.listSessions()).rejects.toThrow(
+      `Bless API request failed after 1 attempt: GET /chat/v2/session returned ${status}.`,
+    );
+    expect(attempts).toBe(1);
+  });
+
+  it("repete chamadas após 429 e preserva o status final", async () => {
+    let attempts = 0;
+    const fetchImpl = (async () => {
+      attempts += 1;
+      return new Response("", { status: 429, headers: { "retry-after": "0" } });
+    }) as typeof fetch;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl,
+      waitImpl: async () => undefined,
+    });
+
+    await expect(client.listSessions()).rejects.toThrow(
+      "Bless API request failed after 3 attempts: GET /chat/v2/session returned 429.",
+    );
+    expect(attempts).toBe(3);
+  });
+
+  it("repete chamadas após 503 e preserva o status final", async () => {
+    let attempts = 0;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => {
+        attempts += 1;
+        return new Response("", { status: 503 });
+      }) as typeof fetch,
+      waitImpl: async () => undefined,
+    });
+
+    await expect(client.listAgents()).rejects.toThrow(
+      "Bless API request failed after 3 attempts: GET /core/v1/agent returned 503.",
+    );
+    expect(attempts).toBe(3);
+  });
+
+  it("repete timeout e informa a falha sem expor detalhes internos", async () => {
+    let attempts = 0;
+    const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => {
+      attempts += 1;
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          const error = new Error("request aborted with synthetic-api-credential");
+          error.name = "AbortError";
+          reject(error);
+        });
+      });
+    }) as typeof fetch;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl,
+      timeoutMs: 1,
+      waitImpl: async () => undefined,
+    });
+
+    const promise = client.listSessions();
+    await expect(promise).rejects.toThrow(
+      "Bless API request failed after 3 attempts: GET /chat/v2/session timed out.",
+    );
+    await expect(promise).rejects.not.toThrow("synthetic-api-credential");
+    expect(attempts).toBe(3);
+  });
+
+  it("repete erros de rede e não inclui token nem mensagem original no erro", async () => {
+    let attempts = 0;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => {
+        attempts += 1;
+        throw new Error("network failed using Bearer synthetic-api-credential");
+      }) as typeof fetch,
+      waitImpl: async () => undefined,
+    });
+
+    const promise = client.listSessions();
+    await expect(promise).rejects.toThrow(
+      "Bless API request failed after 3 attempts: GET /chat/v2/session failed due to a network error.",
+    );
+    await expect(promise).rejects.not.toThrow("synthetic-api-credential");
+    expect(attempts).toBe(3);
+  });
+
+  it("respeita Retry-After e limita a espera a 10 segundos", async () => {
+    const waits: number[] = [];
+    let attempts = 0;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response("", { status: 429, headers: { "retry-after": "30" } });
+        }
+        return jsonResponse({ items: [], hasMorePages: false });
+      }) as typeof fetch,
+      waitImpl: async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+    });
+
+    await expect(client.listSessions()).resolves.toEqual([]);
+    expect(waits).toEqual([10_000]);
+  });
+
+  it("sanitiza o identificador de sessão e omite query e token no erro", async () => {
+    const sessionId = "session-sensitive-customer-123";
+    const token = "secret-bearer-token";
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token,
+      fetchImpl: (async () => new Response("", { status: 503 })) as typeof fetch,
+      waitImpl: async () => undefined,
+    });
+
+    const promise = client.listMessages(sessionId);
+    await expect(promise).rejects.toThrow(
+      "Bless API request failed after 3 attempts: GET /chat/v1/session/[session]/message returned 503.",
+    );
+    await expect(promise).rejects.not.toThrow(sessionId);
+    await expect(promise).rejects.not.toThrow(token);
+    await expect(promise).rejects.not.toThrow("PageNumber");
+  });
+
+  it("retorna sucesso após a segunda tentativa", async () => {
+    const waits: number[] = [];
+    let attempts = 0;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => {
+        attempts += 1;
+        return attempts === 1
+          ? new Response("", { status: 503 })
+          : jsonResponse({ items: [], hasMorePages: false });
+      }) as typeof fetch,
+      waitImpl: async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+    });
+
     await expect(client.listSessions()).resolves.toEqual([]);
     expect(attempts).toBe(2);
+    expect(waits).toEqual([750]);
+  });
+
+  it("aplica backoff exponencial de 750 ms e 1500 ms", async () => {
+    const waits: number[] = [];
+    let attempts = 0;
+    const client = new BlessClient({
+      baseUrl: "https://api.example.test",
+      token: "synthetic-api-credential",
+      fetchImpl: (async () => {
+        attempts += 1;
+        return attempts < 3
+          ? new Response("", { status: 503 })
+          : jsonResponse({ items: [], hasMorePages: false });
+      }) as typeof fetch,
+      waitImpl: async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+    });
+
+    await expect(client.listSessions()).resolves.toEqual([]);
+    expect(waits).toEqual([750, 1_500]);
   });
 });

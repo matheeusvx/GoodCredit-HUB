@@ -20,7 +20,7 @@ import { createSupabaseAdmin, listAllHubUsers, throwOnSupabaseError } from "./su
 
 const OPEN_STATUSES = ["STARTED", "PENDING", "IN_PROGRESS"] as const;
 const SYNC_ID = "bless-primary";
-const MESSAGE_CONCURRENCY = 5;
+const MESSAGE_CONCURRENCY = 3;
 
 interface SyncStateRow {
   initialized_at: string | null;
@@ -51,11 +51,18 @@ export interface CrmSyncSummary {
   assignmentEventsDetected: number;
 }
 
-function safeErrorMessage(error: unknown): string {
+export function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "CRM synchronization failed.";
   return message
-    .replace(/authorization\s*[:=]\s*[^\s,;]+/gi, "Authorization=[redacted]")
-    .replace(/bearer\s+[a-z0-9._~-]+/gi, "Bearer [redacted]")
+    .replace(
+      /authorization\s*[:=]\s*(?:bearer\s+)?[^\s,;]+/gi,
+      "Authorization=[redacted]",
+    )
+    .replace(/bearer\s+[^\s,;]+/gi, "Bearer [redacted]")
+    .replace(
+      /(?:access[_-]?token|api[_-]?token|token)\s*[:=]\s*[^\s,;]+/gi,
+      "token=[redacted]",
+    )
     .slice(0, 500);
 }
 

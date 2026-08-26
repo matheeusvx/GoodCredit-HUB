@@ -3,7 +3,7 @@ import dashboardHandler from "../crm/dashboard.js";
 import { isCrmDashboardMappingEligible } from "./dashboard.js";
 import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config.js";
 import { bearerToken, hasForbiddenIdentityParameter, type ApiRequest, type ApiResponse } from "./http.js";
-import { resolveAutomaticMappingRows } from "./sync.js";
+import { resolveAutomaticMappingRows, safeErrorMessage } from "./sync.js";
 
 function responseRecorder() {
   const record = { status: 0, body: null as unknown };
@@ -113,5 +113,19 @@ describe("segurança da integração CRM", () => {
     expect(record.body).toEqual({
       error: "A data inicial não pode ser posterior à final.",
     });
+  });
+
+  it("preserva o diagnóstico sanitizado do BlessClient no estado do sync", () => {
+    const message = "Bless API request failed after 3 attempts: GET /chat/v2/session returned 503.";
+    expect(safeErrorMessage(new Error(message))).toBe(message);
+  });
+
+  it("remove credenciais de mensagens antes de persistir o erro do sync", () => {
+    const result = safeErrorMessage(new Error(
+      "Authorization: Bearer segredo-1; api_token=segredo-2; Bearer segredo-3",
+    ));
+    expect(result).not.toContain("segredo-1");
+    expect(result).not.toContain("segredo-2");
+    expect(result).not.toContain("segredo-3");
   });
 });
