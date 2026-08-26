@@ -117,25 +117,119 @@ describe("analytics históricos do CRM", () => {
     });
   });
 
-  it("marca assignment history anterior à inicialização como indisponível, não zero", () => {
+  it("retorna FULL quando todo o período possui histórico de assignments", () => {
     const result = analytics({
-      assignmentHistoryStartAt: "2026-08-22T03:00:00Z",
+      assignmentHistoryStartAt: "2026-08-19T03:00:00Z",
       assignmentEvents: [
-        assignment("received", "2026-08-23T13:00:00Z", null, AGENT),
-        assignment("transferred", "2026-08-24T13:00:00Z", AGENT, OTHER),
+        assignment("received", "2026-08-20T13:00:00Z", null, AGENT),
+        assignment("transferred", "2026-08-21T13:00:00Z", AGENT, OTHER),
       ],
     });
-    expect(result.periodSummary.received).toBeNull();
-    expect(result.periodSummary.transferred).toBeNull();
-    expect(result.dailySeries.find((day) => day.date === "2026-08-21")).toMatchObject({
-      received: null,
-      transferred: null,
-      availability: { assignments: false },
+    expect(result.availability.assignmentCoverage).toBe("FULL");
+    expect(result.periodSummary).toMatchObject({ received: 1, transferred: 1 });
+  });
+
+  it("retorna PARTIAL e agrega somente assignments posteriores ao início do monitor", () => {
+    const assignmentHistoryStartAt = "2026-08-25T21:38:00Z";
+    const result = analytics({
+      assignmentHistoryStartAt,
+      assignmentEvents: [
+        assignment("before-received", "2026-08-25T20:00:00Z", null, AGENT),
+        assignment("after-received", "2026-08-25T22:00:00Z", null, AGENT),
+        assignment("before-transfer", "2026-08-25T21:37:59Z", AGENT, OTHER),
+        assignment("after-transfer", "2026-08-25T22:30:00Z", AGENT, OTHER),
+      ],
     });
-    expect(result.dailySeries.find((day) => day.date === "2026-08-22")).toMatchObject({
+
+    expect(result.availability.assignmentCoverage).toBe("PARTIAL");
+    expect(result.periodSummary).toMatchObject({ received: 1, transferred: 1 });
+    expect(result.dailySeries.find((day) => day.date === "2026-08-25")).toMatchObject({
+      received: 1,
+      transferred: 1,
+      availability: {
+        assignments: true,
+        assignmentCoverage: "PARTIAL",
+      },
+    });
+    const receivedFromSeries = result.dailySeries.reduce(
+      (sum, day) => sum + (day.received ?? 0),
+      0,
+    );
+    const transferredFromSeries = result.dailySeries.reduce(
+      (sum, day) => sum + (day.transferred ?? 0),
+      0,
+    );
+    expect(receivedFromSeries).toBe(result.periodSummary.received);
+    expect(transferredFromSeries).toBe(result.periodSummary.transferred);
+  });
+
+  it("retorna NONE quando o período termina antes do histórico de assignments", () => {
+    const result = analytics({
+      assignmentHistoryStartAt: "2026-08-26T03:00:00Z",
+      assignmentEvents: [
+        assignment("outside", "2026-08-20T13:00:00Z", null, AGENT),
+      ],
+    });
+
+    expect(result.availability.assignmentCoverage).toBe("NONE");
+    expect(result.periodSummary).toMatchObject({ received: null, transferred: null });
+    expect(result.dailySeries.every((day) =>
+      day.received === null
+      && day.transferred === null
+      && day.availability.assignmentCoverage === "NONE"
+    )).toBe(true);
+  });
+
+  it("preserva zero como valor real quando a cobertura é PARTIAL", () => {
+    const result = analytics({
+      assignmentHistoryStartAt: "2026-08-25T21:38:00Z",
+      assignmentEvents: [],
+    });
+
+    expect(result.availability.assignmentCoverage).toBe("PARTIAL");
+    expect(result.periodSummary).toMatchObject({ received: 0, transferred: 0 });
+    expect(result.dailySeries.find((day) => day.date === "2026-08-25")).toMatchObject({
       received: 0,
       transferred: 0,
-      availability: { assignments: true },
+    });
+  });
+
+  it("não compara assignments quando algum período possui cobertura incompleta", () => {
+    const result = analytics({
+      assignmentHistoryStartAt: "2026-08-25T21:38:00Z",
+      assignmentEvents: [
+        assignment("current", "2026-08-25T22:00:00Z", null, AGENT),
+      ],
+    });
+
+    expect(result.periodSummary.received).toBe(1);
+    expect(result.comparison.received).toEqual({
+      current: 1,
+      previous: null,
+      absoluteChange: null,
+      percentChange: null,
+      available: false,
+    });
+    expect(result.comparison.transferred.available).toBe(false);
+  });
+
+  it("não altera clientes atendidos nem tempo de resposta com cobertura parcial", () => {
+    const result = analytics({
+      assignmentHistoryStartAt: "2026-08-25T21:38:00Z",
+      messageActivity: [
+        message("message-a", "same-client", "2026-08-20T13:00:00Z"),
+        message("message-b", "same-client", "2026-08-21T13:00:00Z"),
+      ],
+      responseEvents: [
+        response("response-a", "2026-08-20T14:00:00Z", 30),
+        response("response-b", "2026-08-21T14:00:00Z", 90),
+      ],
+    });
+
+    expect(result.periodSummary).toMatchObject({
+      clientsServed: 1,
+      responseCount: 2,
+      averageResponseSeconds: 60,
     });
   });
 

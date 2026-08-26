@@ -1,6 +1,7 @@
 import type {
   CrmAnalyticsMetricComparison,
   CrmAnalyticsPeriodSummary,
+  CrmAssignmentHistoryCoverage,
   CrmDashboardAnalytics,
   CrmDashboardSession,
 } from "../../types/crmDashboard.js";
@@ -33,6 +34,7 @@ interface AnalyticsInput {
 
 interface RangeAggregate extends CrmAnalyticsPeriodSummary {
   assignmentsAvailable: boolean;
+  assignmentCoverage: CrmAssignmentHistoryCoverage;
   messagesAvailable: boolean;
   responsesAvailable: boolean;
 }
@@ -50,6 +52,21 @@ function rangeAvailable(start: Date, end: Date, availableFrom: Date | null): boo
   );
 }
 
+export function getAssignmentHistoryCoverage(
+  start: Date,
+  end: Date,
+  availableFrom: Date | null,
+): CrmAssignmentHistoryCoverage {
+  if (
+    !availableFrom
+    || end.getTime() <= start.getTime()
+    || end.getTime() <= availableFrom.getTime()
+  ) {
+    return "NONE";
+  }
+  return start.getTime() < availableFrom.getTime() ? "PARTIAL" : "FULL";
+}
+
 function aggregateRange(options: {
   start: Date;
   end: Date;
@@ -61,11 +78,12 @@ function aggregateRange(options: {
   messageActivity: CrmMessageActivity[];
   responseEvents: CrmResponseEvent[];
 }): RangeAggregate {
-  const assignmentsAvailable = rangeAvailable(
+  const assignmentCoverage = getAssignmentHistoryCoverage(
     options.start,
     options.end,
     options.assignmentAvailableFrom
   );
+  const assignmentsAvailable = assignmentCoverage !== "NONE";
   const messagesAvailable = rangeAvailable(
     options.start,
     options.end,
@@ -76,9 +94,14 @@ function aggregateRange(options: {
     options.end,
     options.responsesAvailableFrom
   );
-  const assignments = options.assignmentEvents.filter((event) =>
-    inRange(event.detectedAt, options.start, options.end)
-  );
+  const assignmentStart = assignmentCoverage === "PARTIAL"
+    ? options.assignmentAvailableFrom!
+    : options.start;
+  const assignments = assignmentsAvailable
+    ? options.assignmentEvents.filter((event) =>
+        inRange(event.detectedAt, assignmentStart, options.end)
+      )
+    : [];
   const messages = options.messageActivity.filter((activity) =>
     activity.actorType === "AGENT"
     && activity.blessUserId === options.blessUserId
@@ -110,6 +133,7 @@ function aggregateRange(options: {
       : null,
     responseCount: responsesAvailable ? responses.length : 0,
     assignmentsAvailable,
+    assignmentCoverage,
     messagesAvailable,
     responsesAvailable,
   };
@@ -198,6 +222,7 @@ export function calculateCrmAnalytics(input: AnalyticsInput): CrmDashboardAnalyt
         averageResponseSeconds: aggregate.averageResponseSeconds,
         availability: {
           assignments: aggregate.assignmentsAvailable,
+          assignmentCoverage: aggregate.assignmentCoverage,
           messages: aggregate.messagesAvailable,
           responses: aggregate.responsesAvailable,
         },
@@ -236,6 +261,7 @@ export function calculateCrmAnalytics(input: AnalyticsInput): CrmDashboardAnalyt
       assignmentHistoryStartAt: input.assignmentHistoryStartAt,
       messagesHistoryStartAt: input.metricsStartAt,
       responsesHistoryStartAt: input.metricsStartAt,
+      assignmentCoverage: current.assignmentCoverage,
       limitations: [
         "ASSIGNMENT_HISTORY_STARTS_AT_MONITOR_INITIALIZATION",
         "PORTFOLIO_HISTORY_UNAVAILABLE_CURRENT_SNAPSHOT_ONLY",
@@ -259,12 +285,14 @@ export function calculateCrmAnalytics(input: AnalyticsInput): CrmDashboardAnalyt
       received: comparisonMetric(
         current.received,
         previous.received,
-        current.assignmentsAvailable && previous.assignmentsAvailable
+        current.assignmentCoverage === "FULL"
+          && previous.assignmentCoverage === "FULL"
       ),
       transferred: comparisonMetric(
         current.transferred,
         previous.transferred,
-        current.assignmentsAvailable && previous.assignmentsAvailable
+        current.assignmentCoverage === "FULL"
+          && previous.assignmentCoverage === "FULL"
       ),
       clientsServed: comparisonMetric(
         current.clientsServed,

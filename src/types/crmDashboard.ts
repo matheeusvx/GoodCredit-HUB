@@ -35,6 +35,7 @@ export interface CrmDashboardSession {
 }
 
 export type CrmAnalyticsPeriodKey = "today" | "7d" | "30d" | "month" | "custom";
+export type CrmAssignmentHistoryCoverage = "NONE" | "PARTIAL" | "FULL";
 
 export interface CrmAnalyticsPeriod {
   key: CrmAnalyticsPeriodKey;
@@ -55,6 +56,7 @@ export interface CrmAnalyticsDailyPoint {
   averageResponseSeconds: number | null;
   availability: {
     assignments: boolean;
+    assignmentCoverage: CrmAssignmentHistoryCoverage;
     messages: boolean;
     responses: boolean;
   };
@@ -99,6 +101,7 @@ export interface CrmAnalyticsAvailability {
   assignmentHistoryStartAt: string | null;
   messagesHistoryStartAt: string;
   responsesHistoryStartAt: string;
+  assignmentCoverage: CrmAssignmentHistoryCoverage;
   limitations: CrmAnalyticsLimitation[];
 }
 

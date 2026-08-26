@@ -4,6 +4,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { getCrmDashboard } from "../../../services/crmDashboardService";
 import type { CrmAnalyticsPeriodKey, CrmDashboardResponse } from "../../../types/crmDashboard";
 import { CrmDashboardHeader } from "./CrmDashboardHeader";
+import { CrmPeriodSelector } from "./CrmPeriodSelector";
 import { CrmDashboardSkeleton } from "./CrmDashboardSkeleton";
 import { CrmInsights } from "./CrmInsights";
 import { CrmMetricCard } from "./CrmMetricCard";
@@ -15,8 +16,10 @@ import { CrmResponseChart } from "./CrmResponseChart";
 import {
   formatDuration,
   formatMetricNumber,
+  assignmentHistoryNote,
   generateCrmInsights,
   retainDashboardAfterRefreshError,
+  selectCrmGreeting,
   type SessionFilter,
   validateCustomDateRange,
 } from "./crmDashboardUtils";
@@ -36,6 +39,7 @@ export function CrmDashboard() {
   const [fetching, setFetching] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [clockNow, setClockNow] = useState(() => new Date());
+  const [greetingMessage] = useState(selectCrmGreeting);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<CrmAnalyticsPeriodKey>("today");
   const [customFrom, setCustomFrom] = useState(localToday);
@@ -130,11 +134,16 @@ export function CrmDashboard() {
     if (!dashboard) return [];
     const summary = dashboard.analytics.periodSummary;
     const comparison = dashboard.analytics.comparison;
-    const assignmentUnavailable = summary.received === null || summary.transferred === null;
+    const assignmentCoverage = dashboard.analytics.availability.assignmentCoverage
+      ?? (summary.received === null || summary.transferred === null ? "NONE" : "FULL");
+    const assignmentNote = assignmentHistoryNote(
+      assignmentCoverage,
+      dashboard.analytics.availability.assignmentHistoryStartAt,
+    );
     return [
       { label: "Carteira atual", value: formatMetricNumber(dashboard.metrics.currentPortfolio), icon: BriefcaseBusiness, comparison: null, note: "Snapshot atual da sua carteira" },
-      { label: "Recebidos", value: formatMetricNumber(summary.received), icon: ArrowDownToLine, comparison: comparison.received, sparkline: dashboard.analytics.dailySeries.map((item) => item.received), note: assignmentUnavailable ? "Dados disponíveis após o início do monitoramento" : undefined },
-      { label: "Transferidos", value: formatMetricNumber(summary.transferred), icon: ArrowUpFromLine, comparison: comparison.transferred, sparkline: dashboard.analytics.dailySeries.map((item) => item.transferred), note: assignmentUnavailable ? "Dados disponíveis após o início do monitoramento" : undefined },
+      { label: "Recebidos", value: formatMetricNumber(summary.received), icon: ArrowDownToLine, comparison: comparison.received, sparkline: dashboard.analytics.dailySeries.map((item) => item.received), note: assignmentNote },
+      { label: "Transferidos", value: formatMetricNumber(summary.transferred), icon: ArrowUpFromLine, comparison: comparison.transferred, sparkline: dashboard.analytics.dailySeries.map((item) => item.transferred), note: assignmentNote },
       { label: "Tempo médio de resposta", value: formatDuration(period === "today" ? dashboard.metrics.averageResponseSecondsToday : summary.averageResponseSeconds), icon: Clock3, comparison: comparison.averageResponseSeconds, lowerIsBetter: true, sparkline: dashboard.analytics.dailySeries.map((item) => item.averageResponseSeconds) },
     ];
   }, [dashboard, period]);
@@ -145,14 +154,20 @@ export function CrmDashboard() {
   }
 
   function applyCustom() {
-    if (!validateCustomDateRange(customFrom, customTo)) setAppliedCustom({ from: customFrom, to: customTo });
+    if (!validateCustomDateRange(customFrom, customTo)) {
+      setPeriod("custom");
+      setAppliedCustom({ from: customFrom, to: customTo });
+    }
   }
 
   if (!dashboard && fetching) return <CrmDashboardSkeleton />;
 
   return (
     <section className="space-y-5" aria-labelledby="crm-dashboard-title">
-      <CrmDashboardHeader name={displayName} status={error ? "SYNC_ERROR" : dashboard?.meta.integrationStatus || null} lastSyncAt={dashboard?.meta.lastSyncAt || null} refreshing={refreshing} busy={fetching} now={clockNow} onRefresh={() => void load(true)} period={period} onPeriodChange={changePeriod} customFrom={customFrom} customTo={customTo} onCustomFromChange={setCustomFrom} onCustomToChange={setCustomTo} onApplyCustom={applyCustom} />
+      <div className="flex flex-col items-start gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <CrmDashboardHeader name={displayName} greeting={greetingMessage} status={error ? "SYNC_ERROR" : dashboard?.meta.integrationStatus || null} lastSyncAt={dashboard?.meta.lastSyncAt || null} refreshing={refreshing} busy={fetching} now={clockNow} onRefresh={() => void load(true)} />
+        <CrmPeriodSelector period={period} onPeriodChange={changePeriod} customFrom={customFrom} customTo={customTo} onCustomFromChange={setCustomFrom} onCustomToChange={setCustomTo} onApplyCustom={applyCustom} now={clockNow} />
+      </div>
       {error && <StateNotice tone="red"><span className="flex items-center gap-2"><AlertCircle className="h-4 w-4" />{error}{dashboard && " Os últimos dados permanecem visíveis."}</span></StateNotice>}
       {dashboard?.meta.integrationStatus === "NOT_CONFIGURED" && <StateNotice>Integração CRM ainda não configurada.</StateNotice>}
       {dashboard?.meta.integrationStatus === "UNLINKED" && <StateNotice>Seu usuário do CRM ainda não está vinculado ao GoodCredit Hub.</StateNotice>}

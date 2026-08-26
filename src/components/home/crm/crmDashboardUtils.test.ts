@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { CrmDashboardResponse, CrmDashboardSession } from "../../../types/crmDashboard";
 import {
+  assignmentHistoryNote,
   filterAndSortSessions,
   formatChartDate,
+  formatCrmPeriodLabel,
   formatDuration,
   formatMetricNumber,
   formatRelativeTime,
@@ -11,7 +13,9 @@ import {
   getCrmConnectionVisualStatus,
   metricDeltaPresentation,
   normalizeSparklineValues,
+  resolveCrmPeriodDateRange,
   retainDashboardAfterRefreshError,
+  selectCrmGreeting,
   validateCustomDateRange,
 } from "./crmDashboardUtils";
 
@@ -36,6 +40,17 @@ describe("lógica visual do dashboard CRM", () => {
     expect(formatChartDate("2026-08-25")).toContain("25");
     expect(formatRelativeTime("2026-08-23T15:00:00Z", new Date("2026-08-25T15:00:00Z"))).toBe("há 2 dias");
     expect(formatUpdatedLabel("2026-08-25T14:00:00Z", new Date("2026-08-25T15:00:00Z"))).toBe("Atualizado há 1 h");
+  });
+
+  it("explica discretamente cobertura parcial ou ausente de assignments", () => {
+    const availableFrom = "2026-08-25T21:38:00Z";
+    expect(assignmentHistoryNote("FULL", availableFrom)).toBeUndefined();
+    expect(assignmentHistoryNote("PARTIAL", availableFrom)).toBe(
+      "Dados disponíveis desde 25/08 às 18:38",
+    );
+    expect(assignmentHistoryNote("NONE", availableFrom)).toBe(
+      "Histórico disponível somente desde 25/08 às 18:38",
+    );
   });
 
   it("distingue CRM conectado, desatualizado e indisponível", () => {
@@ -79,6 +94,27 @@ describe("lógica visual do dashboard CRM", () => {
     expect(validateCustomDateRange("", "2026-08-20")).toBeTruthy();
     expect(validateCustomDateRange("2026-08-20", "2026-08-05")).toBeTruthy();
     expect(validateCustomDateRange("2026-08-05", "2026-08-20")).toBeNull();
+  });
+
+  it("resolve e exibe os intervalos reais dos períodos em São Paulo", () => {
+    const now = new Date("2026-08-26T15:00:00Z");
+    expect(resolveCrmPeriodDateRange("today", "", "", now)).toEqual({ from: "2026-08-26", to: "2026-08-26" });
+    expect(resolveCrmPeriodDateRange("7d", "", "", now)).toEqual({ from: "2026-08-20", to: "2026-08-26" });
+    expect(resolveCrmPeriodDateRange("30d", "", "", now)).toEqual({ from: "2026-07-28", to: "2026-08-26" });
+    expect(resolveCrmPeriodDateRange("month", "", "", now)).toEqual({ from: "2026-08-01", to: "2026-08-26" });
+    expect(resolveCrmPeriodDateRange("custom", "2026-08-25", "2026-12-12", now)).toEqual({ from: "2026-08-25", to: "2026-12-12" });
+    expect(formatCrmPeriodLabel("2026-08-26", "2026-08-26")).toBe("26 ago");
+    expect(formatCrmPeriodLabel("2026-08-20", "2026-08-26")).toBe("20 ago - 26 ago");
+    expect(formatCrmPeriodLabel("2026-07-28", "2026-08-26")).toBe("28 jul - 26 ago");
+    expect(formatCrmPeriodLabel("2026-08-01", "2026-08-26")).toBe("01 ago - 26 ago");
+    expect(formatCrmPeriodLabel("2026-08-25", "2026-12-12")).toBe("25 ago - 12 dez");
+    expect(formatCrmPeriodLabel("2026-12-25", "2027-01-10")).toBe("25 dez 2026 - 10 jan 2027");
+  });
+
+  it("seleciona uma saudação natural de forma determinística para a montagem", () => {
+    const greeting = selectCrmGreeting(0.42);
+    expect(greeting).toBe(selectCrmGreeting(0.42));
+    expect(greeting).not.toContain("👋");
   });
 
   it("filtra por nome e ordena awaiting, unread, inactive e demais", () => {

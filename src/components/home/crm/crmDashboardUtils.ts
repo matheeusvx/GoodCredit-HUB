@@ -1,5 +1,7 @@
 import type {
+  CrmAnalyticsPeriodKey,
   CrmAnalyticsMetricComparison,
+  CrmAssignmentHistoryCoverage,
   CrmDashboardResponse,
   CrmDashboardSession,
   CrmIntegrationStatus,
@@ -14,6 +16,77 @@ export type CrmConnectionVisualStatus =
   | "unavailable"
   | "unlinked"
   | "not_configured";
+
+export const CRM_GREETING_MESSAGES = [
+  "Bom te ver novamente.",
+  "Tenha um ótimo dia.",
+  "Que bom ter você por aqui.",
+  "Tudo pronto para mais um dia.",
+  "Vamos acompanhar sua operação.",
+  "Um bom trabalho por aí.",
+  "Pronto para acompanhar seus resultados?",
+] as const;
+
+const MONTH_LABELS = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+] as const;
+
+export function selectCrmGreeting(randomValue = Math.random()): string {
+  const index = Math.min(
+    CRM_GREETING_MESSAGES.length - 1,
+    Math.max(0, Math.floor(randomValue * CRM_GREETING_MESSAGES.length)),
+  );
+  return CRM_GREETING_MESSAGES[index];
+}
+
+function saoPauloDateKey(now: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value || "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function shiftDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function resolveCrmPeriodDateRange(
+  period: CrmAnalyticsPeriodKey,
+  customFrom: string,
+  customTo: string,
+  now = new Date(),
+): { from: string; to: string } {
+  const today = saoPauloDateKey(now);
+  if (period === "custom" && customFrom && customTo) {
+    return { from: customFrom, to: customTo };
+  }
+  if (period === "7d") return { from: shiftDateKey(today, -6), to: today };
+  if (period === "30d") return { from: shiftDateKey(today, -29), to: today };
+  if (period === "month") return { from: `${today.slice(0, 8)}01`, to: today };
+  return { from: today, to: today };
+}
+
+export function formatCrmPeriodLabel(from: string, to: string): string {
+  const parse = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return { year, month, day };
+  };
+  const start = parse(from);
+  const end = parse(to);
+  const format = (date: ReturnType<typeof parse>, includeYear: boolean) =>
+    `${String(date.day).padStart(2, "0")} ${MONTH_LABELS[date.month - 1]}${includeYear ? ` ${date.year}` : ""}`;
+  if (from === to) return format(start, false);
+  const crossesYears = start.year !== end.year;
+  return `${format(start, crossesYears)} - ${format(end, crossesYears)}`;
+}
 
 export function getCrmConnectionVisualStatus(options: {
   integrationStatus: CrmIntegrationStatus | null;
@@ -107,6 +180,24 @@ export function formatFullDateTime(value: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+export function assignmentHistoryNote(
+  coverage: CrmAssignmentHistoryCoverage,
+  availableFrom: string | null,
+): string | undefined {
+  if (coverage === "FULL") return undefined;
+  if (!availableFrom) return "Histórico de movimentações ainda indisponível";
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(availableFrom));
+  return coverage === "PARTIAL"
+    ? `Dados disponíveis desde ${formatted.replace(",", " às")}`
+    : `Histórico disponível somente desde ${formatted.replace(",", " às")}`;
 }
 
 export function formatRelativeTime(value: string | null, now = new Date()): string {
