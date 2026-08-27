@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.api.json && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "crm:provision-users": "node scripts/provision-crm-hub-users.mjs"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",

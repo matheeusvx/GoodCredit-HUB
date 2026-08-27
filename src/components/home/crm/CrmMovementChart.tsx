@@ -1,0 +1,8 @@
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { CrmAnalyticsDailyPoint } from "../../../types/crmDashboard";
+import { ChartCard, EmptyChartState } from "./ChartCard";
+import { formatChartDate } from "./crmDashboardUtils";
+
+export function CrmMovementChart({ data }: { data: CrmAnalyticsDailyPoint[] }) {
+  return <ChartCard title="Movimentação" description="Entradas, saídas e clientes atendidos por dia">{!data.length ? <EmptyChartState /> : <div className="h-72" role="img" aria-label="Gráfico de movimentação diária"><ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="date" tickFormatter={formatChartDate} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} minTickGap={24} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} /><Tooltip labelFormatter={(label) => formatChartDate(String(label))} formatter={(value, name) => [value === null || value === undefined ? "Sem histórico disponível" : String(value), name === "received" ? "Recebidos" : name === "transferred" ? "Transferidos" : "Clientes atendidos"]} /><Legend formatter={(value) => value === "received" ? "Recebidos" : value === "transferred" ? "Transferidos" : "Clientes atendidos"} /><Bar dataKey="received" fill="#54a34c" radius={[4, 4, 0, 0]} /><Bar dataKey="transferred" fill="#2377a4" radius={[4, 4, 0, 0]} /><Bar dataKey="clientsServed" fill="#94a3b8" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>}</ChartCard>;
+}

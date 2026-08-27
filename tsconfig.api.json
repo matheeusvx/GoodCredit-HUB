@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true
+  },
+  "include": [
+    "api/**/*.ts",
+    "src/lib/crm/**/*.ts",
+    "src/types/crmDashboard.ts"
+  ],
+  "exclude": ["**/*.test.ts"]
+}
