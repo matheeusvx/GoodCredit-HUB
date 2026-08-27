@@ -7,6 +7,11 @@ import {
 } from "../../src/lib/crm/domain.js";
 import { calculateCrmAnalytics } from "../../src/lib/crm/analytics.js";
 import {
+  buildCrmAttendanceMovements,
+  buildCrmAttendedClients,
+  type CrmAttendanceSessionSnapshot,
+} from "../../src/lib/crm/attendance.js";
+import {
   getSaoPauloDayRange,
   resolveCrmAnalyticsPeriod,
   type CrmAnalyticsPeriodRequest,
@@ -47,7 +52,8 @@ interface SessionRow {
   last_interaction_at: string | null;
   unread_count: number;
   last_actor_type: string | null;
-  current_bless_user_id: string;
+  current_bless_user_id: string | null;
+  assignment_scope: string;
 }
 
 interface AssignmentRow {
@@ -85,6 +91,58 @@ interface DashboardMapping {
   bless_user_id: string;
   agent_name: string | null;
   agent_email: string | null;
+}
+
+function chunks<T>(values: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    result.push(values.slice(index, index + size));
+  }
+  return result;
+}
+
+async function loadSessionSnapshotsByIds(
+  supabase: SupabaseClient,
+  sessionIds: string[],
+): Promise<SessionRow[]> {
+  const rows: SessionRow[] = [];
+  for (const sessionIdGroup of chunks([...new Set(sessionIds)], 100)) {
+    if (!sessionIdGroup.length) continue;
+    const { data, error } = await supabase
+      .from("crm_sessions")
+      .select("session_id,contact_name,status,last_interaction_at,unread_count,last_actor_type,current_bless_user_id,assignment_scope")
+      .in("session_id", sessionIdGroup)
+      .order("session_id");
+    throwOnSupabaseError("Unable to load attended CRM sessions", error);
+    rows.push(...((data || []) as SessionRow[]));
+  }
+  return rows;
+}
+
+async function loadCustomerActivityBySessionIds(
+  supabase: SupabaseClient,
+  sessionIds: string[],
+  start: Date,
+  end: Date,
+): Promise<ActivityRow[]> {
+  const rows: ActivityRow[] = [];
+  for (const sessionIdGroup of chunks([...new Set(sessionIds)], 100)) {
+    if (!sessionIdGroup.length) continue;
+    rows.push(...await loadPagedRows<ActivityRow>(
+      "Unable to load attended CRM customer activity",
+      (from, to) => supabase
+        .from("crm_message_activity")
+        .select("message_id,session_id,actor_type,bless_user_id,timestamp,direction,origin,message_type")
+        .eq("actor_type", "CUSTOMER")
+        .in("session_id", sessionIdGroup)
+        .gte("timestamp", start.toISOString())
+        .lt("timestamp", end.toISOString())
+        .order("timestamp")
+        .order("message_id")
+        .range(from, to),
+    ));
+  }
+  return rows;
 }
 
 export function isCrmDashboardMappingEligible(
@@ -208,7 +266,7 @@ export async function buildCrmDashboard(options: {
     loadPagedRows<SessionRow>("Unable to load current CRM portfolio", (from, to) =>
       options.supabase
         .from("crm_sessions")
-        .select("session_id,contact_name,status,last_interaction_at,unread_count,last_actor_type,current_bless_user_id")
+        .select("session_id,contact_name,status,last_interaction_at,unread_count,last_actor_type,current_bless_user_id,assignment_scope")
         .eq("assignment_scope", "VALID")
         .eq("current_bless_user_id", blessUserId)
         .in("status", OPEN_STATUSES)
@@ -266,7 +324,7 @@ export async function buildCrmDashboard(options: {
         lastInteractionAt
         && new Date(lastInteractionAt).getTime() < inactiveBefore
       ),
-      currentBlessUserId: row.current_bless_user_id as string,
+      currentBlessUserId: row.current_bless_user_id,
     };
   });
   sessions.sort((left, right) =>
@@ -304,6 +362,44 @@ export async function buildCrmDashboard(options: {
     respondedAt: String(row.responded_at),
     responseSeconds: Number(row.response_seconds),
   }));
+  const attendedSessionIds = new Set(
+    messageActivity
+      .filter((activity) =>
+        activity.actorType === "AGENT"
+        && activity.blessUserId === blessUserId
+        && new Date(activity.timestamp).getTime() >= period.effectiveStart.getTime()
+        && new Date(activity.timestamp).getTime() < period.effectiveEnd.getTime()
+      )
+      .map((activity) => activity.sessionId)
+  );
+  const [attendedSessionRows, customerActivityRows] = await Promise.all([
+    loadSessionSnapshotsByIds(options.supabase, [...attendedSessionIds]),
+    loadCustomerActivityBySessionIds(
+      options.supabase,
+      [...attendedSessionIds],
+      period.effectiveStart,
+      period.effectiveEnd,
+    ),
+  ]);
+  const attendedSessionSnapshots: CrmAttendanceSessionSnapshot[] = attendedSessionRows.map((row) => ({
+    sessionId: String(row.session_id),
+    contactName: row.contact_name,
+    status: row.status as CrmSessionStatus,
+    assignmentScope: row.assignment_scope as CrmAttendanceSessionSnapshot["assignmentScope"],
+    currentBlessUserId: row.current_bless_user_id,
+    unreadCount: Number(row.unread_count || 0),
+    lastActorType: row.last_actor_type,
+  }));
+  const customerMessageActivity: CrmMessageActivity[] = customerActivityRows.map((row) => ({
+    messageId: String(row.message_id),
+    sessionId: String(row.session_id),
+    actorType: "CUSTOMER",
+    blessUserId: null,
+    timestamp: String(row.timestamp),
+    direction: row.direction as string | null,
+    origin: row.origin as string | null,
+    messageType: row.message_type as string | null,
+  }));
   const metrics = calculateCrmDashboardMetrics({
     blessUserId,
     sessions,
@@ -322,6 +418,25 @@ export async function buildCrmDashboard(options: {
     assignmentEvents,
     messageActivity,
     responseEvents,
+  });
+  analytics.attendedClients = buildCrmAttendedClients({
+    blessUserId,
+    excludedUserIds: options.excludedUserIds,
+    start: period.effectiveStart,
+    end: period.effectiveEnd,
+    assignmentHistoryStartAt: state?.initialized_at || null,
+    messageActivity: [...messageActivity, ...customerMessageActivity],
+    assignmentEvents,
+    sessions: attendedSessionSnapshots,
+  });
+  analytics.attendanceMovements = buildCrmAttendanceMovements({
+    blessUserId,
+    excludedUserIds: options.excludedUserIds,
+    start: period.effectiveStart,
+    end: period.effectiveEnd,
+    assignmentHistoryStartAt: state?.initialized_at || null,
+    assignmentEvents,
+    attendedClients: analytics.attendedClients,
   });
 
   return {

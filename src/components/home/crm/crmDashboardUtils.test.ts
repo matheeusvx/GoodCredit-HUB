@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CrmDashboardResponse, CrmDashboardSession } from "../../../types/crmDashboard";
+import type { CrmAttendedClient, CrmDashboardResponse, CrmDashboardSession } from "../../../types/crmDashboard";
 import {
   assignmentHistoryNote,
+  attendedClientSituation,
+  filterAndSortAttendedClients,
   filterAndSortSessions,
   formatChartDate,
   formatCrmPeriodLabel,
@@ -128,6 +130,48 @@ describe("lógica visual do dashboard CRM", () => {
       "awaiting", "unread", "inactive", "ok",
     ]);
     expect(filterAndSortSessions(rows, "unread", "beta").map((item) => item.sessionId)).toEqual(["unread"]);
+    expect(filterAndSortSessions(rows, "awaiting", "beta").map((item) => item.sessionId)).toEqual(["awaiting"]);
+    expect(filterAndSortSessions(rows, "inactive", "beta").map((item) => item.sessionId)).toEqual(["inactive"]);
+  });
+
+  it("busca e ordena clientes atendidos pela última interação DESC", () => {
+    const base: Omit<CrmAttendedClient, "sessionId" | "contactName" | "lastAgentInteractionAt"> = {
+      currentStatus: "IN_PROGRESS",
+      firstAgentInteractionAt: "2026-08-25T10:00:00Z",
+      agentMessageCount: 1,
+      customerMessageCount: 1,
+      totalRelevantMessages: 2,
+      currentAssignmentScope: "VALID",
+      currentBlessUserId: "user-a",
+      receivedInPeriod: false,
+      transferredInPeriod: false,
+    };
+    const clients: CrmAttendedClient[] = [
+      { ...base, sessionId: "older", contactName: "Cliente Alfa", lastAgentInteractionAt: "2026-08-25T11:00:00Z" },
+      { ...base, sessionId: "newer", contactName: "CLIENTE BETA", lastAgentInteractionAt: "2026-08-26T11:00:00Z" },
+    ];
+    expect(filterAndSortAttendedClients(clients, "cliente").map((item) => item.sessionId)).toEqual(["newer", "older"]);
+    expect(filterAndSortAttendedClients(clients, "beta").map((item) => item.sessionId)).toEqual(["newer"]);
+  });
+
+  it("deriva situação histórica somente do snapshot e eventos reais", () => {
+    const client: CrmAttendedClient = {
+      sessionId: "session",
+      contactName: "Cliente",
+      currentStatus: "IN_PROGRESS",
+      firstAgentInteractionAt: "2026-08-25T10:00:00Z",
+      lastAgentInteractionAt: "2026-08-25T11:00:00Z",
+      agentMessageCount: 1,
+      customerMessageCount: 1,
+      totalRelevantMessages: 2,
+      currentAssignmentScope: "VALID",
+      currentBlessUserId: "user-a",
+      receivedInPeriod: false,
+      transferredInPeriod: false,
+    };
+    expect(attendedClientSituation(client, "user-a")).toBe("Em sua carteira");
+    expect(attendedClientSituation({ ...client, currentBlessUserId: "user-b", transferredInPeriod: true }, "user-a")).toBe("Transferido");
+    expect(attendedClientSituation({ ...client, currentStatus: "COMPLETED" }, "user-a")).toBe("Concluído");
   });
 
   it("trata comparação indisponível e considera redução de resposta como melhoria", () => {

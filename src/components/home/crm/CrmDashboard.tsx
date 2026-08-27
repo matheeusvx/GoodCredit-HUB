@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getCrmDashboard } from "../../../services/crmDashboardService";
 import type { CrmAnalyticsPeriodKey, CrmDashboardResponse } from "../../../types/crmDashboard";
+import { CrmAttendanceDrawer } from "./CrmAttendanceDrawer";
 import { CrmDashboardHeader } from "./CrmDashboardHeader";
 import { CrmPeriodSelector } from "./CrmPeriodSelector";
 import { CrmDashboardSkeleton } from "./CrmDashboardSkeleton";
+import { CrmExportMenu } from "./CrmExportMenu";
 import { CrmInsights } from "./CrmInsights";
 import { CrmMetricCard } from "./CrmMetricCard";
 import { CrmMovementChart } from "./CrmMovementChart";
@@ -49,6 +51,10 @@ export function CrmDashboard() {
   const [chartType, setChartType] = useState<MainChartType>("area");
   const [sessionFilter, setSessionFilter] = useState<SessionFilter>("all");
   const [sessionSearch, setSessionSearch] = useState("");
+  const [selectedAttendance, setSelectedAttendance] = useState<{
+    sessionId: string;
+    contactName: string;
+  } | null>(null);
   const mountedRef = useRef(false);
   const requestInFlightRef = useRef(false);
   const pendingRequestRef = useRef<{ refresh: boolean } | null>(null);
@@ -160,6 +166,8 @@ export function CrmDashboard() {
     }
   }
 
+  const closeAttendanceDrawer = useCallback(() => setSelectedAttendance(null), []);
+
   if (!dashboard && fetching) return <CrmDashboardSkeleton />;
 
   return (
@@ -178,8 +186,30 @@ export function CrmDashboard() {
         <div className="grid gap-5 xl:grid-cols-3"><CrmPerformanceChart data={dashboard.analytics.dailySeries} metric={mainMetric} chartType={chartType} onMetricChange={setMainMetric} onChartTypeChange={setChartType} /><CrmPortfolioHealth distribution={dashboard.analytics.portfolioDistribution} health={dashboard.analytics.portfolioHealth} /></div>
         <div className="grid gap-5 xl:grid-cols-2"><CrmMovementChart data={dashboard.analytics.dailySeries} /><CrmResponseChart data={dashboard.analytics.dailySeries} /></div>
         <CrmInsights insights={insights} />
-        <CrmPrioritySessions sessions={dashboard.sessions} filter={sessionFilter} search={sessionSearch} onFilterChange={setSessionFilter} onSearchChange={setSessionSearch} />
+        <CrmPrioritySessions
+          sessions={dashboard.sessions}
+          attendedClients={dashboard.analytics.attendedClients}
+          currentBlessUserId={dashboard.user.blessUserId}
+          filter={sessionFilter}
+          search={sessionSearch}
+          onFilterChange={setSessionFilter}
+          onSearchChange={setSessionSearch}
+          onSelectSession={setSelectedAttendance}
+          exportControl={<CrmExportMenu dashboard={dashboard} />}
+        />
       </>}
+      {selectedAttendance && session?.access_token && (
+        <CrmAttendanceDrawer
+          key={`${selectedAttendance.sessionId}-${period}-${appliedCustom?.from || ""}-${appliedCustom?.to || ""}`}
+          sessionId={selectedAttendance.sessionId}
+          fallbackName={selectedAttendance.contactName}
+          accessToken={session.access_token}
+          period={period}
+          from={period === "custom" ? appliedCustom?.from : undefined}
+          to={period === "custom" ? appliedCustom?.to : undefined}
+          onClose={closeAttendanceDrawer}
+        />
+      )}
     </section>
   );
 }

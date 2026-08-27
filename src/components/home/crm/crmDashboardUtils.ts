@@ -2,13 +2,17 @@ import type {
   CrmAnalyticsPeriodKey,
   CrmAnalyticsMetricComparison,
   CrmAssignmentHistoryCoverage,
+  CrmAttendedClient,
   CrmDashboardResponse,
   CrmDashboardSession,
   CrmIntegrationStatus,
 } from "../../../types/crmDashboard";
+import { attendedClientSituation } from "../../../lib/crm/attendancePresentation";
 import { CRM_STALE_AFTER_MS, isSyncOlderThan } from "./crmRefresh";
 
-export type SessionFilter = "all" | "awaiting" | "unread" | "inactive";
+export { attendedClientSituation };
+
+export type SessionFilter = "all" | "awaiting" | "unread" | "inactive" | "attended";
 export type CrmConnectionVisualStatus =
   | "connected"
   | "updating"
@@ -243,6 +247,22 @@ export function filterAndSortSessions(
       return priority(left) - priority(right)
         || new Date(left.lastInteractionAt || 0).getTime() - new Date(right.lastInteractionAt || 0).getTime();
     });
+}
+
+export function filterAndSortAttendedClients(
+  clients: CrmAttendedClient[],
+  search: string,
+): CrmAttendedClient[] {
+  const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
+  return clients
+    .filter((client) =>
+      !normalizedSearch
+      || client.contactName.toLocaleLowerCase("pt-BR").includes(normalizedSearch)
+    )
+    .sort((left, right) =>
+      new Date(right.lastAgentInteractionAt).getTime()
+      - new Date(left.lastAgentInteractionAt).getTime()
+    );
 }
 
 export type DeltaTone = "positive" | "negative" | "neutral" | "unavailable";

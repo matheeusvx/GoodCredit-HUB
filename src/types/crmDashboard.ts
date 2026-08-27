@@ -34,6 +34,62 @@ export interface CrmDashboardSession {
   inactiveOver24h: boolean;
 }
 
+export type CrmAssignmentScope = "VALID" | "EXCLUDED" | "UNASSIGNED" | "UNKNOWN";
+
+export interface CrmAttendedClient {
+  sessionId: string;
+  contactName: string;
+  currentStatus: CrmSessionStatus;
+  firstAgentInteractionAt: string;
+  lastAgentInteractionAt: string;
+  agentMessageCount: number;
+  customerMessageCount: number;
+  totalRelevantMessages: number;
+  currentAssignmentScope: CrmAssignmentScope;
+  currentBlessUserId: string | null;
+  receivedInPeriod: boolean;
+  transferredInPeriod: boolean;
+}
+
+export interface CrmAttendanceMovement {
+  contactName: string;
+  type: "RECEIVED" | "TRANSFERRED" | "UNASSIGNED" | "COMPLETED" | "REOPENED";
+  occurredAt: string;
+}
+
+export interface CrmAttendanceActivityItem {
+  actorType: "AGENT" | "CUSTOMER";
+  timestamp: string;
+  direction: string | null;
+  messageType: string | null;
+}
+
+export interface CrmAttendanceAssignmentItem {
+  eventType: "ASSIGNED" | "TRANSFERRED" | "UNASSIGNED" | "COMPLETED" | "REOPENED";
+  occurredAt: string;
+  relation: "RECEIVED" | "TRANSFERRED" | "UNASSIGNED" | "COMPLETED" | "REOPENED";
+}
+
+export interface CrmAttendanceDetail {
+  sessionId: string;
+  contactName: string;
+  status: CrmSessionStatus;
+  currentAssignmentScope: CrmAssignmentScope;
+  isCurrentlyAssignedToUser: boolean;
+  agentMessageCount: number;
+  customerMessageCount: number;
+  totalRelevantMessages: number;
+  firstInteractionAt: string | null;
+  lastInteractionAt: string | null;
+  averageResponseSeconds: number | null;
+  responseCount: number;
+  unreadCount: number;
+  awaitingResponse: boolean;
+  assignmentCoverage: CrmAssignmentHistoryCoverage;
+  assignmentEvents: CrmAttendanceAssignmentItem[];
+  activityTimeline: CrmAttendanceActivityItem[];
+}
+
 export type CrmAnalyticsPeriodKey = "today" | "7d" | "30d" | "month" | "custom";
 export type CrmAssignmentHistoryCoverage = "NONE" | "PARTIAL" | "FULL";
 
@@ -129,6 +185,8 @@ export interface CrmDashboardAnalytics {
   dailySeries: CrmAnalyticsDailyPoint[];
   portfolioHealth: CrmPortfolioHealth;
   portfolioDistribution: CrmPortfolioDistribution;
+  attendedClients: CrmAttendedClient[];
+  attendanceMovements: CrmAttendanceMovement[];
 }
 
 export interface CrmDashboardResponse {

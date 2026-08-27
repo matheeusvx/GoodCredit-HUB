@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import attendanceDetailHandler from "../crm/attendance-detail.js";
 import dashboardHandler from "../crm/dashboard.js";
 import { isCrmDashboardMappingEligible } from "./dashboard.js";
 import { REQUIRED_BLESS_EXCLUDED_USER_ID, getExcludedBlessUserIds } from "./config.js";
@@ -98,6 +99,31 @@ describe("segurança da integração CRM", () => {
   it("retorna 401 para chamada anônima antes de consultar configuração ou dados", async () => {
     const { record, response } = responseRecorder();
     await dashboardHandler({ method: "GET", headers: {}, query: {} }, response);
+    expect(record.status).toBe(401);
+    expect(record.body).toEqual({ error: "Não autorizado." });
+  });
+
+  it.each(["userId", "hubUserId", "blessUserId"])(
+    "rejeita %s no endpoint de detalhe antes de consultar configuração ou dados",
+    async (identityParameter) => {
+      const { record, response } = responseRecorder();
+      await attendanceDetailHandler({
+        method: "GET",
+        headers: { authorization: "Bearer token-sintetico" },
+        query: { sessionId: "session-1", [identityParameter]: "outro-usuario" },
+      }, response);
+      expect(record.status).toBe(400);
+      expect(record.body).toEqual({ error: "Parâmetro de identidade não permitido." });
+    },
+  );
+
+  it("retorna 401 no detalhe anônimo antes de consultar configuração ou dados", async () => {
+    const { record, response } = responseRecorder();
+    await attendanceDetailHandler({
+      method: "GET",
+      headers: {},
+      query: { sessionId: "session-1" },
+    }, response);
     expect(record.status).toBe(401);
     expect(record.body).toEqual({ error: "Não autorizado." });
   });

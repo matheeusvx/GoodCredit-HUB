@@ -311,5 +311,7 @@ export function calculateCrmAnalytics(input: AnalyticsInput): CrmDashboardAnalyt
     dailySeries,
     portfolioHealth,
     portfolioDistribution,
+    attendedClients: [],
+    attendanceMovements: [],
   };
 }

@@ -1,4 +1,8 @@
-import type { CrmAnalyticsPeriodKey, CrmDashboardResponse } from "../types/crmDashboard";
+import type {
+  CrmAnalyticsPeriodKey,
+  CrmAttendanceDetail,
+  CrmDashboardResponse,
+} from "../types/crmDashboard";
 
 export interface CrmDashboardRequestOptions {
   period?: CrmAnalyticsPeriodKey;
@@ -39,4 +43,30 @@ export async function getCrmDashboard(
     throw new Error(String(body.error));
   }
   throw new Error("Não foi possível atualizar os indicadores.");
+}
+
+export async function getCrmAttendanceDetail(
+  accessToken: string,
+  sessionId: string,
+  options: Pick<CrmDashboardRequestOptions, "period" | "from" | "to" | "signal"> = {},
+): Promise<CrmAttendanceDetail> {
+  const params = new URLSearchParams({ sessionId });
+  if (options.period) params.set("period", options.period);
+  if (options.period === "custom" && options.from && options.to) {
+    params.set("from", options.from);
+    params.set("to", options.to);
+  }
+  const response = await fetch(`/api/crm/attendance-detail?${params.toString()}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: options.signal,
+    cache: "no-store",
+  });
+  const body = await response.json().catch(() => null) as unknown;
+  if (response.ok && body && typeof body === "object" && "sessionId" in body) {
+    return body as CrmAttendanceDetail;
+  }
+  if (response.status === 401) throw new Error("Sua sessão expirou.");
+  if (response.status === 404) throw new Error("Atendimento não encontrado ou indisponível para esta conta.");
+  throw new Error("Não foi possível carregar os detalhes do atendimento.");
 }
