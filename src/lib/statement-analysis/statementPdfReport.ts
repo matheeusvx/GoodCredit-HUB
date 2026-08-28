@@ -26,7 +26,7 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
   let y = 14;
   const brand = await logo();
   if (brand) pdf.addImage(brand, "PNG", margin, y, 28, 22);
-  pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.setTextColor(15, 23, 42); pdf.text("Relatório de Apuração de Renda", margin, y + 28);
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.setTextColor(15, 23, 42); pdf.text("Relatório de Análise de Perfil — Renda", margin, y + 28);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); pdf.setTextColor(71, 85, 105); pdf.text(`Cliente/processo: ${result.clientName || "Não informado"}`, margin, y + 36); pdf.text(`Gerado em ${new Date(result.generatedAt).toLocaleDateString("pt-BR")}`, margin, y + 42); y += 53;
   if (result.analysisType === "PLATFORM_INCOME" && result.platformIncomeResult) {
     const platform = result.platformIncomeResult;

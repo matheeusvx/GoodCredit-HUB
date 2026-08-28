@@ -5,13 +5,13 @@ import { useAuth } from "../contexts/AuthContext";
 
 export type HubView = "home" | "amortization" | "simulation" | "pro-soluto" | "registration" | "checklist" | "compliance-checklist" | "fgts" | "income-analysis" | "usage-guide" | "faq";
 
-const modules = [
+export const SIDEBAR_MODULES = [
   { label: "Início", icon: Home, enabled: true, view: "home" as const },
   { label: "Planilha de Amortização", icon: BarChart3, enabled: true, view: "amortization" as const },
   { label: "Simulação de Financiamento", icon: WalletCards, enabled: true, view: "simulation" as const },
   { label: "Cálculo de Pró-Soluto", icon: BadgeDollarSign, enabled: true, view: "pro-soluto" as const },
   { label: "Registro", icon: Landmark, enabled: true, view: "registration" as const },
-  { label: "Apuração de Renda", icon: FileClock, enabled: true, view: "income-analysis" as const },
+  { label: "Análise de Perfil", icon: FileClock, enabled: true, view: "income-analysis" as const },
   { label: "Checklist Documental", icon: CheckSquare, enabled: true, view: "checklist" as const },
   { label: "Checklist de Conformidade", icon: ShieldCheck, enabled: true, view: "compliance-checklist" as const },
   { label: "Uso de FGTS", icon: PiggyBank, enabled: true, view: "fgts" as const },
@@ -89,7 +89,7 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
       >
         <div className="flex min-h-full flex-col">
           <nav className="space-y-1.5">
-            {modules.map((module) => {
+            {SIDEBAR_MODULES.map((module) => {
               const Icon = module.icon;
               const isActive = module.enabled && module.view === activeView;
               return (

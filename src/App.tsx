@@ -17,7 +17,7 @@ import { ChecklistPage } from "./components/checklist/ChecklistPage";
 import { HomePage } from "./components/home/HomePage";
 import { SimulationPage } from "./components/simulation/SimulationPage";
 import { FgtsPage } from "./components/fgts/FgtsPage";
-import { IncomeAnalysisPage } from "./components/income-analysis/IncomeAnalysisPage";
+import { ProfileAnalysisPage } from "./components/profile-analysis/ProfileAnalysisPage";
 import { ProSolutoPage } from "./components/pro-soluto/ProSolutoPage";
 import { RegistrationPage } from "./components/registration/RegistrationPage";
 import { FaqPage } from "./components/faq/FaqPage";
@@ -615,9 +615,9 @@ function AuthenticatedHub() {
             <button
               type="button"
               onClick={() => navigateTo("income-analysis")}
-              className={`rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeView === "income-analysis" ? "bg-goodgreen-600 text-white" : "bg-slate-100 text-slate-600"}`}
             >
-              Renda
+              Análise de Perfil
             </button>
             <button
               type="button"
@@ -672,7 +672,7 @@ function AuthenticatedHub() {
         ) : activeView === "fgts" ? (
           <FgtsPage onSendToAmortization={importFgtsProjection} />
         ) : activeView === "income-analysis" ? (
-          <IncomeAnalysisPage onSendToSimulation={() => navigateTo("simulation")} />
+          <ProfileAnalysisPage onSendToSimulation={() => navigateTo("simulation")} />
         ) : activeView === "usage-guide" ? (
           <UsageGuidePage onNavigate={navigateTo} />
         ) : activeView === "faq" ? (
