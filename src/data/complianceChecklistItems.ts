@@ -34,7 +34,19 @@ export const COMPLIANCE_CHECKLIST_ITEMS: ComplianceChecklistItemDefinition[] = [
   { id: "forms", order: 12, label: "Formulários", icon: "ClipboardList" },
   { id: "research", order: 13, label: "Pesquisas", icon: "SearchCheck" },
   { id: "discontinued-income", order: 14, label: "Renda Descontinuada", icon: "TrendingDown" },
-  { id: "fgts-authorization-screen", order: 15, label: "Tela de Autorização do FGTS", icon: "MonitorCog" }
+  { id: "fgts-authorization-screen", order: 15, label: "Tela de Autorização do FGTS", icon: "MonitorCog" },
+  {
+    id: "payslip-mo-statement-authorization-value-mismatch",
+    order: 16,
+    label: "Holerite + MO + Extrato + autorização: Valor não confere",
+    icon: "WalletCards"
+  },
+  {
+    id: "payslip-statement-value-match",
+    order: 17,
+    label: "Holerite + Extrato: Valor confere",
+    icon: "WalletCards"
+  }
 ];
 
 export const COMPLIANCE_STATUS_LABELS: Record<ComplianceChecklistStatus, string> = {
