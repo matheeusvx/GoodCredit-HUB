@@ -1,6 +1,7 @@
 import type { BankTransaction } from "./incomeAnalysis";
 import type { PdfBankCode, PdfReconciliation } from "./pdfImport";
 import type { PlatformIncomeDocument, PlatformIncomeResult } from "./platformIncome";
+import type { InstitutionId, InstitutionSelection } from "../lib/statement-analysis/institutionCatalog";
 
 export type SupportedBank = Exclude<PdfBankCode, "AUTO" | "OTHER" | "BANCO_DO_BRASIL" | "C6"> | "OTHER";
 export type StatementFileFormat = "PDF" | "CSV" | "XLSX" | "XLS";
@@ -68,6 +69,12 @@ export interface NormalizedBankTransaction {
 }
 
 export interface StatementFileRecord {
+  selectedInstitution?: InstitutionSelection;
+  detectedInstitution?: InstitutionId | null;
+  institutionSelectionMethod?: "AUTO" | "MANUAL";
+  readingMethod?: "SPECIFIC_BANK" | "GENERIC_BANK" | "PLATFORM" | "SPREADSHEET" | "UNSUPPORTED" | null;
+  incompatibilityWarnings?: string[];
+  selectionBlocked?: boolean;
   id: string;
   file: File;
   name: string;

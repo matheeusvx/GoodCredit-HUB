@@ -2,7 +2,9 @@ import jsPDF from "jspdf";
 import type { AutomatedIncomeResult } from "../../types/statementAnalysis";
 import { formatCompetence, formatCurrencyBR } from "../income-analysis/formatters";
 import { maskCpf, maskHolderName } from "../income-analysis/platforms/platformUtils";
-import { getBankLabel, getClassificationLabel, getConfidenceLabel, getReconciliationStatusLabel, getStabilityLabel } from "./presentationLabels";
+import { getClassificationLabel, getConfidenceLabel, getReconciliationStatusLabel, getStabilityLabel } from "./presentationLabels";
+import { fileInstitutionLabel, fileReadingLabel } from "./institutionSelection";
+import { getInstitution } from "./institutionCatalog";
 
 async function logo() {
   try {
@@ -28,6 +30,20 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
   if (brand) pdf.addImage(brand, "PNG", margin, y, 28, 22);
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.setTextColor(15, 23, 42); pdf.text("Relatório de Análise de Perfil — Renda", margin, y + 28);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); pdf.setTextColor(71, 85, 105); pdf.text(`Cliente/processo: ${result.clientName || "Não informado"}`, margin, y + 36); pdf.text(`Gerado em ${new Date(result.generatedAt).toLocaleDateString("pt-BR")}`, margin, y + 42); y += 53;
+  const readingNotes = () => {
+    result.files.forEach((file, index) => {
+      const notes = [
+        `Arquivo ${index + 1}: ${fileInstitutionLabel(file)} | ${file.institutionSelectionMethod === "MANUAL" ? `seleção manual: ${getInstitution(file.selectedInstitution)?.label || "Outra instituição"}` : "detecção automática"} | ${fileReadingLabel(file)} | leitor utilizado: ${file.parserId || "não executado"}`,
+        ...new Set([...(file.incompatibilityWarnings || []), ...(file.warnings || [])]),
+      ];
+      notes.forEach((note) => {
+        const rows: string[] = pdf.splitTextToSize(note, 180);
+        rows.forEach((row) => { if (y > 274) { pdf.addPage(); y = 15; } pdf.text(row, margin, y); y += 4.5; });
+        y += 1;
+      });
+    });
+    y += 4;
+  };
   if (result.analysisType === "PLATFORM_INCOME" && result.platformIncomeResult) {
     const platform = result.platformIncomeResult;
     const platformStatus = {
@@ -72,6 +88,8 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
       y += 6;
     });
     y += 4;
+    readingNotes();
+    if (y > 254) { pdf.addPage(); y = 15; }
     pdf.setFont("helvetica", "bold");
     pdf.text("Comprovantes mensais analisados", margin, y);
     y += 6;
@@ -128,7 +146,7 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
     return pdf;
   }
   const facts = [
-    ["Bancos", [...new Set(result.files.map((file) => getBankLabel(file.bank)))].join(", ")],
+    ["Instituições", [...new Set(result.files.map(fileInstitutionLabel))].join(", ")],
     ["Meses completos", String(result.completeMonths)],
     ["Renda confirmada", formatCurrencyBR(result.confirmedMonthlyIncome)],
     ["Renda potencial", formatCurrencyBR(result.potentialMonthlyIncome)],
@@ -139,7 +157,15 @@ export async function generateStatementAnalysisPdf(result: AutomatedIncomeResult
     ["Confiança da extração", `${getConfidenceLabel(result.extractionConfidence)} (${Math.round(result.extractionConfidence * 100)}%)`],
     ["Confiança da classificação", `${getConfidenceLabel(result.classificationConfidence)} (${Math.round(result.classificationConfidence * 100)}%)`],
   ];
-  facts.forEach(([label, value]) => { pdf.setFont("helvetica", "bold"); pdf.text(`${label}:`, margin, y); pdf.setFont("helvetica", "normal"); pdf.text(String(value), margin + 52, y); y += 6; }); y += 4;
+  facts.forEach(([label, value]) => {
+    const rows: string[] = pdf.splitTextToSize(String(value), 128);
+    if (y + rows.length * 4.5 > 274) { pdf.addPage(); y = 15; }
+    pdf.setFont("helvetica", "bold"); pdf.text(`${label}:`, margin, y);
+    pdf.setFont("helvetica", "normal"); pdf.text(rows, margin + 52, y);
+    y += Math.max(6, rows.length * 4.5 + 1);
+  }); y += 4;
+  readingNotes();
+  if (y > 254) { pdf.addPage(); y = 15; }
   pdf.setFont("helvetica", "bold"); pdf.text("Resultado por mês", margin, y); y += 6; pdf.setFont("helvetica", "normal");
   const paragraph = (text: string) => {
     const rows: string[] = pdf.splitTextToSize(text, 180);
