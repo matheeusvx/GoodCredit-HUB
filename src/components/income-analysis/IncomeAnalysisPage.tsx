@@ -1,3 +1,4 @@
+import { changeFileInstitution } from "../../lib/statement-analysis/institutionSelection";
 import { useMemo, useRef, useState } from "react";
 import type { IncomeAnalysisParties, NormalizedBankTransaction, StatementFileRecord, StatementProcessingProgress } from "../../types/statementAnalysis";
 import { calculateAutomatedIncome } from "../../lib/statement-analysis/statementAnalysis";
@@ -20,6 +21,7 @@ const EMPTY_PARTIES: IncomeAnalysisParties = { accountHolder: null, spouses: [] 
 
 export function IncomeAnalysisPage({ onSendToSimulation }: { onSendToSimulation: () => void }) {
   const [stage, setStage] = useState<Stage>("UPLOAD"); const [clientName, setClientName] = useState(""); const [files, setFiles] = useState<StatementFileRecord[]>([]); const [parties, setParties] = useState<IncomeAnalysisParties>(EMPTY_PARTIES); const [transactions, setTransactions] = useState<NormalizedBankTransaction[]>([]); const [progress, setProgress] = useState<StatementProcessingProgress | null>(null); const [reviewOpen, setReviewOpen] = useState(false); const [viewing, setViewing] = useState<NormalizedBankTransaction | null>(null); const [notice, setNotice] = useState(""); const controllerRef = useRef<AbortController | null>(null);
+  const [managerReferences, setManagerReferences] = useState<Record<string, number>>({});
   const platformResult = useMemo(
     () => calculatePlatformIncomeResult(
       files.flatMap((file) => file.platformDocument ? [file.platformDocument] : []),
@@ -29,9 +31,9 @@ export function IncomeAnalysisPage({ onSendToSimulation }: { onSendToSimulation:
   );
   const result = useMemo(
     () => stage === "RESULT"
-      ? calculateAutomatedIncome(clientName, files, transactions, platformResult, parties)
+      ? calculateAutomatedIncome(clientName, files, transactions, platformResult, parties, managerReferences)
       : null,
-    [clientName, files, parties, platformResult, stage, transactions]
+    [clientName, files, parties, platformResult, stage, transactions, managerReferences]
   );
 
   function addFiles(candidates: File[]) {
@@ -57,6 +59,11 @@ export function IncomeAnalysisPage({ onSendToSimulation }: { onSendToSimulation:
         processed = [...processed, failed]; setFiles((items) => items.map((item) => item.id === current.id ? failed : item));
       }
     }
+    if (processed.some((file) => file.selectionBlocked)) {
+      setFiles(processed); setTransactions([]); setStage("UPLOAD"); setProgress(null); controllerRef.current = null;
+      setNotice("Revise a instituição dos arquivos sinalizados ou remova os documentos não suportados antes de prosseguir.");
+      return;
+    }
     const anchor = processed.at(-1) || files[0]; const emitFinal = (step: number) => setProgress({ fileId: anchor.id, fileName: "Análise consolidada", step, stepLabel: PROCESSING_STEPS[step], currentPage: 0, totalPages: 0, percent: Math.round((step / PROCESSING_STEPS.length) * 100), completedFiles: processed.filter((file) => ["COMPLETED", "REVIEW_REQUIRED", "DIVERGENT"].includes(file.status)).length, warningFiles: processed.filter((file) => ["REVIEW_REQUIRED", "DIVERGENT", "ERROR", "UNRECOGNIZED"].includes(file.status)).length });
     const extractedHolder = processed.find((file) => file.holderIdentity)?.holderIdentity || null;
     const resolvedParties: IncomeAnalysisParties = { accountHolder: parties.accountHolder || extractedHolder, spouses: parties.spouses };
@@ -65,11 +72,11 @@ export function IncomeAnalysisPage({ onSendToSimulation }: { onSendToSimulation:
     setFiles(processed); setTransactions(consolidated); setStage("RESULT"); setProgress(null); controllerRef.current = null;
   }
 
-  function reset() { if ((files.length || transactions.length) && !window.confirm("Limpar os arquivos e o resultado desta análise?")) return; controllerRef.current?.abort(); setStage("UPLOAD"); setFiles([]); setParties(EMPTY_PARTIES); setTransactions([]); setProgress(null); setReviewOpen(false); setViewing(null); setNotice(""); }
+  function reset() { if ((files.length || transactions.length) && !window.confirm("Limpar os arquivos e o resultado desta análise?")) return; controllerRef.current?.abort(); setStage("UPLOAD"); setFiles([]); setManagerReferences({}); setParties(EMPTY_PARTIES); setTransactions([]); setProgress(null); setReviewOpen(false); setViewing(null); setNotice(""); }
   function sendToSimulation() {
     if (!result?.canSendToSimulation) return; if (localStorage.getItem(SIMULATION_KEY) && !window.confirm("Já existe uma renda preparada para a simulação. Deseja substituí-la pela renda confirmada desta análise?")) return;
     const competences = result.months.map((month) => month.competence); localStorage.setItem(SIMULATION_KEY, JSON.stringify({ clientName: result.clientName, confirmedMonthlyIncome: result.confirmedMonthlyIncome, potentialMonthlyIncome: result.potentialMonthlyIncome, participants: result.analysisType === "PLATFORM_INCOME" ? [] : [...new Set(result.transactions.map((item) => item.accountHolder).filter(Boolean))], analyzedMonths: competences, overallConfidence: Math.min(result.extractionConfidence, result.classificationConfidence), generatedAt: result.generatedAt, averageIncome: result.confirmedMonthlyIncome, medianIncome: result.medianIncome, totalConsidered: result.confirmedIncomeTotal, pendingReviewAmount: result.totalPending, incomeProfile: result.analysisType === "SHOPEE_PAY" ? "ShopeePay" : result.platformIncomeResult?.platform || "", analyzedPeriod: { start: competences[0] || "", end: competences.at(-1) || "", months: result.completeMonths } })); onSendToSimulation();
   }
   const viewingFile = viewing ? files.find((file) => file.id === viewing.sourceFileId) : undefined;
-  return <div className="min-h-screen bg-slate-100">{notice && <div className="mx-auto mt-4 max-w-[1500px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</div>}{stage === "UPLOAD" && <StatementUpload clientName={clientName} files={files} parties={parties} onClientName={setClientName} onAddFiles={addFiles} onRemoveFile={(id) => setFiles((items) => items.filter((item) => item.id !== id))} onParties={setParties} onStart={() => { void startAnalysis(); }} onClear={reset} />}{stage === "PROCESSING" && <StatementProcessing files={files} progress={progress} onCancel={() => controllerRef.current?.abort()} />}{stage === "RESULT" && result && <IncomeAnalysisResult result={result} onReview={() => setReviewOpen(true)} onPdf={() => { void generateStatementAnalysisPdf(result); }} onSend={sendToSimulation} onReset={reset} />}{reviewOpen && <AdvancedTransactionReview transactions={transactions} onChange={setTransactions} onView={setViewing} onClose={() => setReviewOpen(false)} />}{viewing && viewingFile && <StatementViewer transaction={viewing} file={viewingFile} onClose={() => setViewing(null)} />}</div>;
+  return <div className="min-h-screen bg-slate-100">{notice && <div className="mx-auto mt-4 max-w-[1500px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</div>}{stage === "UPLOAD" && <StatementUpload onInstitutionChange={(id, selection) => { setFiles((items) => changeFileInstitution(items, id, selection)); setNotice(""); }} clientName={clientName} files={files} parties={parties} onClientName={setClientName} onAddFiles={addFiles} onRemoveFile={(id) => setFiles((items) => items.filter((item) => item.id !== id))} onParties={setParties} onStart={() => { void startAnalysis(); }} onClear={reset} />}{stage === "PROCESSING" && <StatementProcessing files={files} progress={progress} onCancel={() => controllerRef.current?.abort()} />}{stage === "RESULT" && result && <IncomeAnalysisResult onManagerReference={(competence, value) => setManagerReferences((previous) => { const next = { ...previous }; if (value === null) delete next[competence]; else next[competence] = value; return next; })} result={result} onReview={() => setReviewOpen(true)} onPdf={() => { void generateStatementAnalysisPdf(result); }} onSend={sendToSimulation} onReset={reset} />}{reviewOpen && <AdvancedTransactionReview transactions={transactions} onChange={setTransactions} onView={setViewing} onClose={() => setReviewOpen(false)} />}{viewing && viewingFile && <StatementViewer transaction={viewing} file={viewingFile} onClose={() => setViewing(null)} />}</div>;
 }

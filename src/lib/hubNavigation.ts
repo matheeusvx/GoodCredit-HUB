@@ -9,7 +9,7 @@ export const HUB_VIEW_PATHS: Record<HubView, string> = {
   checklist: "/checklist-documental",
   "compliance-checklist": "/checklist-conformidade",
   fgts: "/uso-fgts",
-  "income-analysis": "/apuracao-renda",
+  "income-analysis": "/analise-perfil",
   "usage-guide": "/guia-de-uso",
   faq: "/faq"
 };
@@ -17,6 +17,7 @@ export const HUB_VIEW_PATHS: Record<HubView, string> = {
 export type ResolvedHubView = HubView | "not-found";
 
 export function resolveHubView(pathname: string): ResolvedHubView {
+  if (pathname === "/apuracao-renda") return "income-analysis";
   if (/^\/registro(?:\/balancete(?:\/novo|\/[^/]+)?)?$/.test(pathname)) {
     return "registration";
   }

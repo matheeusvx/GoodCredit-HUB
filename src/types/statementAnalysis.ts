@@ -1,6 +1,7 @@
 import type { BankTransaction } from "./incomeAnalysis";
 import type { PdfBankCode, PdfReconciliation } from "./pdfImport";
 import type { PlatformIncomeDocument, PlatformIncomeResult } from "./platformIncome";
+import type { InstitutionId, InstitutionSelection } from "../lib/statement-analysis/institutionCatalog";
 
 export type SupportedBank = Exclude<PdfBankCode, "AUTO" | "OTHER" | "BANCO_DO_BRASIL" | "C6"> | "OTHER";
 export type StatementFileFormat = "PDF" | "CSV" | "XLSX" | "XLS";
@@ -68,6 +69,12 @@ export interface NormalizedBankTransaction {
 }
 
 export interface StatementFileRecord {
+  selectedInstitution?: InstitutionSelection;
+  detectedInstitution?: InstitutionId | null;
+  institutionSelectionMethod?: "AUTO" | "MANUAL";
+  readingMethod?: "SPECIFIC_BANK" | "GENERIC_BANK" | "PLATFORM" | "SPREADSHEET" | "UNSUPPORTED" | null;
+  incompatibilityWarnings?: string[];
+  selectionBlocked?: boolean;
   id: string;
   file: File;
   name: string;
@@ -165,6 +172,8 @@ export interface RelatedPartyClassification {
 }
 
 export interface RelatedPartyReviewAudit {
+  previousValues?: Partial<NormalizedBankTransaction>;
+  newValues?: Partial<NormalizedBankTransaction>;
   previousClassification: NormalizedTransactionClassification;
   newClassification: NormalizedTransactionClassification;
   previousRelationship: RelatedPartyType;
@@ -183,6 +192,13 @@ export interface RelatedPartyExclusionSummary {
 }
 
 export interface MonthlyStatementAnalysis {
+  depositTransferCredits?: number;
+  financialYield?: number;
+  sameOwnerCredits?: number;
+  exceptionalCredits?: number;
+  creditCount?: number;
+  managerReference?: number;
+  managerDifference?: number;
   competence: string;
   totalCredits: number;
   totalDebits: number;
@@ -302,7 +318,8 @@ export function reconciliationFromPdf(value?: PdfReconciliation, transactionCoun
       ],
     };
   }
-  const difference = value?.balanceDifference ?? value?.creditDifference ?? value?.debitDifference ?? null;
+  const differences = [value?.balanceDifference, value?.creditDifference, value?.debitDifference].filter((item): item is number => item !== null && item !== undefined);
+  const difference = differences.length ? differences.reduce((largest, item) => Math.abs(item) > Math.abs(largest) ? item : largest, 0) : null;
   return {
     status: !value || value.status === "NOT_AVAILABLE" ? "NO_SUMMARY" : value.status === "MATCHED" ? "RECONCILED" : Math.abs(difference || 0) <= 0.01 ? "SMALL_DIFFERENCE" : "DIVERGENCE",
     creditTotal: value?.parsedCreditTotal || 0,
