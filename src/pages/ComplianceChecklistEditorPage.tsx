@@ -10,7 +10,6 @@ import { ComplianceProgressSummary } from "../components/compliance-checklist/Co
 import { COMPLIANCE_CHECKLIST_ITEMS } from "../data/complianceChecklistItems";
 import { useComplianceChecklist } from "../hooks/useComplianceChecklist";
 import { useComplianceChecklistAutosave } from "../hooks/useComplianceChecklistAutosave";
-import { formatComplianceDateTime } from "../lib/compliance-checklist/complianceChecklistPresentation";
 import { generateComplianceChecklistPdf } from "../lib/compliance-checklist/complianceChecklistPdf";
 import {
   complianceChecklistEditorPath,
@@ -46,7 +45,8 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     loading,
     error,
     recoveredDraft,
-    reload
+    reload,
+    adoptCreatedChecklist
   } = useComplianceChecklist(checklistId);
   const [dirty, setDirty] = useState(false);
   const [filter, setFilter] = useState<ComplianceChecklistFilter>("ALL");
@@ -69,7 +69,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
   useEffect(() => {
     if (recoveredDraft) {
       setDirty(true);
-      setNotice("Um rascunho temporário deste navegador foi recuperado.");
     }
   }, [recoveredDraft]);
 
@@ -143,9 +142,17 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     });
   }
 
-  const handleCreated = useCallback((id: string) => {
-    navigateComplianceChecklist(complianceChecklistEditorPath(id), true);
-  }, []);
+  const handleCreated = useCallback(
+    (id: string) => {
+      // Keep this editor mounted with the current content instead of
+      // reloading the newly created checklist from scratch.
+      adoptCreatedChecklist(id);
+      navigateComplianceChecklist(complianceChecklistEditorPath(id), true, {
+        adoptedChecklistId: id
+      });
+    },
+    [adoptCreatedChecklist]
+  );
 
   const handleSaved = useCallback(
     (record: ComplianceChecklistRecord) => {
@@ -162,7 +169,8 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     pendingCreationId,
     expectedUpdatedAt: detail?.record.updatedAt ?? null,
     dirty,
-    enabled: !loading,
+    // Right after creation, wait for the record's version before updating it.
+    enabled: !loading && (!checklistId || Boolean(detail)),
     onCreated: handleCreated,
     onSaved: handleSaved,
     onDirtyChange: setDirty
@@ -205,7 +213,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
       })),
       lastUpdatedAt: timestamp
     });
-    setNotice("Todos os itens foram marcados como conformes.");
   }
 
   function clearItems() {
@@ -213,7 +220,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     setOpenObservations(new Set());
     setFilter("ALL");
     setObservationsOnly(false);
-    setNotice("Status e observações foram limpos. A identificação foi mantida.");
   }
 
   async function saveNow() {
@@ -231,10 +237,7 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     }
 
     if (!checklistId) {
-      const saved = await saveNow();
-      if (saved) {
-        setNotice("Checklist salvo. O editor será aberto para gerar o PDF.");
-      }
+      await saveNow();
       return;
     }
 
@@ -268,7 +271,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
           updatedAt: savedDetail.record.updatedAt
         }
       );
-      setNotice(draft ? "Relatório em rascunho gerado." : "Relatório gerado.");
     } catch {
       setNotice("Não foi possível gerar o relatório. Tente novamente.");
     } finally {
@@ -317,13 +319,7 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
       <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
         <div aria-live="polite">
           {notice && (
-            <div
-              className={`rounded-lg border px-4 py-3 text-sm font-semibold ${
-                notice.startsWith("Informe") || notice.startsWith("Não")
-                  ? "border-amber-200 bg-amber-50 text-amber-900"
-                  : "border-goodgreen-200 bg-goodgreen-50 text-goodgreen-800"
-              }`}
-            >
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
               {notice}
             </div>
           )}
@@ -339,27 +335,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
             void reload();
           }}
         />
-
-        {detail && (
-          <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
-            <p>
-              <strong className="block text-slate-800">Criado em</strong>
-              {formatComplianceDateTime(detail.record.createdAt)}
-            </p>
-            <p>
-              <strong className="block text-slate-800">Criado por</strong>
-              {detail.record.createdByLabel}
-            </p>
-            <p>
-              <strong className="block text-slate-800">Atualizado em</strong>
-              {formatComplianceDateTime(detail.record.updatedAt)}
-            </p>
-            <p>
-              <strong className="block text-slate-800">Atualizado por</strong>
-              {detail.record.updatedByLabel}
-            </p>
-          </section>
-        )}
 
         <ComplianceClientIdentification state={state} onChange={updateState} />
         <ComplianceProgressSummary summary={summary} />
