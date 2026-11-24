@@ -43,6 +43,16 @@ export function useComplianceChecklistAutosave({
   const [message, setMessage] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const savingRef = useRef(false);
+  const latestStateRef = useRef(state);
+  latestStateRef.current = state;
+
+  // Edits typed while a save request is in flight must stay pending.
+  const markSaved = useCallback(
+    (savedState: ComplianceChecklistState) => {
+      onDirtyChange(latestStateRef.current !== savedState);
+    },
+    [onDirtyChange]
+  );
 
   const saveNow = useCallback(async () => {
     if (!enabled || !user || savingRef.current || !state.clientName.trim()) {
@@ -67,7 +77,7 @@ export function useComplianceChecklistAutosave({
           pendingCreationId ?? undefined
         );
         clearTemporaryComplianceChecklistDraft(localStorage, user.id);
-        onDirtyChange(false);
+        markSaved(state);
         setStatus("SAVED");
         setSavedAt(new Date().toISOString());
         onCreated(id);
@@ -85,7 +95,7 @@ export function useComplianceChecklistAutosave({
         expectedUpdatedAt
       );
       clearTemporaryComplianceChecklistDraft(localStorage, user.id);
-      onDirtyChange(false);
+      markSaved(state);
       setStatus("SAVED");
       setSavedAt(new Date().toISOString());
       onSaved(record);
@@ -111,6 +121,7 @@ export function useComplianceChecklistAutosave({
     enabled,
     expectedUpdatedAt,
     onCreated,
+    markSaved,
     onDirtyChange,
     onSaved,
     pendingCreationId,
