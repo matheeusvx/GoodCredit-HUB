@@ -8,8 +8,8 @@ interface Props {
 
 export function CustomerDataCard({ form, onChange }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-bold text-slate-950">Dados do Cliente</h2>
+    <section className="surface p-5 sm:p-6">
+      <h2 className="text-lg font-bold text-ink">Dados do Cliente</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <label className="field">
           <span>Nome completo ou processo</span>

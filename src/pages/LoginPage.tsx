@@ -87,7 +87,7 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
-      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-panel sm:p-8">
+      <section className="w-full max-w-md surface p-6 sm:p-8">
         <img
           src="/logo-goodcredit-hub.png"
           alt="GoodCredit Hub"
@@ -97,7 +97,7 @@ export function LoginPage() {
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-goodgreen-50 text-goodgreen-700">
             <LockKeyhole className="h-5 w-5" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-slate-950">Acesso interno</h1>
+          <h1 className="mt-4 text-2xl font-bold text-ink">Acesso interno</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Entre para acessar o GoodCredit Hub.
           </p>

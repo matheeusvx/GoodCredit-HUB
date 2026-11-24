@@ -80,7 +80,7 @@ export function CrmPrioritySessions({
       <div className="border-b border-slate-100 p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-950">Atendimentos</h2>
+            <h2 className="text-base font-bold text-ink">Atendimentos</h2>
             <p className="mt-1 text-sm text-slate-500">
               Acompanhe sua carteira, prioridades e histórico de atendimentos.
             </p>
@@ -143,7 +143,7 @@ export function CrmPrioritySessions({
                     onKeyDown={(event) => openWithKeyboard(event, open)}
                     className="cursor-pointer transition hover:bg-slate-50/90 focus-visible:bg-goodgreen-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-goodgreen-500"
                   >
-                    <td className="px-5 py-4 font-semibold text-slate-900">{item.contactName}</td>
+                    <td className="px-5 py-4 font-semibold text-ink">{item.contactName}</td>
                     <td className="px-5 py-4 text-slate-600">{STATUS_LABELS[item.currentStatus]}</td>
                     <td className="px-5 py-4">
                       <span className="font-semibold text-slate-700" title={formatFullDateTime(item.lastAgentInteractionAt)}>
@@ -171,7 +171,7 @@ export function CrmPrioritySessions({
                     onKeyDown={(event) => openWithKeyboard(event, open)}
                     className="cursor-pointer transition hover:bg-slate-50/90 focus-visible:bg-goodgreen-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-goodgreen-500"
                   >
-                    <td className="px-5 py-4 font-semibold text-slate-900">{item.contactName}</td>
+                    <td className="px-5 py-4 font-semibold text-ink">{item.contactName}</td>
                     <td className="px-5 py-4 text-slate-600">{STATUS_LABELS[item.status]}</td>
                     <td className="px-5 py-4">
                       <span className="font-semibold text-slate-700" title={formatFullDateTime(item.lastInteractionAt)}>

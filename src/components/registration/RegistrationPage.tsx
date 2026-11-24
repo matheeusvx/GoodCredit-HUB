@@ -1,5 +1,5 @@
-import { Landmark } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PageHeader } from "../ui/PageHeader";
 import { RegistrationFinancialEditorPage } from "../../pages/RegistrationFinancialEditorPage";
 import { RegistrationFinancialListPage } from "../../pages/RegistrationFinancialListPage";
 import type { RegistrationTool } from "../../types/registration";
@@ -51,15 +51,8 @@ export function RegistrationPage() {
 
   const route = getRegistrationRouteState(pathname);
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 xl:px-8">
-          <div className="flex items-start gap-4">
-            <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-goodgreen-50 text-goodgreen-700 sm:flex"><Landmark className="h-5 w-5" aria-hidden="true" /></span>
-            <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">GoodCredit Hub</p><h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Registro</h1><p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">Simule o ITBI e acompanhe os valores operacionais dos processos cartoriais.</p></div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      <PageHeader title="Registro" description="Simule o ITBI e acompanhe os custos cartoriais." maxWidth="max-w-[1500px]" />
 
       <main className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
         {route.type === "TOOLS" && <div className="flex w-full justify-center"><RegistrationToolSelector value={tool} onChange={changeTool} /></div>}

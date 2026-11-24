@@ -82,7 +82,7 @@ export function ItbiSimulation() {
     <div id="registration-itbi-panel" role="tabpanel" aria-labelledby="registration-tab-itbi" className="space-y-6">
       <section>
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">Simulação simplificada</p>
-        <h2 className="mt-2 text-xl font-bold text-slate-950 sm:text-2xl">Simulação Simplificada de ITBI</h2>
+        <h2 className="mt-2 text-xl font-bold text-ink sm:text-2xl">Simulação Simplificada de ITBI</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">Selecione a cidade e informe os dados da operação para obter uma estimativa.</p>
       </section>
 
@@ -108,20 +108,13 @@ export function ItbiSimulation() {
             ) : (
               <section className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
                 <Info className="mx-auto h-6 w-6 text-goodblue-500" aria-hidden="true" />
-                <h3 className="mt-3 font-bold text-slate-900">Resultado da simulação</h3>
+                <h3 className="mt-3 font-bold text-ink">Resultado da simulação</h3>
                 <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">Selecione uma cidade disponível, informe o valor e clique em Calcular.</p>
               </section>
             )}
           </div>
         </div>
       )}
-
-      <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-4 text-sm leading-6 text-goodblue-900">
-        <strong>Importante:</strong>{" "}
-        {isSaoPaulo
-          ? "esta é uma estimativa baseada nas regras informadas para contratos celebrados em 2026. A base considera o maior valor entre a transação e o Valor Venal de Referência. O valor definitivo depende do enquadramento e da emissão oficial."
-          : "esta é uma simulação simplificada baseada exclusivamente no valor de compra e venda informado. O valor definitivo pode variar conforme a base reconhecida pelo município, o enquadramento da operação e a emissão da guia oficial."}
-      </section>
     </div>
   );
 }

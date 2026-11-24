@@ -20,7 +20,7 @@ export function ComplianceChecklistActions({
 
   return (
     <>
-      <section className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-500">
           Os dados são sincronizados com o histórico central da GoodCredit.
         </p>
@@ -59,7 +59,7 @@ export function ComplianceChecklistActions({
           <div className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="clear-compliance-title" className="text-lg font-bold text-slate-950">
+                <h2 id="clear-compliance-title" className="text-lg font-bold text-ink">
                   Limpar Checklist de Conformidade
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">

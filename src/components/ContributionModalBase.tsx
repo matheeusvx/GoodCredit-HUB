@@ -141,7 +141,7 @@ export function ContributionModalBase({
       <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-slate-950">{title}</h2>
+            <h2 className="text-xl font-bold text-ink">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
           </div>
           <button type="button" onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100" title="Fechar">
@@ -151,7 +151,7 @@ export function ContributionModalBase({
 
         <div className="space-y-5 overflow-y-auto px-6 py-5">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h3 className="font-bold text-slate-900">Adicionar programação recorrente</h3>
+            <h3 className="font-bold text-ink">Adicionar programação recorrente</h3>
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <label className="field">
                 <span>Valor por aporte</span>
@@ -211,7 +211,7 @@ export function ContributionModalBase({
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Efetivamente utilizado no cenário atual</p>
-              <p className="mt-1 font-bold text-slate-900">{formatCurrencyBR(effectiveUsed)}</p>
+              <p className="mt-1 font-bold text-ink">{formatCurrencyBR(effectiveUsed)}</p>
               <p className="mt-1 text-sm text-slate-600">A quitação antecipada pode limitar o total utilizado.</p>
             </div>
           </div>
@@ -219,7 +219,7 @@ export function ContributionModalBase({
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-slate-950">Aportes cadastrados</h3>
+                <h3 className="font-bold text-ink">Aportes cadastrados</h3>
                 <p className="text-sm text-slate-500">Edite, desative ou exclua eventos individuais.</p>
               </div>
               <button type="button" onClick={addSingleEvent} className="btn-secondary">

@@ -11,12 +11,12 @@ export function ProSolutoExplanation({ form, result }: Props) {
   const steps = buildProSolutoExplanation(form, result);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel sm:p-6">
+    <section className="surface p-5 sm:p-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-goodblue-600">
           Memória de cálculo
         </p>
-        <h2 className="mt-2 text-xl font-bold text-slate-950">
+        <h2 className="mt-2 text-xl font-bold text-ink">
           Como chegamos ao pró-soluto?
         </h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -31,7 +31,7 @@ export function ProSolutoExplanation({ form, result }: Props) {
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-goodblue-600 text-xs font-bold text-white">
                 {step.number}
               </span>
-              <h3 className="pt-1 text-sm font-bold text-slate-900">{step.title}</h3>
+              <h3 className="pt-1 text-sm font-bold text-ink">{step.title}</h3>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-600">{step.description}</p>
             <p className="mt-3 text-xs font-semibold leading-5 text-slate-700">

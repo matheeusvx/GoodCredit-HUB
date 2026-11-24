@@ -26,7 +26,7 @@ export function ComplianceChecklistDuplicateDialog({
       <div className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="duplicate-title" className="text-lg font-bold text-slate-950">
+            <h2 id="duplicate-title" className="text-lg font-bold text-ink">
               Duplicar checklist
             </h2>
             <p className="mt-1 text-sm text-slate-600">{clientName}</p>
@@ -51,7 +51,7 @@ export function ComplianceChecklistDuplicateDialog({
               className="mt-0.5"
             />
             <span>
-              <strong className="block text-sm text-slate-900">
+              <strong className="block text-sm text-ink">
                 Copiar somente a identificação
               </strong>
               <span className="mt-1 block text-xs leading-5 text-slate-500">
@@ -68,7 +68,7 @@ export function ComplianceChecklistDuplicateDialog({
               className="mt-0.5"
             />
             <span>
-              <strong className="block text-sm text-slate-900">
+              <strong className="block text-sm text-ink">
                 Copiar também status e observações
               </strong>
               <span className="mt-1 block text-xs leading-5 text-slate-500">

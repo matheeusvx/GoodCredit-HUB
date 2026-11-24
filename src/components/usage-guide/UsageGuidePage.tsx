@@ -1,4 +1,3 @@
-import { Info } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { USAGE_GUIDES, USAGE_GUIDE_LAST_REVIEWED_AT, USAGE_GUIDE_VERSION } from "../../data/usageGuideData";
 import { filterUsageGuides } from "../../lib/usageGuideSearch";
@@ -108,18 +107,6 @@ export function UsageGuidePage({ onNavigate }: { onNavigate: (view: HubView) => 
             onOpenModule={openModule}
           />
         </div>
-
-        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-5 text-sm leading-6 text-goodblue-900">
-          <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <div>
-              <h2 className="font-bold">Orientação institucional</h2>
-              <p className="mt-2">
-                Este Guia de Uso possui caráter orientativo e descreve o funcionamento das ferramentas disponíveis no GoodCredit Hub. Os resultados gerados pelo sistema não substituem a análise documental, a conferência operacional ou a validação da instituição financeira.
-              </p>
-            </div>
-          </div>
-        </section>
 
         <footer className="pb-4 text-center text-xs leading-5 text-slate-500">
           <p className="font-bold text-slate-600">Guia de Uso GoodCredit Hub</p>

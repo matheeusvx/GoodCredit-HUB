@@ -13,7 +13,7 @@ const questions: Array<[AnswerKey, string]> = [
   ["ownHousingPurpose", "O imóvel será destinado à moradia própria?"],
   ["contractEligible", "O contrato está enquadrado para uso do FGTS?"],
 ];
-const selectClass = "h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10";
+const selectClass = "h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-ink outline-none focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10";
 
 function AnswerSelect({ value, onChange }: { value: FgtsEligibilityAnswer; onChange: (value: FgtsEligibilityAnswer) => void }) {
   return <select className={selectClass} value={value} onChange={(event) => onChange(event.target.value as FgtsEligibilityAnswer)}><option value="UNKNOWN">Não sei</option><option value="YES">Sim</option><option value="NO">Não</option></select>;
@@ -21,7 +21,7 @@ function AnswerSelect({ value, onChange }: { value: FgtsEligibilityAnswer; onCha
 
 export function FgtsEligibilityCard({ form, result, onChange }: Props) {
   const tone = result.status === "POSSIBLE_BARRIER" ? "border-rose-200 bg-rose-50 text-rose-800" : result.status === "ELIGIBLE_INDICATIONS" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800";
-  return <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section className="surface p-5 sm:p-6">
     <h2 className="text-xl font-bold">Verificação Inicial de Elegibilidade</h2>
     <p className="mt-1 text-sm text-slate-500">Triagem orientativa sujeita à validação do agente financeiro.</p>
     <div className="mt-5 grid gap-4 md:grid-cols-2">

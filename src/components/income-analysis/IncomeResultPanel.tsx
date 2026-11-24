@@ -18,10 +18,10 @@ export function IncomeResultPanel({ form, result, onCopy, onPdfSummary, onPdfDet
     ["Mediana mensal", formatCurrencyBR(result.medianIncome)],
     ["Indicador de estabilidade", result.stabilityLabel]
   ];
-  return <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section className="surface p-5 sm:p-6">
     <h2 className="text-xl font-bold">Resultado Geral</h2>
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{facts.map(([label, value]) => <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 font-bold text-slate-950">{value}</p></div>)}</div>
-    <p className="mt-4 text-xs text-slate-500">Indicador interno de estabilidade — não representa critério oficial de aprovação.</p>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{facts.map(([label, value]) => <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 font-bold text-ink">{value}</p></div>)}</div>
+    
     {result.pendingCount > 0 && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Existem lançamentos pendentes de classificação. A renda média poderá mudar após a conclusão da análise.</p>}
     {result.totalEntries > 0 && result.totalExcluded / result.totalEntries >= 0.4 && <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">Parte relevante das entradas foi desconsiderada. Revise os motivos antes de concluir a apuração.</p>}
     <div className="mt-5"><IncomeActions onCopy={onCopy} onPdfSummary={onPdfSummary} onPdfDetailed={onPdfDetailed} onSend={onSend} canSend={Boolean(form.clientName && form.incomeProfile && result.monthCount && result.averageIncome > 0)} /></div>

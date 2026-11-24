@@ -182,7 +182,7 @@ export function CrmDashboard() {
       {dashboard?.meta.integrationStatus === "SYNC_ERROR" && <StateNotice>O CRM está temporariamente indisponível. Exibindo o último estado sincronizado.</StateNotice>}
       {dashboard?.user && <>
         {dashboard.analytics.period.limitedByMetricsStartAt && <p className="rounded-lg bg-goodblue-50 px-4 py-2 text-xs font-medium text-goodblue-700">O período foi ajustado à data inicial disponível para análise.</p>}
-        <div className={`grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-4 ${fetching ? "opacity-70" : "opacity-100"}`}>{cards.map((card) => <CrmMetricCard key={card.label} {...card} />)}</div>
+        <div className={`stagger grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-4 ${fetching ? "opacity-70" : "opacity-100"}`}>{cards.map((card) => <CrmMetricCard key={card.label} {...card} />)}</div>
         <div className="grid gap-5 xl:grid-cols-3"><CrmPerformanceChart data={dashboard.analytics.dailySeries} metric={mainMetric} chartType={chartType} onMetricChange={setMainMetric} onChartTypeChange={setChartType} /><CrmPortfolioHealth distribution={dashboard.analytics.portfolioDistribution} health={dashboard.analytics.portfolioHealth} /></div>
         <div className="grid gap-5 xl:grid-cols-2"><CrmMovementChart data={dashboard.analytics.dailySeries} /><CrmResponseChart data={dashboard.analytics.dailySeries} /></div>
         <CrmInsights insights={insights} />

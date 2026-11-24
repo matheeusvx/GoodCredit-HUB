@@ -19,7 +19,7 @@ export function FaqSearch({ value, onChange }: FaqSearchProps) {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Pesquisar uma dúvida, assunto ou palavra-chave..."
-          className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-12 pr-12 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100"
+          className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-12 pr-12 text-sm font-medium text-ink outline-none transition placeholder:text-slate-400 focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100"
         />
         {value && (
           <button

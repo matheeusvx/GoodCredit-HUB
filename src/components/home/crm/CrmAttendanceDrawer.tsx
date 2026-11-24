@@ -35,7 +35,7 @@ function SummaryItem({ label, value }: { label: string; value: string | number }
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-bold text-slate-900">{value}</p>
+      <p className="mt-1 text-base font-bold text-ink">{value}</p>
     </div>
   );
 }
@@ -102,7 +102,7 @@ export function CrmAttendanceDrawer({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-700">Atendimento</p>
-            <h2 id="crm-attendance-drawer-title" className="mt-1 truncate text-xl font-bold text-slate-950">
+            <h2 id="crm-attendance-drawer-title" className="mt-1 truncate text-xl font-bold text-ink">
               {detail?.contactName || fallbackName}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -114,7 +114,7 @@ export function CrmAttendanceDrawer({
             type="button"
             onClick={onClose}
             aria-label="Fechar detalhes do atendimento"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>

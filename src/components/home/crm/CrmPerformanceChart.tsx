@@ -23,7 +23,7 @@ function PerformanceTooltip({ active, label, value, metric }: {
   const name = metricOptions.find((item) => item.key === metric)?.label || "Indicador";
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-panel">
-      <p className="text-xs font-bold text-slate-900">{formatChartDate(label)}</p>
+      <p className="text-xs font-bold text-ink">{formatChartDate(label)}</p>
       <p className="mt-1 text-xs text-slate-600">{name}: <strong>{value === null || value === undefined ? "Sem histórico disponível" : metric === "averageResponseSeconds" ? formatDuration(value) : formatMetricNumber(value)}</strong></p>
     </div>
   );
@@ -50,7 +50,7 @@ export function CrmPerformanceChart({ data, metric, chartType, onMetricChange, o
       {!data.length || !hasData ? <EmptyChartState>{metric === "received" || metric === "transferred" ? "Histórico disponível após o início do monitoramento." : undefined}</EmptyChartState> : (
         <div className="h-72 sm:h-80" role="img" aria-label={`Gráfico de ${metricOptions.find((item) => item.key === metric)?.label}`}>
           <ResponsiveContainer width="100%" height="100%">
-            {chartType === "bar" ? <BarChart data={data}>{common}<Bar dataKey={metric} fill="#3f8b3a" radius={[6, 6, 0, 0]} /></BarChart> : chartType === "area" ? <AreaChart data={data}>{common}<defs><linearGradient id="crmPerformanceArea" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#54a34c" stopOpacity={0.28} /><stop offset="95%" stopColor="#54a34c" stopOpacity={0.02} /></linearGradient></defs><Area type="monotone" dataKey={metric} stroke="#3f8b3a" strokeWidth={2.5} fill="url(#crmPerformanceArea)" connectNulls={false} /></AreaChart> : <LineChart data={data}>{common}<Line type="monotone" dataKey={metric} stroke="#3f8b3a" strokeWidth={2.5} dot={{ r: 3, fill: "#fff", strokeWidth: 2 }} activeDot={{ r: 5 }} connectNulls={false} /></LineChart>}
+            {chartType === "bar" ? <BarChart data={data}>{common}<Bar dataKey={metric} fill="#1f7c4e" radius={[6, 6, 0, 0]} /></BarChart> : chartType === "area" ? <AreaChart data={data}>{common}<defs><linearGradient id="crmPerformanceArea" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2f9461" stopOpacity={0.28} /><stop offset="95%" stopColor="#2f9461" stopOpacity={0.02} /></linearGradient></defs><Area type="monotone" dataKey={metric} stroke="#1f7c4e" strokeWidth={2.5} fill="url(#crmPerformanceArea)" connectNulls={false} /></AreaChart> : <LineChart data={data}>{common}<Line type="monotone" dataKey={metric} stroke="#1f7c4e" strokeWidth={2.5} dot={{ r: 3, fill: "#fff", strokeWidth: 2 }} activeDot={{ r: 5 }} connectNulls={false} /></LineChart>}
           </ResponsiveContainer>
         </div>
       )}

@@ -27,7 +27,7 @@ export function FgtsIncomeEstimator({ form, result, onChange }: Props) {
     ["rateConfirmed", "O contrato está sujeito ao percentual informado?"],
   ];
 
-  return <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section className="surface p-5 sm:p-6">
     <h2 className="text-xl font-bold">Estimativa de Renda pelo Depósito do FGTS</h2>
     <p className="mt-1 text-sm text-slate-500">Compare o valor bruto do holerite com a renda estimada pelo recolhimento da mesma competência.</p>
     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -60,8 +60,7 @@ export function FgtsIncomeEstimator({ form, result, onChange }: Props) {
         <FgtsCurrencyInput ariaLabel="Depósito mensal do FGTS" className={`${inputClass} mt-2`} value={form.monthlyDeposit} onValueChange={(monthlyDeposit) => onChange({ ...form, monthlyDeposit })} placeholder="R$ 400,00" />
       </label>
       <label className="text-sm font-semibold md:col-span-2">Tipo de vínculo<select className={`${inputClass} mt-2`} value={form.employmentType} onChange={(event) => employmentChange(event.target.value as FgtsEmploymentType)}><option value="REGULAR">Empregado CLT com recolhimento regular de 8%</option><option value="APPRENTICE">Menor aprendiz — 2%</option><option value="OTHER">Outro percentual</option><option value="UNKNOWN">Não sei</option></select></label>
-      <label className="text-sm font-semibold">Percentual de recolhimento<input type="text" inputMode="decimal" className={`${inputClass} mt-2 disabled:bg-slate-100 disabled:text-slate-500`} disabled={form.employmentType !== "OTHER"} value={rateInput} onFocus={() => { rateFocused.current = true; }} onChange={(event) => { const next = event.target.value.replace(/[^\d,.]/g, ""); setRateInput(next); const parsed = Number(next.replace(",", ".")); onChange({ ...form, contributionRate: Number.isFinite(parsed) && parsed > 0 && parsed <= 100 ? parsed / 100 : 0 }); }} onBlur={() => { rateFocused.current = false; setRateInput((form.contributionRate * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })); }} /></label>
-      <div className="flex min-h-12 items-center rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm text-blue-800"><strong>Regra aplicada:</strong>&nbsp;o maior valor válido será considerado.</div>
+      <label className="text-sm font-semibold md:col-span-2">Percentual de recolhimento<input type="text" inputMode="decimal" className={`${inputClass} mt-2 disabled:bg-slate-100 disabled:text-slate-500`} disabled={form.employmentType !== "OTHER"} value={rateInput} onFocus={() => { rateFocused.current = true; }} onChange={(event) => { const next = event.target.value.replace(/[^\d,.]/g, ""); setRateInput(next); const parsed = Number(next.replace(",", ".")); onChange({ ...form, contributionRate: Number.isFinite(parsed) && parsed > 0 && parsed <= 100 ? parsed / 100 : 0 }); }} onBlur={() => { rateFocused.current = false; setRateInput((form.contributionRate * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })); }} /></label>
     </div>
     {form.employmentType === "UNKNOWN" && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Confirme o percentual de recolhimento antes de utilizar a estimativa.</p>}
     <div className="mt-5 grid gap-3 md:grid-cols-2">{checks.map(([key, label]) => <label key={key} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-goodgreen-600" checked={Boolean(form[key])} onChange={(event) => onChange({ ...form, [key]: event.target.checked })} />{label}</label>)}</div>

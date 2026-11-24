@@ -288,7 +288,7 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
     return (
       <main className="min-h-screen bg-slate-100 p-6">
         <div className="mx-auto max-w-xl rounded-lg border border-rose-200 bg-white p-6 text-center">
-          <h1 className="text-lg font-bold text-slate-950">
+          <h1 className="text-lg font-bold text-ink">
             Não foi possível abrir o checklist
           </h1>
           <p className="mt-2 text-sm text-rose-700">{error}</p>
@@ -390,11 +390,6 @@ export function ComplianceChecklistEditorPage({ checklistId }: Props) {
           onObservationToggle={toggleObservation}
           onObservationRemove={removeObservation}
         />
-
-        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 px-4 py-4 text-sm leading-6 text-goodblue-900">
-          <strong>Importante:</strong> este checklist é uma ferramenta de controle
-          interno e não substitui a conferência documental e operacional do analista.
-        </section>
       </main>
     </div>
   );

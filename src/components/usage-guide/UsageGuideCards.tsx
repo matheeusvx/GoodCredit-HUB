@@ -13,7 +13,7 @@ export function UsageGuideCards({ guides, selectedId, onSelect, onOpenModule }: 
   return (
     <section aria-labelledby="usage-guide-modules-title">
       <div className="mb-4">
-        <h2 id="usage-guide-modules-title" className="text-xl font-bold text-slate-950">Módulos documentados</h2>
+        <h2 id="usage-guide-modules-title" className="text-xl font-bold text-ink">Módulos documentados</h2>
         <p className="mt-1 text-sm text-slate-500">Escolha uma ferramenta para abrir sua orientação completa.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
@@ -31,7 +31,7 @@ export function UsageGuideCards({ guides, selectedId, onSelect, onOpenModule }: 
                 </span>
                 {selected && <span className="rounded-full bg-goodgreen-50 px-2.5 py-1 text-[11px] font-bold text-goodgreen-700">Selecionado</span>}
               </div>
-              <h3 className="mt-4 text-base font-bold text-slate-950">{guide.title}</h3>
+              <h3 className="mt-4 text-base font-bold text-ink">{guide.title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">{guide.shortDescription}</p>
               <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
                 {guide.keyFeatures.map((feature) => <li key={feature}>• {feature}</li>)}

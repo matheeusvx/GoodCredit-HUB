@@ -14,7 +14,7 @@ export function FgtsAmortizationPlanner({ form, result, events, onFormChange, on
   function updateForm(patch: Partial<FgtsProjectionForm>) { onFormChange({ ...form, ...patch, periodicityMonths: fixedPeriodicity }); }
   function addEvent() { const last = events[events.length - 1]; const month = (last?.month || Math.max(0, form.firstContributionMonth - fixedPeriodicity)) + fixedPeriodicity; onEventsChange([...events, { id: `manual-${Date.now()}`, eventNumber: events.length + 1, month, estimatedDate: "", availableBalance: 0, amount: 0, remainingBalance: 0, active: true, note: "Evento adicionado", source: "FGTS" }]); }
 
-  return <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section className="surface p-5 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Planejamento de Amortizações com FGTS</h2><p className="mt-1 text-sm text-slate-500">Projete utilizações futuras em intervalos fixos e revise os valores de cada evento.</p></div><button type="button" className="btn-secondary" onClick={addEvent}><Plus className="h-4 w-4" /> Adicionar evento</button></div>
     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <label className="text-sm font-semibold">Data do contrato (opcional)<input type="date" className={cls} value={form.contractDate} onChange={(event) => updateForm({ contractDate: event.target.value })} /></label>

@@ -40,7 +40,7 @@ export function RegistrationToolSelector({ value, onChange }: { value: Registrat
             className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-400 focus-visible:ring-offset-1 ${
               selected
                 ? "border-goodgreen-300 bg-white text-goodgreen-700 shadow-sm"
-                : "border-transparent bg-transparent text-slate-600 hover:bg-white/70 hover:text-slate-900"
+                : "border-transparent bg-transparent text-slate-600 hover:bg-white/70 hover:text-ink"
             }`}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />

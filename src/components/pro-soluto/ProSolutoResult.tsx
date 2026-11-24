@@ -50,7 +50,7 @@ function ResultBlock({ icon: Icon, title, rows, tone = "default" }: ResultBlockP
             tone === "highlight" ? "text-goodgreen-700" : "text-slate-500"
           }`}
         />
-        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-bold text-ink">{title}</h3>
       </div>
       <dl className="mt-3 space-y-2.5">
         {rows.map(([label, value]) => (
@@ -59,7 +59,7 @@ function ResultBlock({ icon: Icon, title, rows, tone = "default" }: ResultBlockP
             className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
           >
             <dt className="text-xs leading-5 text-slate-500">{label}</dt>
-            <dd className="text-sm font-bold text-slate-900 sm:text-right">{value}</dd>
+            <dd className="text-sm font-bold text-ink sm:text-right">{value}</dd>
           </div>
         ))}
       </dl>
@@ -77,7 +77,7 @@ export function ProSolutoResult({ form, result }: Props) {
           <BadgeDollarSign className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-950">Resultado do Pró-Soluto</h2>
+          <h2 className="text-xl font-bold text-ink">Resultado do Pró-Soluto</h2>
           <p className="mt-0.5 text-xs font-semibold text-slate-500">
             {statusLabels[result.status]}
           </p>

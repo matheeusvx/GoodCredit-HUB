@@ -27,7 +27,7 @@ export function ComplianceChecklistList({
       <div className="mb-4 flex items-center gap-3">
         <ClipboardCheck className="h-5 w-5 text-goodgreen-700" />
         <div>
-          <h2 id="compliance-list-title" className="text-lg font-bold text-slate-950">
+          <h2 id="compliance-list-title" className="text-lg font-bold text-ink">
             Verificações de Conformidade
           </h2>
           <p className="text-xs text-slate-500">

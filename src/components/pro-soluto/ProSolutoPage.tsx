@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageHeader } from "../ui/PageHeader";
 import { formatCurrencyBRL, normalizeCurrencyInput, parseCurrencyBRL } from "../../lib/fgts/currency";
 import { calculateProSoluto, validateProSolutoForm } from "../../lib/pro-soluto/proSolutoCalculator";
 import { clampFinanceablePercent } from "../../lib/pro-soluto/proSolutoConstants";
@@ -161,22 +162,10 @@ export function ProSolutoPage() {
 
   return (
     <div>
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 sm:px-6 xl:px-8">
-          <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">
-                Composição da operação
-              </p>
-              <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">
-                Cálculo de Pró-Soluto
-              </h1>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Apure quanto ainda precisa ser pago com recursos próprios para que o vendedor
-                receba integralmente o valor acordado na compra e venda.
-              </p>
-            </div>
-            <ProSolutoActions
+      <PageHeader
+        title="Cálculo de Pró-Soluto"
+        description="Apure quanto o comprador paga com recursos próprios."
+        actions={<ProSolutoActions
               canExport={canExport}
               copied={copied}
               generatingPdf={generatingPdf}
@@ -184,10 +173,8 @@ export function ProSolutoPage() {
               onGeneratePdf={generatePdf}
               onImport={importSimulation}
               onClear={clearCalculation}
-            />
-          </div>
-        </div>
-      </header>
+            />}
+      />
 
       <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.06fr)_minmax(420px,0.94fr)]">
@@ -205,12 +192,6 @@ export function ProSolutoPage() {
         </div>
 
         {canExport && <ProSolutoExplanation form={form} result={result} />}
-
-        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 px-4 py-4 text-sm leading-6 text-goodblue-900">
-          <strong>Importante:</strong> o resultado é orientativo. Confirme o crédito aprovado,
-          o percentual financiável, a avaliação de engenharia e os recursos efetivamente
-          reconhecidos na operação antes de formalizar o pró-soluto.
-        </section>
       </main>
     </div>
   );

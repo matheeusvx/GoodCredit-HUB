@@ -71,7 +71,7 @@ export function CrmPeriodSelector({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex max-w-full">
+    <div ref={containerRef} className="relative z-30 inline-flex max-w-full">
       <button
         type="button"
         aria-haspopup="dialog"

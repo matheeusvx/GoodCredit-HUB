@@ -49,8 +49,8 @@ function CurrencyField({
   onBlur
 }: CurrencyFieldProps) {
   return (
-    <label htmlFor={id} className="flex min-w-0 flex-col gap-2">
-      <span className="text-sm font-semibold text-slate-700">
+    <label htmlFor={id} className="field-cell">
+      <span className="field-cell-label">
         {label}
         {required ? " *" : ""}
       </span>
@@ -65,7 +65,7 @@ function CurrencyField({
         placeholder="R$ 0,00"
         className="input-field"
       />
-      {hint && <span className="text-xs leading-5 text-slate-500">{hint}</span>}
+      <span className="field-cell-hint">{hint}</span>
     </label>
   );
 }
@@ -89,7 +89,7 @@ function FormSection({ icon: Icon, eyebrow, title, description, children }: Form
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">
             {eyebrow}
           </p>
-          <h3 className="mt-1 text-base font-bold text-slate-950">{title}</h3>
+          <h3 className="mt-1 text-base font-bold text-ink">{title}</h3>
           <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
         </div>
       </div>
@@ -113,9 +113,9 @@ export function ProSolutoForm({
   );
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white shadow-panel">
+    <section className="surface">
       <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
-        <h2 className="text-xl font-bold text-slate-950">Dados da Operação</h2>
+        <h2 className="text-xl font-bold text-ink">Dados da Operação</h2>
         <p className="mt-1 text-sm leading-6 text-slate-500">
           Informe os valores da negociação. A avaliação é usada somente para calcular o
           limite de financiamento.
@@ -143,10 +143,10 @@ export function ProSolutoForm({
           title="Valor acordado e avaliação"
           description="O CCV representa quanto o vendedor precisa receber. A avaliação não substitui esse valor."
         >
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-x-5 gap-y-6 md:grid-cols-2">
             <CurrencyField
               id="pro-soluto-seller-receivable"
-              label="Valor que o vendedor precisa receber — CCV"
+              label="Valor a receber pelo vendedor (CCV)"
               value={inputs.sellerReceivableAmount}
               required
               hint="Informe o valor total acordado na compra e venda."
@@ -171,9 +171,9 @@ export function ProSolutoForm({
           title="Limite e crédito aprovado"
           description="O crédito considerado será o menor valor entre a aprovação e o limite calculado pela avaliação."
         >
-          <div className="grid gap-5 md:grid-cols-2">
-            <label htmlFor="pro-soluto-percent" className="flex min-w-0 flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
+          <div className="grid gap-x-5 gap-y-6 md:grid-cols-2">
+            <label htmlFor="pro-soluto-percent" className="field-cell">
+              <span className="field-cell-label">
                 Percentual máximo financiável *
               </span>
               <input
@@ -188,9 +188,7 @@ export function ProSolutoForm({
                 className="input-field"
               />
               <span
-                className={`text-xs leading-5 ${
-                  percentLimitError ? "font-semibold text-red-600" : "text-slate-500"
-                }`}
+                className={`field-cell-hint ${percentLimitError ? "font-semibold !text-rose-600" : ""}`}
               >
                 {percentLimitError ||
                   `O percentual máximo permitido nesta operação é de ${MAX_FINANCEABLE_PERCENT}% sobre o valor de avaliação.`}
@@ -240,7 +238,7 @@ export function ProSolutoForm({
           title="Valores já aplicados na operação"
           description="Considere somente FGTS efetivamente utilizado e entrada já paga ao vendedor."
         >
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-x-5 gap-y-6 md:grid-cols-2">
             <CurrencyField
               id="pro-soluto-fgts"
               label="FGTS utilizado"

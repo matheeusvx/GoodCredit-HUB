@@ -1,6 +1,7 @@
-import { CheckCircle2, Info, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { formatCurrencyBR, formatPercentBR } from "../lib/financial";
 import { AmortizationImpactSummary } from "../types/amortization";
+import { Roll, useMounted } from "./ui/Roll";
 
 interface AmortizationImpactProps {
   impact: AmortizationImpactSummary;
@@ -13,157 +14,136 @@ interface AmortizationImpactProps {
 
 const explanations = [
   ["Total amortizado", "Soma dos aportes manuais e dos valores de FGTS efetivamente utilizados para reduzir o saldo devedor."],
-  ["Aportes manuais", "Soma dos valores manuais efetivamente aplicados. Valores excedentes ou posteriores à quitação não são contabilizados."],
-  ["Total de FGTS utilizado", "Soma dos aportes de FGTS efetivamente aplicados. Valores excedentes ou posteriores à quitação não são contabilizados."],
+  ["Aportes manuais e FGTS", "Somente valores efetivamente aplicados. Excedentes ou valores posteriores à quitação não são contabilizados."],
   ["Economia em juros", "Diferença entre os juros projetados no contrato original e os juros projetados após as amortizações."],
-  ["Prazo após as amortizações", "Quantidade de parcelas necessárias até o saldo devedor corrigido chegar a zero."],
-  ["Parcelas eliminadas", "Diferença entre o prazo original e o mês efetivo de quitação."],
-  ["Redução do custo total", "Diferença entre o total projetado no contrato original e o total projetado após as amortizações efetivamente aplicadas."]
+  ["Prazo e parcelas eliminadas", "Parcelas necessárias até o saldo corrigido chegar a zero, comparadas ao prazo original."],
+  ["Redução do custo total", "Diferença entre o total projetado no contrato original e o total projetado após as amortizações."],
+  ["Ordem de aplicação", "No mesmo mês, o aporte manual é aplicado antes do FGTS, sem dupla contagem nas parcelas corrigidas."]
 ] as const;
 
-export function AmortizationImpact({
-  impact,
-  hasManual,
-  hasFgts,
-  onClearManual,
-  onClearFgts,
-  onClearAll
-}: AmortizationImpactProps) {
+export function AmortizationImpact({ impact, hasManual, hasFgts, onClearManual, onClearFgts, onClearAll }: AmortizationImpactProps) {
+  const mounted = useMounted();
+  const total = impact.totalAmortizationApplied;
+  const manualShare = total > 0 ? impact.manualAmortizationApplied / total : 0;
   const hasUnused = impact.unusedManualAmount > 0 || impact.unusedFgtsAmount > 0;
 
   return (
-    <section id="amortization-impact" className="rounded-lg border border-slate-200 bg-white shadow-panel">
-      <div className="flex flex-col gap-4 border-b border-slate-200 p-5 lg:flex-row lg:items-start lg:justify-between">
+    <section id="amortization-impact" className="surface overflow-hidden">
+      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-goodgreen-600">Cenário corrigido</p>
-          <h2 className="mt-1 text-xl font-bold text-slate-950">Impacto das Amortizações</h2>
-          <p className="mt-1 text-sm text-slate-500">Somente valores efetivamente aplicados ao saldo entram nos indicadores.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {hasManual && (
-            <button type="button" onClick={onClearManual} className="btn-muted text-amber-700">
-              <Trash2 className="h-4 w-4" /> Limpar Aportes Manuais
-            </button>
-          )}
-          {hasFgts && (
-            <button type="button" onClick={onClearFgts} className="btn-muted text-goodgreen-700">
-              <Trash2 className="h-4 w-4" /> Limpar FGTS
-            </button>
-          )}
-          {hasManual && hasFgts && (
-            <button type="button" onClick={onClearAll} className="btn-muted text-red-700">
-              <Trash2 className="h-4 w-4" /> Limpar Tudo
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
-        <ImpactMetric
-          label="Total amortizado"
-          value={formatCurrencyBR(impact.totalAmortizationApplied)}
-          detail={`Manual ${formatCurrencyBR(impact.manualAmortizationApplied)} · FGTS ${formatCurrencyBR(impact.fgtsAmortizationApplied)}`}
-          tone="green"
-        />
-        <ImpactMetric
-          label="Aportes manuais"
-          value={formatCurrencyBR(impact.manualAmortizationApplied)}
-          detail={`${formatPercentBR(impact.manualSharePercent)} do total amortizado`}
-          tone="amber"
-        />
-        <ImpactMetric
-          label="FGTS utilizado"
-          value={formatCurrencyBR(impact.fgtsAmortizationApplied)}
-          detail={`${formatPercentBR(impact.fgtsSharePercent)} do total amortizado`}
-          tone="green"
-        />
-        <ImpactMetric
-          label="Economia em juros"
-          value={formatCurrencyBR(impact.interestSavings)}
-          detail={`${formatPercentBR(impact.interestSavingsPercent)} dos juros originais`}
-          tone="green"
-        />
-        <ImpactMetric
-          label="Prazo após as amortizações"
-          value={`${impact.correctedTermMonths} ${impact.correctedTermMonths === 1 ? "mês" : "meses"}`}
-          detail={`${formatPercentBR(impact.termReductionPercent)} de redução no prazo`}
-          tone="blue"
-        />
-        <ImpactMetric
-          label="Parcelas eliminadas"
-          value={impact.eliminatedInstallments > 0 ? String(impact.eliminatedInstallments) : "Nenhuma"}
-          detail={`Prazo original: ${impact.originalTermMonths} meses`}
-          tone="blue"
-        />
-        <ImpactMetric
-          label="Redução do custo total"
-          value={formatCurrencyBR(impact.totalCostReduction)}
-          detail={`${formatPercentBR(impact.totalCostReductionPercent)} de redução`}
-          tone="green"
-        />
-        <ImpactMetric
-          label="Novo total projetado"
-          value={formatCurrencyBR(impact.correctedProjectedTotal)}
-          detail={`Original: ${formatCurrencyBR(impact.originalProjectedTotal)}`}
-          tone="slate"
-        />
-      </div>
-
-      {impact.paidOff && impact.payoffMonth && (
-        <div className="m-5 rounded-lg border border-goodgreen-200 bg-goodgreen-50 p-4 text-sm text-goodgreen-800">
-          <div className="flex gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>
-              <p className="font-bold">Financiamento quitado na parcela {impact.payoffMonth}.</p>
-              <p className="mt-1">Foram eliminadas {impact.eliminatedInstallments} parcelas. Todo o saldo devedor foi abatido.</p>
-              {hasUnused && <p className="mt-1">Aportes excedentes ou posteriores à quitação não foram utilizados.</p>}
-            </div>
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-base font-bold text-ink">Aportes aplicados</h2>
+            <p className="text-sm text-ink-muted">
+              Custo total <span className="font-semibold text-goodgreen-700">−{formatPercentBR(impact.totalCostReductionPercent)}</span>
+            </p>
           </div>
-        </div>
-      )}
-
-      {hasUnused && (
-        <div className="mx-5 mb-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" />
-          <p>
-            O último aporte foi limitado ao saldo restante ou estava programado após a quitação. Não utilizado: manual {formatCurrencyBR(impact.unusedManualAmount)} e FGTS {formatCurrencyBR(impact.unusedFgtsAmount)}.
+          <p className="mt-3 text-[30px] font-semibold leading-9 tracking-tight text-ink">
+            <Roll value={formatCurrencyBR(total)} />
           </p>
-        </div>
-      )}
 
-      <details className="border-t border-slate-200 p-5">
-        <summary className="flex cursor-pointer list-none items-center gap-2 font-bold text-slate-800">
-          <Info className="h-5 w-5 text-goodblue-600" /> Como esses valores são calculados?
-        </summary>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {explanations.map(([title, text]) => (
-            <div key={title}>
-              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">{title}</h3>
-              <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
-            </div>
-          ))}
+          {/* One bar, two sources: the split is the information, so it is the picture. */}
+          <div className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+            <div className="h-full bg-amber-400 transition-[width] duration-700 ease-out" style={{ width: mounted ? `${manualShare * 100}%` : "0%" }} />
+            <div className="h-full bg-goodgreen-500 transition-[width] duration-700 ease-out" style={{ width: mounted && total > 0 ? `${(1 - manualShare) * 100}%` : "0%" }} />
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-4">
+            <Source
+              swatch="bg-amber-400"
+              label="Manual"
+              value={formatCurrencyBR(impact.manualAmortizationApplied)}
+              share={formatPercentBR(impact.manualSharePercent)}
+              onClear={hasManual ? onClearManual : undefined}
+            />
+            <Source
+              swatch="bg-goodgreen-500"
+              label="FGTS"
+              value={formatCurrencyBR(impact.fgtsAmortizationApplied)}
+              share={formatPercentBR(impact.fgtsSharePercent)}
+              onClear={hasFgts ? onClearFgts : undefined}
+            />
+          </dl>
         </div>
-        <p className="mt-5 rounded-lg bg-goodblue-50 px-4 py-3 text-sm text-goodblue-800">
-          Esta é uma projeção matemática. Os valores reais podem variar conforme atualização do saldo, seguros, encargos, indexadores e regras do contrato.
-        </p>
-      </details>
+
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-slate-200/80 bg-slate-200/80">
+          <Fact label="Redução do custo" value={formatCurrencyBR(impact.totalCostReduction)} />
+          <Fact label="Novo total projetado" value={formatCurrencyBR(impact.correctedProjectedTotal)} />
+          <Fact label="Prazo corrigido" value={`${impact.correctedTermMonths} ${impact.correctedTermMonths === 1 ? "mês" : "meses"}`} />
+          <Fact label="Parcelas eliminadas" value={impact.eliminatedInstallments > 0 ? String(impact.eliminatedInstallments) : "0"} />
+        </dl>
+      </div>
+
+      {(impact.paidOff && impact.payoffMonth) || hasUnused ? (
+        <div className="space-y-2 px-5 pb-5 sm:px-6">
+          {impact.paidOff && impact.payoffMonth && (
+            <p className="rounded-lg bg-goodgreen-50 px-4 py-3 text-sm text-goodgreen-800 animate-rise">
+              <strong className="font-semibold">Quitado na parcela {impact.payoffMonth}</strong>, {impact.eliminatedInstallments} parcelas antes do prazo.
+            </p>
+          )}
+          {hasUnused && (
+            <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 animate-rise">
+              Parte dos aportes não foi usada (limitada ao saldo ou após a quitação): manual {formatCurrencyBR(impact.unusedManualAmount)}, FGTS {formatCurrencyBR(impact.unusedFgtsAmount)}.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 sm:px-6">
+        <details className="group min-w-0 flex-1">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-ink-muted transition hover:text-ink">
+            Como os valores são calculados
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-open:rotate-180" />
+          </summary>
+          <div className="mt-4 grid gap-x-8 gap-y-4 pb-2 md:grid-cols-2 xl:grid-cols-3">
+            {explanations.map(([title, text]) => (
+              <div key={title}>
+                <h3 className="font-sans text-[13px] font-semibold tracking-normal text-ink-soft">{title}</h3>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">{text}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+        {hasManual && hasFgts && (
+          <button type="button" onClick={onClearAll} className="shrink-0 self-start text-sm font-medium text-rose-600 transition hover:text-rose-700">
+            Limpar todos
+          </button>
+        )}
+      </div>
     </section>
   );
 }
 
-function ImpactMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: "green" | "amber" | "blue" | "slate" }) {
-  const valueClass = {
-    green: "text-goodgreen-700",
-    amber: "text-amber-700",
-    blue: "text-goodblue-700",
-    slate: "text-slate-950"
-  }[tone];
-
+function Source({ swatch, label, value, share, onClear }: { swatch: string; label: string; value: string; share: string; onClear?: () => void }) {
   return (
-    <article className="min-w-0 bg-white p-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-2 break-words text-xl font-bold ${valueClass}`}>{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
-    </article>
+    <div className="min-w-0">
+      <dt className="flex items-center gap-2 text-[13px] text-ink-muted">
+        <span className={`h-2 w-2 rounded-sm ${swatch}`} aria-hidden="true" />
+        {label} <span className="text-slate-400">· {share}</span>
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="ml-auto rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+            title={`Limpar aportes ${label === "Manual" ? "manuais" : "de FGTS"}`}
+            aria-label={`Limpar aportes ${label === "Manual" ? "manuais" : "de FGTS"}`}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </dt>
+      <dd className="mt-0.5 text-[15px] font-semibold text-ink">
+        <Roll value={value} />
+      </dd>
+    </div>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white px-4 py-3">
+      <dt className="text-xs text-ink-muted">{label}</dt>
+      <dd className="mt-0.5 text-[15px] font-semibold text-ink">
+        <Roll value={value} />
+      </dd>
+    </div>
   );
 }

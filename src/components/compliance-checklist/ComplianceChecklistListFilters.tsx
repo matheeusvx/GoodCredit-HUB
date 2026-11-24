@@ -18,7 +18,7 @@ export function ComplianceChecklistListFilters({
   onClear
 }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
         <label className="xl:col-span-4">
           <span className="text-xs font-semibold text-slate-600">

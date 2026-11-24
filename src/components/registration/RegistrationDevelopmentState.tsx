@@ -13,7 +13,7 @@ export function RegistrationDevelopmentState({ kind, cityLabel }: Props) {
         {isCosts ? <FileText className="h-6 w-6" aria-hidden="true" /> : <Clock3 className="h-6 w-6" aria-hidden="true" />}
       </span>
       <span className="mt-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Em desenvolvimento</span>
-      <h2 id="registration-development-title" className="mt-4 text-xl font-bold text-slate-950">
+      <h2 id="registration-development-title" className="mt-4 text-xl font-bold text-ink">
         {isCosts ? "Simulação de Custas" : "Simulação em desenvolvimento"}
       </h2>
       {isCosts ? (

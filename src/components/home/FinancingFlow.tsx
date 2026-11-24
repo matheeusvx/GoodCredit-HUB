@@ -13,9 +13,9 @@ const steps = [
 
 export function FinancingFlow() {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel sm:p-6">
+    <section className="surface p-5 sm:p-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-950">Fluxo geral do financiamento</h2>
+        <h2 className="text-xl font-bold text-ink">Fluxo geral do financiamento</h2>
         <p className="mt-1 text-sm text-slate-500">Etapas principais acompanhadas em uma operação imobiliária.</p>
       </div>
 
@@ -30,7 +30,7 @@ export function FinancingFlow() {
                 </div>
                 <span className="text-xs font-bold text-goodgreen-700">{String(index + 1).padStart(2, "0")}</span>
               </div>
-              <h3 className="mt-3 text-sm font-bold text-slate-950">{step.title}</h3>
+              <h3 className="mt-3 text-sm font-bold text-ink">{step.title}</h3>
               <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
             </article>
           );

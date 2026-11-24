@@ -10,7 +10,7 @@ export function NotFoundPage({ onBackHome }: { onBackHome: () => void }) {
         <p className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-700">
           Erro 404
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950">
+        <h1 className="text-2xl font-bold text-ink">
           Página não encontrada
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">

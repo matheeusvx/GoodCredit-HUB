@@ -8,8 +8,8 @@ interface Props {
 
 export function BankSystemCard({ form, onChange }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-bold text-slate-950">Banco e Sistema</h2>
+    <section className="surface p-5 sm:p-6">
+      <h2 className="text-lg font-bold text-ink">Banco e Sistema</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <label className="field">
           <span>Banco pretendido</span>
@@ -18,7 +18,7 @@ export function BankSystemCard({ form, onChange }: Props) {
             onChange={(event) =>
               onChange({ bancoPretendido: event.target.value as SimulationFormData["bancoPretendido"] })
             }
-            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
+            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
           >
             <option value="">Selecione</option>
             {bankOptions.map((option) => (

@@ -11,8 +11,8 @@ interface Props {
 
 export function ItbiForm({ value, error, onChange, onBlur, onCalculate, onClear }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="itbi-form-title">
-      <h3 id="itbi-form-title" className="text-lg font-bold text-slate-950">Dados da simulação</h3>
+    <section className="surface p-5 sm:p-6" aria-labelledby="itbi-form-title">
+      <h3 id="itbi-form-title" className="text-lg font-bold text-ink">Dados da simulação</h3>
       <p className="mt-1 text-sm leading-6 text-slate-500">Esta versão utiliza exclusivamente o valor de compra e venda informado.</p>
       <label htmlFor="registration-purchase-price" className="mt-5 block text-sm font-semibold text-slate-700">
         Valor de compra e venda

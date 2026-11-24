@@ -29,7 +29,7 @@ export function ModuleCard({ title, description, status, actionLabel, icon: Icon
         </span>
       </div>
 
-      <h3 className="mt-5 text-lg font-bold text-slate-950">{title}</h3>
+      <h3 className="mt-5 text-lg font-bold text-ink">{title}</h3>
       <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{description}</p>
 
       <button

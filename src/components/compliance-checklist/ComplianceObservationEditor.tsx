@@ -26,7 +26,7 @@ export function ComplianceObservationEditor({
           onChange={(event) => onChange(event.target.value)}
           placeholder="Descreva a pendência ou informação relevante..."
           rows={3}
-          className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 text-slate-900 outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10"
+          className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10"
         />
       </label>
       <div className="mt-3 flex flex-wrap justify-end gap-2">

@@ -73,14 +73,14 @@ export function SaoPauloItbiResult({
   rows.push(["Possível isenção", result.exemptionMessage]);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sp-itbi-result-title">
+    <section className="surface p-5 sm:p-6" aria-labelledby="sp-itbi-result-title">
       <div className="flex items-start gap-3">
         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isPotentialExemption ? "bg-amber-50 text-amber-700" : "bg-goodgreen-50 text-goodgreen-700"}`}>
           {isPotentialExemption ? <AlertTriangle className="h-5 w-5" aria-hidden="true" /> : <CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
         </span>
         <div>
           <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${isPotentialExemption ? "bg-amber-100 text-amber-800" : "bg-goodgreen-50 text-goodgreen-700"}`}>{result.badge}</span>
-          <h3 id="sp-itbi-result-title" className="mt-2 text-lg font-bold text-slate-950">Resultado da simulação</h3>
+          <h3 id="sp-itbi-result-title" className="mt-2 text-lg font-bold text-ink">Resultado da simulação</h3>
         </div>
       </div>
 
@@ -88,7 +88,7 @@ export function SaoPauloItbiResult({
         {rows.map(([label, value]) => (
           <div key={label} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
             <dt className="text-xs font-semibold text-slate-500">{label}</dt>
-            <dd className="text-sm font-bold text-slate-900 sm:max-w-[65%] sm:text-right">{value}</dd>
+            <dd className="text-sm font-bold text-ink sm:max-w-[65%] sm:text-right">{value}</dd>
           </div>
         ))}
       </dl>
@@ -111,9 +111,6 @@ export function SaoPauloItbiResult({
       {result.warnings.map((warning) => (
         <p key={warning} className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">{warning}</p>
       ))}
-      <p className="mt-5 text-xs leading-5 text-slate-500">
-        Esta é uma estimativa para contratos celebrados em 2026. O valor definitivo depende da regra municipal vigente, do enquadramento da operação e da emissão oficial.
-      </p>
     </section>
   );
 }

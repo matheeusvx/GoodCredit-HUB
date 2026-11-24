@@ -3,7 +3,7 @@ import { useState } from "react";
 const tone: Record<string, string> = {
   SANTANDER:"border-amber-200 bg-amber-50 text-amber-900",CAIXA:"border-rose-200 bg-rose-50 text-rose-800",INTER:"border-sky-200 bg-sky-50 text-sky-800",ITAU:"border-orange-300 bg-orange-50 text-orange-900",BRADESCO:"border-violet-200 bg-violet-50 text-violet-800",BANCO_DO_BRASIL:"border-slate-300 bg-slate-100 text-slate-800",NAO:"border-slate-200 bg-slate-50 text-slate-700",
   TO_CHARGE:"border-rose-200 bg-rose-50 text-rose-800",FULL_PAYMENT:"border-goodgreen-200 bg-goodgreen-50 text-goodgreen-800",FOLLOWED_ACCOUNT:"border-sky-200 bg-sky-50 text-sky-800",ADVISORY_ONLY:"border-violet-200 bg-violet-50 text-violet-800",NO_PAYMENT:"border-slate-300 bg-slate-100 text-slate-800",
-  ALREADY_PAID:"border-sky-200 bg-sky-50 text-sky-800",NOTHING_PAID:"border-slate-400 bg-slate-100 text-slate-900",DO_NOT_CHARGE:"border-blue-200 bg-blue-50 text-blue-800",CHARGE_SENT:"border-violet-200 bg-violet-50 text-violet-800",
+  ALREADY_PAID:"border-sky-200 bg-sky-50 text-sky-800",NOTHING_PAID:"border-slate-400 bg-slate-100 text-ink",DO_NOT_CHARGE:"border-blue-200 bg-blue-50 text-blue-800",CHARGE_SENT:"border-violet-200 bg-violet-50 text-violet-800",
   PAID_BY_GOODCREDIT:"border-goodgreen-200 bg-goodgreen-50 text-goodgreen-800",PAID_BY_CLIENT:"border-sky-200 bg-sky-50 text-sky-800",PENDING:"border-amber-200 bg-amber-50 text-amber-900",EXEMPT:"border-slate-200 bg-slate-50 text-slate-700",NOT_APPLICABLE:"border-slate-200 bg-slate-50 text-slate-600",IN_PROGRESS:"border-sky-200 bg-sky-50 text-sky-800",PAID:"border-goodgreen-200 bg-goodgreen-50 text-goodgreen-800"
 };
 

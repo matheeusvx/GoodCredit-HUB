@@ -45,21 +45,21 @@ export function ItbiResult({ result }: { result: SimplifiedItbiResult }) {
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="itbi-result-title">
+    <section className="surface p-5 sm:p-6" aria-labelledby="itbi-result-title">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-goodgreen-50 text-goodgreen-700">
           <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">Simulação simplificada</p>
-          <h3 id="itbi-result-title" className="mt-1 text-lg font-bold text-slate-950">Resultado da simulação</h3>
+          <h3 id="itbi-result-title" className="mt-1 text-lg font-bold text-ink">Resultado da simulação</h3>
         </div>
       </div>
       <dl className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
         {rows.map(([label, value]) => (
           <div key={label} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
             <dt className="text-xs font-semibold text-slate-500">{label}</dt>
-            <dd className="text-sm font-bold text-slate-900 sm:text-right">{value}</dd>
+            <dd className="text-sm font-bold text-ink sm:text-right">{value}</dd>
           </div>
         ))}
       </dl>
