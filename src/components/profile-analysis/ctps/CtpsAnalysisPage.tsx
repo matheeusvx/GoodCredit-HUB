@@ -1,17 +1,4 @@
-import {
-  AlertTriangle,
-  ArrowLeft,
-  BriefcaseBusiness,
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
-  Download,
-  FileText,
-  LoaderCircle,
-  RotateCcw,
-  ShieldCheck,
-  Upload,
-} from "lucide-react";
+import { AlertTriangle, ChevronDown, Download, LoaderCircle, RotateCcw, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { processCtpsPdf, validateCtpsPdf } from "../../../lib/profile-analysis/ctps/ctpsDocumentProcessor";
 import { downloadCtpsSummaryPdf } from "../../../lib/profile-analysis/ctps/ctpsPdfReport";
@@ -25,6 +12,9 @@ import {
   formatEmploymentDuration,
   maskCtpsCpf,
 } from "../../../lib/profile-analysis/ctps/ctpsPresentation";
+import { BackLink } from "../../ui/BackLink";
+import { PageHeader } from "../../ui/PageHeader";
+import { StatTile } from "../../ui/StatTile";
 import type { CtpsAnalysis, CtpsDocumentProcessingProgress, CtpsEmployment } from "../../../types/ctpsAnalysis";
 
 const INITIAL_PROGRESS: CtpsDocumentProcessingProgress = { stage: "READING", label: "Lendo documento...", progress: 0 };
@@ -36,19 +26,19 @@ function errorMessage(error: unknown): string {
 }
 
 function Field({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{value}</dd></div>;
+  return <div><dt className="text-xs text-ink-muted">{label}</dt><dd className="mt-0.5 text-sm font-medium text-ink">{value}</dd></div>;
 }
 
 function EmploymentDetails({ employment, referenceDate }: { employment: CtpsEmployment; referenceDate: string }) {
   return (
-    <details className="group rounded-xl border border-slate-200 bg-white open:shadow-sm">
+    <details className="group rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow open:shadow-panel">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-goodgreen-500 sm:p-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="truncate font-bold text-slate-950">{employment.employer.name || "Empregador não identificado"}</h4>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${employment.status === "ACTIVE" ? "bg-goodgreen-50 text-goodgreen-700" : "bg-slate-100 text-slate-600"}`}>{CTPS_STATUS_LABEL[employment.status]}</span>
+            <h4 className="truncate font-semibold text-ink">{employment.employer.name || "Empregador não identificado"}</h4>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${employment.status === "ACTIVE" ? "bg-goodgreen-50 text-goodgreen-700" : "bg-slate-100 text-ink-muted"}`}>{CTPS_STATUS_LABEL[employment.status]}</span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{employment.currentPosition || "Cargo não identificado"} · {formatCtpsCurrency(employment.currentSalary?.amount)}</p>
+          <p className="mt-1 text-sm text-ink-muted">{employment.currentPosition || "Cargo não identificado"} · {formatCtpsCurrency(employment.currentSalary?.amount)}</p>
         </div>
         <ChevronDown className="h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" aria-hidden="true" />
       </summary>
@@ -70,35 +60,35 @@ function EmploymentDetails({ employment, referenceDate }: { employment: CtpsEmpl
 
         <div className="mt-6 grid gap-5 xl:grid-cols-2">
           <div>
-            <h5 className="text-sm font-bold text-slate-900">Histórico salarial</h5>
+            <h5 className="text-[13px] font-semibold text-ink">Histórico salarial</h5>
             <div className="mt-2 space-y-2">
               {employment.salaryHistory.length ? employment.salaryHistory.map((salary, index) => (
-                <div key={`${salary.recordedAt}-${salary.amount}-${index}`} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                <div key={`${salary.recordedAt}-${salary.amount}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-ink-soft">
                   <strong>{formatCtpsCurrency(salary.amount)}</strong> · vigência {formatCtpsDate(salary.effectiveFrom)}
                   {salary.recordedAt !== salary.effectiveFrom && <span className="block text-xs text-slate-500">Registrado em {formatCtpsDate(salary.recordedAt)}</span>}
                 </div>
-              )) : <p className="text-sm text-slate-500">Sem anotações salariais estruturadas.</p>}
+              )) : <p className="text-[13px] text-ink-muted">Sem anotações salariais estruturadas.</p>}
             </div>
           </div>
           <div>
-            <h5 className="text-sm font-bold text-slate-900">Histórico de cargos e contrato</h5>
+            <h5 className="text-[13px] font-semibold text-ink">Histórico de cargos e contrato</h5>
             <div className="mt-2 space-y-2">
               {[...employment.positionHistory.map((item) => ({ date: item.from, text: `Cargo: ${item.title}` })), ...employment.contractHistory.map((item) => ({ date: item.from, text: `Contrato: ${CTPS_CONTRACT_LABEL[item.type]}` }))]
                 .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
-                .map((item, index) => <div key={`${item.date}-${index}`} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700"><strong>{formatCtpsDate(item.date)}</strong> · {item.text}</div>)}
-              {!employment.positionHistory.length && !employment.contractHistory.length && <p className="text-sm text-slate-500">Sem alterações estruturadas.</p>}
+                .map((item, index) => <div key={`${item.date}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-ink-soft"><strong>{formatCtpsDate(item.date)}</strong> · {item.text}</div>)}
+              {!employment.positionHistory.length && !employment.contractHistory.length && <p className="text-[13px] text-ink-muted">Sem alterações estruturadas.</p>}
             </div>
           </div>
           <div>
-            <h5 className="text-sm font-bold text-slate-900">Férias</h5>
+            <h5 className="text-[13px] font-semibold text-ink">Férias</h5>
             <div className="mt-2 space-y-2">
-              {employment.vacations.length ? employment.vacations.map((vacation, index) => <div key={`${vacation.recordedAt}-${index}`} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{formatCtpsDate(vacation.startDate)} a {formatCtpsDate(vacation.endDate)}</div>) : <p className="text-sm text-slate-500">Nenhuma anotação de férias estruturada.</p>}
+              {employment.vacations.length ? employment.vacations.map((vacation, index) => <div key={`${vacation.recordedAt}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-ink-soft">{formatCtpsDate(vacation.startDate)} a {formatCtpsDate(vacation.endDate)}</div>) : <p className="text-[13px] text-ink-muted">Nenhuma anotação de férias estruturada.</p>}
             </div>
           </div>
           <div>
-            <h5 className="text-sm font-bold text-slate-900">Eventos relevantes</h5>
+            <h5 className="text-[13px] font-semibold text-ink">Eventos relevantes</h5>
             <div className="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
-              {employment.events.map((event, index) => <div key={`${event.type}-${event.recordedAt}-${index}`} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700"><strong>{formatCtpsDate(event.recordedAt)}</strong> · {event.originalText}</div>)}
+              {employment.events.map((event, index) => <div key={`${event.type}-${event.recordedAt}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-ink-soft"><strong>{formatCtpsDate(event.recordedAt)}</strong> · {event.originalText}</div>)}
             </div>
           </div>
         </div>
@@ -112,32 +102,31 @@ function CtpsResult({ analysis }: { analysis: CtpsAnalysis }) {
   const terminated = analysis.employments.filter((employment) => employment.status === "TERMINATED");
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <section className="surface p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-goodgreen-600">Documento analisado</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-950">{analysis.holder.name || "Titular não identificado"}</h2>
-            <p className="mt-1 text-sm text-slate-500">CPF {maskCtpsCpf(analysis.holder.cpf)} · confiança {CTPS_CONFIDENCE_LABEL[analysis.document.confidence].toLowerCase()}</p>
+            <h2 className="text-xl font-bold text-ink">{analysis.holder.name || "Titular não identificado"}</h2>
+            <p className="mt-1 text-sm text-ink-muted">CPF {maskCtpsCpf(analysis.holder.cpf)} · confiança {CTPS_CONFIDENCE_LABEL[analysis.document.confidence].toLowerCase()}</p>
           </div>
           <button type="button" className="btn-secondary w-fit" onClick={() => downloadCtpsSummaryPdf(analysis)}><Download className="h-4 w-4" /> Baixar resumo em PDF</button>
         </div>
       </section>
 
-      <section aria-labelledby="ctps-summary" className="space-y-3">
-        <h2 id="ctps-summary" className="text-sm font-bold uppercase tracking-[0.14em] text-slate-500">Resumo profissional</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Vínculos ativos</p><p className="mt-2 text-3xl font-bold text-slate-950">{analysis.summary.activeEmploymentCount}</p></div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Salários contratuais vigentes identificados</p><p className="mt-2 text-2xl font-bold text-slate-950">{formatCtpsCurrency(analysis.summary.currentContractualIncome)}</p></div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Vínculo ativo mais antigo</p><p className="mt-2 text-2xl font-bold text-slate-950">{formatCtpsDate(analysis.summary.oldestActiveAdmissionDate)}</p></div>
+      <section aria-labelledby="ctps-summary">
+        <h2 id="ctps-summary" className="text-base font-bold text-ink">Resumo profissional</h2>
+        <div className="stagger mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <StatTile label="Vínculos ativos" value={String(analysis.summary.activeEmploymentCount)} />
+          <StatTile label="Salários contratuais vigentes" value={formatCtpsCurrency(analysis.summary.currentContractualIncome)} tone="green" emphasis />
+          <StatTile label="Vínculo ativo mais antigo" value={formatCtpsDate(analysis.summary.oldestActiveAdmissionDate)} />
         </div>
       </section>
 
-      <section className="space-y-3"><div><h2 className="text-lg font-bold text-slate-950">Vínculos atuais</h2><p className="text-sm text-slate-500">Contratos identificados como abertos no documento.</p></div>{active.length ? active.map((employment) => <EmploymentDetails key={employment.id} employment={employment} referenceDate={analysis.document.documentSignedAt || analysis.document.analysisDate} />) : <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-500">Nenhum vínculo ativo identificado.</p>}</section>
-      <section className="space-y-3"><div><h2 className="text-lg font-bold text-slate-950">Histórico profissional</h2><p className="text-sm text-slate-500">Vínculos encerrados e respectivos históricos.</p></div>{terminated.length ? terminated.map((employment) => <EmploymentDetails key={employment.id} employment={employment} referenceDate={analysis.document.documentSignedAt || analysis.document.analysisDate} />) : <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-500">Nenhum vínculo encerrado identificado.</p>}</section>
+      <section className="space-y-3"><div><h2 className="text-base font-bold text-ink">Vínculos atuais</h2><p className="text-[13px] text-ink-muted">Contratos identificados como abertos no documento.</p></div>{active.length ? active.map((employment) => <EmploymentDetails key={employment.id} employment={employment} referenceDate={analysis.document.documentSignedAt || analysis.document.analysisDate} />) : <p className="surface p-5 text-sm text-ink-muted">Nenhum vínculo ativo identificado.</p>}</section>
+      <section className="space-y-3"><div><h2 className="text-base font-bold text-ink">Histórico profissional</h2><p className="text-[13px] text-ink-muted">Vínculos encerrados e respectivos históricos.</p></div>{terminated.length ? terminated.map((employment) => <EmploymentDetails key={employment.id} employment={employment} referenceDate={analysis.document.documentSignedAt || analysis.document.analysisDate} />) : <p className="surface p-5 text-sm text-ink-muted">Nenhum vínculo encerrado identificado.</p>}</section>
 
-      {analysis.alerts.length > 0 && <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 sm:p-6"><h2 className="flex items-center gap-2 font-bold text-amber-950"><AlertTriangle className="h-5 w-5" /> Alertas e inconsistências</h2><div className="mt-4 space-y-2">{analysis.alerts.map((alert, index) => <div key={`${alert.code}-${index}`} className="rounded-lg bg-white/70 p-3 text-sm text-amber-950"><strong>{alert.severity === "CRITICAL" ? "Crítico" : alert.severity === "WARNING" ? "Atenção" : "Informativo"}:</strong> {alert.message}</div>)}</div></section>}
+      {analysis.alerts.length > 0 && <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 sm:p-6"><h2 className="font-bold text-amber-950">Alertas e inconsistências</h2><div className="mt-4 space-y-2">{analysis.alerts.map((alert, index) => <div key={`${alert.code}-${index}`} className="rounded-lg bg-white/70 p-3 text-sm text-amber-950"><strong>{alert.severity === "CRITICAL" ? "Crítico" : alert.severity === "WARNING" ? "Atenção" : "Informativo"}:</strong> {alert.message}</div>)}</div></section>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="flex items-center gap-2 font-bold text-slate-950"><ShieldCheck className="h-5 w-5 text-goodgreen-600" /> Qualidade da leitura</h2><dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Field label="Confiança" value={CTPS_CONFIDENCE_LABEL[analysis.quality.confidence]} /><Field label="Páginas" value={String(analysis.quality.pageCount)} /><Field label="Eventos reconhecidos" value={String(analysis.quality.recognizedEventCount)} /><Field label="Método" value={analysis.document.extractionMethod === "PDF_TEXT" ? "Texto do PDF" : analysis.document.extractionMethod === "PDF_OCR" ? "OCR local" : "Texto + OCR"} /></dl></section>
+      <section className="surface p-5 sm:p-6"><h2 className="text-base font-bold text-ink">Qualidade da leitura</h2><dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Field label="Confiança" value={CTPS_CONFIDENCE_LABEL[analysis.quality.confidence]} /><Field label="Páginas" value={String(analysis.quality.pageCount)} /><Field label="Eventos reconhecidos" value={String(analysis.quality.recognizedEventCount)} /><Field label="Método" value={analysis.document.extractionMethod === "PDF_TEXT" ? "Texto do PDF" : analysis.document.extractionMethod === "PDF_OCR" ? "OCR local" : "Texto + OCR"} /></dl></section>
     </div>
   );
 }
@@ -181,33 +170,33 @@ export function CtpsAnalysisPage({ onBack }: { onBack: () => void }) {
     }
   };
 
-  return (
-    <main className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
-      <button type="button" onClick={onBack} className="inline-flex w-fit items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-goodgreen-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500"><ArrowLeft className="h-4 w-4" /> Voltar para Análise de Perfil</button>
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">Análise de Perfil</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Carteira de Trabalho</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Analise vínculos empregatícios, salários, cargos e histórico profissional.</p></div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-goodgreen-50 px-3 py-1.5 text-xs font-bold text-goodgreen-700"><CheckCircle2 className="h-3.5 w-3.5" /> Disponível</span>
-      </header>
+  const clear = () => { setFile(null); setAnalysis(null); setError(""); if (inputRef.current) inputRef.current.value = ""; };
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <label htmlFor="ctps-file" className="text-sm font-bold text-slate-900">Documento CTPS Digital em PDF</label>
-            <button type="button" disabled={processing} onClick={() => inputRef.current?.click()} className="mt-3 flex min-h-36 w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-center transition hover:border-goodgreen-300 hover:bg-goodgreen-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500 disabled:cursor-not-allowed disabled:opacity-60">
-              <span><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-goodgreen-700 shadow-sm"><Upload className="h-5 w-5" /></span><strong className="mt-3 block text-sm text-slate-900">{file ? file.name : "Selecionar PDF"}</strong><span className="mt-1 block text-xs text-slate-500">O processamento acontece localmente no navegador.</span></span>
+  return (
+    <div className="min-h-screen">
+      <BackLink label="Voltar para Análise de Perfil" onClick={onBack} maxWidth="max-w-[1500px]" />
+      <PageHeader
+        title="Carteira de Trabalho"
+        description="Analise vínculos empregatícios, salários, cargos e histórico profissional."
+        maxWidth="max-w-[1500px]"
+        actions={(file || analysis) && !processing ? <button type="button" className="btn-muted" onClick={clear}><RotateCcw className="h-4 w-4" /> Nova análise</button> : undefined}
+      />
+      <main className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
+        <section className="surface p-5 sm:p-6">
+          <label htmlFor="ctps-file" className="text-sm font-semibold text-ink">CTPS Digital em PDF</label>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <button type="button" disabled={processing} onClick={() => inputRef.current?.click()} className={`flex min-h-24 w-full items-center gap-4 rounded-xl border-2 border-dashed px-5 py-5 text-left transition hover:border-goodgreen-300 hover:bg-goodgreen-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-500 disabled:cursor-not-allowed disabled:opacity-60 ${file ? "border-goodgreen-200 bg-goodgreen-50/30" : "border-slate-200 bg-slate-50"}`}>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-goodgreen-700 shadow-sm"><Upload className="h-[18px] w-[18px]" strokeWidth={1.75} /></span>
+              <span className="min-w-0"><strong className="block truncate text-sm font-semibold text-ink">{file ? file.name : "Selecionar PDF"}</strong><span className="mt-0.5 block text-xs text-ink-muted">{file ? "Clique para trocar o arquivo" : "PDF pesquisável ou digitalizado, processado no seu navegador."}</span></span>
             </button>
             <input ref={inputRef} id="ctps-file" className="sr-only" type="file" accept="application/pdf,.pdf" disabled={processing} onChange={(event) => selectFile(event.target.files?.[0] || null)} />
+            <button type="button" className="btn-primary" disabled={!file || processing} onClick={() => { void analyze(); }}>{processing && <LoaderCircle className="h-4 w-4 animate-spin" />}{processing ? "Analisando..." : "Analisar documento"}</button>
           </div>
-          <div className="flex flex-wrap gap-2 lg:flex-col">
-            <button type="button" className="btn-primary" disabled={!file || processing} onClick={() => { void analyze(); }}>{processing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BriefcaseBusiness className="h-4 w-4" />}{processing ? "Analisando..." : "Analisar documento"}</button>
-            {(file || analysis) && !processing && <button type="button" className="btn-muted" onClick={() => { setFile(null); setAnalysis(null); setError(""); if (inputRef.current) inputRef.current.value = ""; }}><RotateCcw className="h-4 w-4" /> Nova análise</button>}
-          </div>
-        </div>
-        {processing && <div className="mt-5" role="status" aria-live="polite"><div className="flex items-center justify-between gap-3 text-sm"><span className="flex items-center gap-2 font-semibold text-slate-700"><LoaderCircle className="h-4 w-4 animate-spin text-goodgreen-600" /> {progress.label}</span><span className="text-slate-500">{Math.round(progress.progress * 100)}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-goodgreen-600 transition-all" style={{ width: `${Math.max(4, progress.progress * 100)}%` }} /></div></div>}
-        {error && <div className="mt-5 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}</div>}
-        {!processing && !analysis && <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500"><span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> PDF com texto pesquisável ou OCR local quando necessário</span><span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Datas e históricos permanecem estruturados</span></div>}
-      </section>
-      {analysis && analysis.document.parseStatus !== "UNRECOGNIZED" && <CtpsResult analysis={analysis} />}
-    </main>
+          {processing && <div className="mt-5" role="status" aria-live="polite"><div className="flex items-center justify-between gap-3 text-[13px]"><span className="font-medium text-ink-soft">{progress.label}</span><span className="tabular-nums text-ink-muted">{Math.round(progress.progress * 100)}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-goodgreen-600 transition-all duration-500 ease-out" style={{ width: `${Math.max(4, progress.progress * 100)}%` }} /></div></div>}
+          {error && <div className="mt-5 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}</div>}
+        </section>
+        {analysis && analysis.document.parseStatus !== "UNRECOGNIZED" && <CtpsResult analysis={analysis} />}
+      </main>
+    </div>
   );
 }
