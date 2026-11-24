@@ -4,8 +4,8 @@ interface Props {
 
 export function SimulationSummaryBox({ text }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-bold text-slate-950">Resumo da Simulação</h2>
+    <section className="surface p-5 sm:p-6">
+      <h2 className="text-lg font-bold text-ink">Resumo da Simulação</h2>
       <textarea
         value={text}
         readOnly

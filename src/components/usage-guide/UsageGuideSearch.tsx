@@ -9,7 +9,7 @@ interface Props {
 
 export function UsageGuideSearch({ value, resultCount, onChange, onClear }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Pesquisa no Guia de Uso">
+    <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5" aria-label="Pesquisa no Guia de Uso">
       <label htmlFor="usage-guide-search" className="text-sm font-bold text-slate-800">
         Pesquisar no Guia de Uso
       </label>
@@ -21,7 +21,7 @@ export function UsageGuideSearch({ value, resultCount, onChange, onClear }: Prop
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Pesquisar uma funcionalidade ou instrução..."
-          className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10"
+          className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-11 text-sm text-ink outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10"
         />
         {value && (
           <button

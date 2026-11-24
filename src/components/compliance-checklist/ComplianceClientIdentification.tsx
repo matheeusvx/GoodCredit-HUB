@@ -8,11 +8,11 @@ interface Props {
 
 export function ComplianceClientIdentification({ state, onChange }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white shadow-panel">
+    <section className="surface">
       <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
         <UserRoundCheck className="h-5 w-5 text-goodgreen-700" />
         <div>
-          <h2 className="text-lg font-bold text-slate-950">Identificação do Cliente</h2>
+          <h2 className="text-lg font-bold text-ink">Identificação do Cliente</h2>
           <p className="mt-0.5 text-xs text-slate-500">
             Dados mínimos para identificar esta conferência interna.
           </p>

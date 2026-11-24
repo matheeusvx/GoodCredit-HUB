@@ -66,7 +66,7 @@ export function ComplianceChecklistItem({
             <span className="mt-0.5 text-xs font-bold text-slate-400">
               {String(definition.order).padStart(2, "0")}
             </span>
-            <h3 className="text-sm font-bold leading-5 text-slate-900">
+            <h3 className="text-sm font-bold leading-5 text-ink">
               {definition.label}
             </h3>
           </div>

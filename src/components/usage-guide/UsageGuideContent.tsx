@@ -35,7 +35,7 @@ function GuideSection({ id, title, icon, children }: { id: string; title: string
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
-          className="flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-base font-bold text-slate-950 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-goodgreen-400 sm:px-6"
+          className="flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-base font-bold text-ink transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-goodgreen-400 sm:px-6"
         >
           <span className="flex items-center gap-3">{icon}{title}</span>
           <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
@@ -76,7 +76,7 @@ export function UsageGuideContent({ guide, feedback, onCopyInstructions, onCopyL
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">Orientação do módulo</p>
-              <h2 id={`${guide.anchor}-title`} className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">{guide.title}</h2>
+              <h2 id={`${guide.anchor}-title`} className="mt-1 text-xl font-bold text-ink sm:text-2xl">{guide.title}</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{guide.shortDescription}</p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export function UsageGuideContent({ guide, feedback, onCopyInstructions, onCopyL
           {guide.requiredInformation.map((field) => (
             <div key={field.name} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="text-sm font-bold text-slate-900">{field.name}</h4>
+                <h4 className="text-sm font-bold text-ink">{field.name}</h4>
                 {field.required && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">Obrigatório</span>}
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-600">{field.description}</p>
@@ -122,7 +122,7 @@ export function UsageGuideContent({ guide, feedback, onCopyInstructions, onCopyL
             <li key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)] gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-goodgreen-600 text-sm font-bold text-white">{index + 1}</span>
               <div className="pt-0.5">
-                <h4 className="text-sm font-bold text-slate-900">{step.title}</h4>
+                <h4 className="text-sm font-bold text-ink">{step.title}</h4>
                 <p className="mt-1 text-sm leading-6 text-slate-600">{step.description}</p>
               </div>
             </li>
@@ -145,7 +145,7 @@ export function UsageGuideContent({ guide, feedback, onCopyInstructions, onCopyL
         <dl className="grid gap-3 md:grid-cols-2">
           {guide.actions.map((action) => (
             <div key={action.title} className="border-l-2 border-goodgreen-400 pl-4">
-              <dt className="text-sm font-bold text-slate-900">{action.title}</dt>
+              <dt className="text-sm font-bold text-ink">{action.title}</dt>
               <dd className="mt-1 text-sm leading-6 text-slate-600">{action.description}</dd>
             </div>
           ))}

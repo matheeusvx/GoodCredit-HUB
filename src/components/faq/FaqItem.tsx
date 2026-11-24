@@ -55,7 +55,7 @@ export function FaqItem({ item, isOpen, feedback, onToggle, onCopyAnswer, onCopy
             {item.number}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold leading-6 text-slate-950 sm:text-base">{item.question}</span>
+            <span className="block text-sm font-bold leading-6 text-ink sm:text-base">{item.question}</span>
             <span className="mt-2 inline-flex rounded-md bg-goodblue-50 px-2 py-1 text-xs font-bold text-goodblue-700">
               {getFaqCategoryLabel(item.category)}
             </span>

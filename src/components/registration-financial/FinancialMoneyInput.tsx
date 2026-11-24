@@ -18,7 +18,7 @@ export function FinancialMoneyInput({ valueCents, onChange, disabled, id, ariaLa
       onFocus={() => { focused.current = true; }}
       onChange={(event) => { setText(event.target.value); onChange(parseBRLToCents(event.target.value)); }}
       onBlur={() => { focused.current = false; const parsed = parseBRLToCents(text); onChange(parsed); setText(parsed > 0 ? formatCentsBRL(parsed) : ""); }}
-      className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10 disabled:bg-slate-100 disabled:text-slate-500"
+      className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-ink outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-500/10 disabled:bg-slate-100 disabled:text-slate-500"
     />
   );
 }

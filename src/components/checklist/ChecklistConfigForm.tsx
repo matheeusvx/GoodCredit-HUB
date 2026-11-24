@@ -9,8 +9,8 @@ interface Props {
 
 const profileOptions: Array<{ value: ChecklistProfile; label: string; participant: "COMPRADOR" | "VENDEDOR" }> = [
   { value: "COMPRADOR_CLT", label: "Empregado CLT", participant: "COMPRADOR" },
-  { value: "COMPRADOR_AUTONOMO", label: "Profissional Autonomo", participant: "COMPRADOR" },
-  { value: "VENDEDOR_PJ", label: "Pessoa Juridica", participant: "VENDEDOR" }
+  { value: "COMPRADOR_AUTONOMO", label: "Profissional Autônomo", participant: "COMPRADOR" },
+  { value: "VENDEDOR_PJ", label: "Pessoa Jurídica", participant: "VENDEDOR" }
 ];
 
 export function ChecklistConfigForm({ form, onChange, errors }: Props) {
@@ -24,8 +24,8 @@ export function ChecklistConfigForm({ form, onChange, errors }: Props) {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-        <h2 className="text-lg font-bold text-slate-950">Dados Basicos</h2>
+      <div className="surface p-5 sm:p-6">
+        <h2 className="text-base font-bold text-ink">Dados básicos</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className="field">
             <span>Nome do cliente ou processo</span>
@@ -63,31 +63,31 @@ export function ChecklistConfigForm({ form, onChange, errors }: Props) {
               className="select-field"
             >
               <option value="">Selecione</option>
-              <option value="PF">Pessoa Fisica</option>
-              <option value="PJ">Pessoa Juridica</option>
+              <option value="PF">Pessoa Física</option>
+              <option value="PJ">Pessoa Jurídica</option>
             </select>
           </label>
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-        <h2 className="text-lg font-bold text-slate-950">Perfil Documental</h2>
+      <div className="surface p-5 sm:p-6">
+        <h2 className="text-base font-bold text-ink">Perfil documental</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {availableProfiles.map((option) => (
             <label
               key={option.value}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700"
+              className="flex h-12 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-ink-soft shadow-sm transition hover:border-slate-300 has-[:checked]:border-goodgreen-500 has-[:checked]:bg-goodgreen-50/60 has-[:checked]:text-goodgreen-800 has-[:checked]:ring-4 has-[:checked]:ring-goodgreen-100"
             >
               <input
                 type="radio"
                 checked={form.profile === option.value}
                 onChange={() => onChange({ profile: option.value })}
-                className="text-goodgreen-600 focus:ring-goodgreen-500"
+                className="h-4 w-4 accent-goodgreen-600"
               />
               {option.label}
             </label>
           ))}
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400">
+          <div className="flex h-12 items-center rounded-lg border border-dashed border-slate-200 px-4 text-sm text-slate-400">
             Outros perfis em breve
           </div>
         </div>
@@ -108,7 +108,7 @@ function ComplementaryRulesSection({
   return (
     <div className="gc-rules-card">
       <div className="gc-rules-header">
-        <h2 className="gc-rules-title">Regras Complementares</h2>
+        <h2 className="gc-rules-title">Regras complementares</h2>
         <p className="gc-rules-description">Ajustes adicionais que alteram alertas e documentos do checklist.</p>
       </div>
 
@@ -128,7 +128,7 @@ function ComplementaryRulesSection({
         </FormFieldSelect>
 
         <FormFieldSelect
-          label="Tipo de operacao"
+          label="Tipo de operação"
           value={form.tipoOperacao}
           onChange={(tipoOperacao) => onChange({ tipoOperacao: tipoOperacao as ChecklistFormData["tipoOperacao"] })}
           className="gc-rule-operation"
@@ -162,7 +162,7 @@ function ComplementaryRulesSection({
         </FormFieldSelect>
 
         <FormFieldSelect
-          label="Matricula atualizada?"
+          label="Matrícula atualizada?"
           value={form.precisaMatriculaAtualizada}
           onChange={(precisaMatriculaAtualizada) =>
             onChange({

@@ -9,7 +9,7 @@ export function SummaryCard({ label, value, detail, tone = "slate" }: SummaryCar
   const toneClass = {
     green: "border-goodgreen-100 bg-goodgreen-50 text-goodgreen-700",
     blue: "border-goodblue-100 bg-goodblue-50 text-goodblue-700",
-    slate: "border-slate-200 bg-white text-slate-900"
+    slate: "border-slate-200 bg-white text-ink"
   }[tone];
 
   return (

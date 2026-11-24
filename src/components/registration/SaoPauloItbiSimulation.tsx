@@ -154,7 +154,7 @@ export function SaoPauloItbiSimulation() {
         ) : (
           <section className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
             <Info className="mx-auto h-6 w-6 text-goodblue-500" aria-hidden="true" />
-            <h3 className="mt-3 font-bold text-slate-900">Resultado da simulação</h3>
+            <h3 className="mt-3 font-bold text-ink">Resultado da simulação</h3>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">Informe CCV, VVR e a modalidade para calcular a estimativa conforme a regra de 2026.</p>
           </section>
         )}

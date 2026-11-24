@@ -7,19 +7,128 @@
     box-sizing: border-box;
   }
 
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     margin: 0;
     min-width: 320px;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #0f172a;
-    background: #f1f5f9;
+    font-family: theme("fontFamily.sans");
+    font-feature-settings: "cv11", "ss01", "ss03";
+    color: theme("colors.ink.DEFAULT");
+    background: theme("colors.canvas");
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: theme("fontFamily.display");
+    letter-spacing: -0.015em;
+  }
+
+  h1 {
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    background: theme("colors.goodgreen.100");
+    color: theme("colors.goodgreen.900");
+  }
+
+  /* Money and counts line up column to column. */
+  table,
+  input,
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 
   input,
   button,
-  select {
+  select,
+  textarea {
     font: inherit;
+  }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236b7884' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 16px;
+    padding-right: 2.25rem !important;
+  }
+
+  select[multiple] {
+    background-image: none;
+  }
+}
+
+/* ---------- Motion ----------
+   Every view enters as one composition: header first, then its sections in reading order,
+   each a beat after the one above. Nothing pops; everything rises a few pixels into place. */
+@layer components {
+  .view-enter > header,
+  .view-enter > div > header {
+    animation: fade 360ms ease-out backwards;
+  }
+
+  .view-enter main > *,
+  .view-enter > main > * {
+    animation: rise 560ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .view-enter main > *:nth-child(1) { animation-delay: 40ms; }
+  .view-enter main > *:nth-child(2) { animation-delay: 100ms; }
+  .view-enter main > *:nth-child(3) { animation-delay: 160ms; }
+  .view-enter main > *:nth-child(4) { animation-delay: 220ms; }
+  .view-enter main > *:nth-child(5) { animation-delay: 280ms; }
+  .view-enter main > *:nth-child(6) { animation-delay: 340ms; }
+  .view-enter main > *:nth-child(n + 7) { animation-delay: 400ms; }
+
+  .stagger > * {
+    animation: rise 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .stagger > *:nth-child(1) { animation-delay: 60ms; }
+  .stagger > *:nth-child(2) { animation-delay: 110ms; }
+  .stagger > *:nth-child(3) { animation-delay: 160ms; }
+  .stagger > *:nth-child(4) { animation-delay: 210ms; }
+  .stagger > *:nth-child(5) { animation-delay: 260ms; }
+  .stagger > *:nth-child(6) { animation-delay: 310ms; }
+  .stagger > *:nth-child(n + 7) { animation-delay: 360ms; }
+
+  .roll {
+    display: inline-flex;
+    overflow: hidden;
+    vertical-align: bottom;
+    white-space: pre;
+  }
+
+  .roll > span {
+    display: inline-block;
+  }
+
+  .roll > span[data-changed] {
+    animation: roll-in 440ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .meter {
+    transform-origin: left center;
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 1ms !important;
+    }
   }
 }
 
@@ -31,7 +140,7 @@
 
   .sidebar-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: #cfd6dc transparent;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -45,84 +154,115 @@
 
   .sidebar-scroll::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: #cbd5e1;
+    background: #cfd6dc;
   }
 
-  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  /* ---------- Surfaces ---------- */
+  .surface {
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-panel;
   }
 
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-goodgreen-700;
+  }
+
+  /* ---------- Buttons ---------- */
   .btn-primary,
   .btn-secondary,
   .btn-muted {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus:outline-none focus:ring-4;
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold transition duration-150 ease-out focus:outline-none focus-visible:ring-4 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply bg-goodgreen-600 text-white shadow-sm hover:bg-goodgreen-700 focus:ring-goodgreen-100;
+    @apply bg-goodgreen-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(12,26,38,0.18)] hover:bg-goodgreen-700 focus-visible:ring-goodgreen-100;
   }
 
   .btn-secondary {
-    @apply border border-goodblue-100 bg-goodblue-50 text-goodblue-700 hover:border-goodblue-200 hover:bg-goodblue-100 focus:ring-goodblue-100;
+    @apply border border-goodblue-100 bg-goodblue-50 text-goodblue-700 hover:border-goodblue-200 hover:bg-goodblue-100 focus-visible:ring-goodblue-100;
   }
 
   .btn-muted {
-    @apply border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus:ring-slate-200;
+    @apply border border-slate-200 bg-white text-ink-soft shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-ink focus-visible:ring-slate-200;
   }
 
+  /* ---------- Fields ----------
+     Label on top, control pinned to the bottom of the cell, so a two-line label never
+     pushes its control out of line with its neighbours. */
   .field {
-    @apply block rounded-lg border border-slate-200 bg-slate-50 p-3;
+    @apply flex min-w-0 flex-col gap-1.5;
   }
 
-  .field span {
-    @apply block text-xs font-bold uppercase tracking-wide text-slate-500;
+  .field > span {
+    @apply block text-[13px] font-medium leading-5 text-ink-soft;
   }
 
-  .field input {
-    @apply mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100;
+  .field > span + input,
+  .field > span + select,
+  .field > span + div {
+    @apply mt-auto;
+  }
+
+  .field input,
+  .field select:not(.select-field) {
+    @apply h-11 w-full rounded-lg border border-slate-300/80 bg-white px-3 text-sm font-medium text-ink shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-400 focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100;
   }
 
   .select-field {
-    @apply mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100;
+    @apply h-11 w-full rounded-lg border border-slate-300/80 bg-white px-3 text-sm font-medium text-ink shadow-sm outline-none transition hover:border-slate-400 focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100;
   }
 
   .input-field {
-    @apply h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100 disabled:cursor-not-allowed disabled:bg-slate-100;
+    @apply h-11 w-full rounded-lg border border-slate-300/80 bg-white px-3 text-sm font-medium text-ink shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-400 focus:border-goodgreen-500 focus:ring-4 focus:ring-goodgreen-100 disabled:cursor-not-allowed disabled:bg-slate-100;
+  }
+
+  /* A field that shares its parent grid rows (label / control / hint), so controls in the
+     same row line up even when one label wraps to two lines. Parent must be a grid. */
+  .field-cell {
+    @apply row-span-3 grid min-w-0 grid-rows-subgrid gap-y-2;
+  }
+
+  .field-cell-label {
+    @apply self-end text-[13px] font-medium leading-5 text-ink-soft;
+  }
+
+  .field-cell-hint {
+    @apply text-xs leading-5 text-ink-muted;
   }
 
   .field small {
-    @apply mt-2 block text-xs font-medium text-slate-500;
+    @apply block text-xs text-ink-muted;
   }
 
   .field.readonly {
-    @apply flex flex-col justify-between bg-white;
+    @apply justify-between rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2.5;
   }
 
   .field.readonly strong {
-    @apply mt-2 text-xl font-bold text-slate-950;
+    @apply text-lg font-semibold text-ink;
   }
 
+  /* ---------- Tables ---------- */
   .table-group {
-    @apply border-r border-white/20 px-3 py-3 text-center text-xs font-bold uppercase tracking-wide text-white;
+    @apply border-b border-slate-200 bg-white px-3 pb-2 pt-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em];
   }
 
   .table-head {
-    @apply border-b border-r border-slate-200 bg-slate-100 px-3 py-3 text-xs font-bold uppercase tracking-wide text-slate-600;
+    @apply whitespace-nowrap border-b border-slate-200 bg-slate-50/95 px-3 py-2.5 text-right text-xs font-medium text-ink-muted backdrop-blur;
   }
 
   .table-cell {
-    @apply border-b border-r border-slate-100 px-3 py-2 text-right text-slate-700;
+    @apply whitespace-nowrap border-b border-slate-100 px-3 py-2 text-right text-ink-soft;
   }
 }
 
 @layer components {
   .gc-rules-card {
     width: 100%;
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     padding: 24px;
-    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 1px 2px rgba(12, 26, 38, 0.04), 0 8px 24px -12px rgba(12, 26, 38, 0.1);
   }
 
   .gc-rules-header {
@@ -134,7 +274,7 @@
   .gc-rules-title {
     margin: 0;
     color: #0f172a;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.35;
   }
@@ -160,6 +300,7 @@
   }
 
   .gc-rule-label {
+    font-weight: 500 !important;
     color: #475569;
     font-size: 13px;
     font-weight: 700;
@@ -167,17 +308,17 @@
   }
 
   .gc-select {
-    height: 48px;
+    height: 44px;
     width: 100%;
     min-width: 0;
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
     padding: 0 38px 0 12px;
     color: #0f172a;
     font-size: 14px;
-    font-weight: 600;
-    line-height: 48px;
+    font-weight: 500;
+    line-height: 44px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     outline: none;
     transition:
@@ -191,8 +332,8 @@
   }
 
   .gc-select:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+    border-color: #2f9461;
+    box-shadow: 0 0 0 4px rgba(47, 148, 97, 0.14);
   }
 
   @media (min-width: 768px) {

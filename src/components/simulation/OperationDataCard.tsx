@@ -14,8 +14,8 @@ function moneyBlur(value: string) {
 
 export function OperationDataCard({ form, onChange }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-bold text-slate-950">Dados da Operação</h2>
+    <section className="surface p-5 sm:p-6">
+      <h2 className="text-lg font-bold text-ink">Dados da Operação</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <label className="field">
           <span>Tipo de financiamento</span>
@@ -24,7 +24,7 @@ export function OperationDataCard({ form, onChange }: Props) {
             onChange={(event) =>
               onChange({ tipoFinanciamento: event.target.value as SimulationFormData["tipoFinanciamento"] })
             }
-            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
+            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
           >
             <option value="">Selecione</option>
             {financingTypeOptions.map((option) => (
@@ -39,7 +39,7 @@ export function OperationDataCard({ form, onChange }: Props) {
           <select
             value={form.tipoOperacao}
             onChange={(event) => onChange({ tipoOperacao: event.target.value as SimulationFormData["tipoOperacao"] })}
-            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
+            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
           >
             <option value="">Selecione</option>
             {operationTypeOptions.map((option) => (
@@ -54,7 +54,7 @@ export function OperationDataCard({ form, onChange }: Props) {
           <select
             value={form.uf}
             onChange={(event) => onChange({ uf: event.target.value })}
-            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-950 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
+            className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100"
           >
             <option value="">UF</option>
             {ufOptions.map((uf) => (

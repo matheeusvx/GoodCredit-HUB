@@ -1,74 +1,77 @@
-import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, ShieldCheck } from "lucide-react";
 import { COMPLIANCE_OVERALL_STATUS_LABELS } from "../../lib/compliance-checklist/complianceChecklistSummary";
 import { ComplianceChecklistSummary } from "../../types/complianceChecklist";
+import { Roll, useMounted } from "../ui/Roll";
 
 interface Props {
   summary: ComplianceChecklistSummary;
 }
 
 export function ComplianceProgressSummary({ summary }: Props) {
+  const mounted = useMounted();
   const statusTone =
     summary.overallStatus === "HAS_ISSUES"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
+      ? "bg-amber-50 text-amber-800 ring-amber-200"
       : summary.overallStatus === "COMPLETED"
-        ? "border-goodgreen-200 bg-goodgreen-50 text-goodgreen-800"
-        : "border-goodblue-100 bg-goodblue-50 text-goodblue-800";
+        ? "bg-goodgreen-50 text-goodgreen-800 ring-goodgreen-200"
+        : "bg-goodblue-50 text-goodblue-800 ring-goodblue-100";
 
-  const metrics = [
-    { label: "Total", value: summary.total, icon: ShieldCheck, tone: "text-slate-600" },
-    { label: "Conformes", value: summary.compliant, icon: CheckCircle2, tone: "text-goodgreen-700" },
-    { label: "Com pendência", value: summary.hasIssue, icon: AlertTriangle, tone: "text-amber-700" },
-    { label: "Pendentes", value: summary.pending, icon: CircleDashed, tone: "text-goodblue-700" },
-    { label: "Não se aplica", value: summary.notApplicable, icon: MinusCircle, tone: "text-slate-500" }
+  const segments = [
+    { label: "Conformes", value: summary.compliant, bar: "bg-goodgreen-500" },
+    { label: "Com pendência", value: summary.hasIssue, bar: "bg-amber-500" },
+    { label: "Não se aplica", value: summary.notApplicable, bar: "bg-slate-300" },
+    { label: "Pendentes", value: summary.pending, bar: "bg-transparent" }
   ];
+  const total = Math.max(1, summary.total);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel sm:p-6">
+    <section className="surface p-5 sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">
-            Progresso geral
-          </p>
-          <h2 className="mt-2 text-lg font-bold text-slate-950">
+          <p className="eyebrow">Progresso geral</p>
+          <h2 className="mt-2 text-lg font-bold text-ink">
             {summary.completed} de {summary.total} verificações concluídas
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Conforme, com pendência e não se aplica contam como itens concluídos.
-          </p>
         </div>
-        <div className={`rounded-lg border px-4 py-3 text-sm font-bold ${statusTone}`}>
-          {COMPLIANCE_OVERALL_STATUS_LABELS[summary.overallStatus]}
+        <div className="flex items-center gap-4">
+          <p className="text-3xl font-semibold tracking-tight text-ink">
+            <Roll value={`${summary.completionPercent}%`} />
+          </p>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${statusTone}`}>
+            {COMPLIANCE_OVERALL_STATUS_LABELS[summary.overallStatus]}
+          </span>
         </div>
       </div>
 
       <div
-        className="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-100"
+        className="mt-5 flex h-2 gap-0.5 overflow-hidden rounded-full bg-slate-100"
         role="progressbar"
         aria-label="Progresso do checklist"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={summary.completionPercent}
       >
-        <div
-          className="h-full rounded-full bg-goodgreen-600 transition-[width] duration-300"
-          style={{ width: `${summary.completionPercent}%` }}
-        />
-      </div>
-      <p className="mt-2 text-right text-sm font-bold text-goodgreen-700">
-        {summary.completionPercent}% concluído
-      </p>
-
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        {metrics.map(({ label, value, icon: Icon, tone }) => (
-          <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
-            <div className="flex items-center gap-2">
-              <Icon className={`h-4 w-4 ${tone}`} />
-              <span className="text-xs font-semibold text-slate-500">{label}</span>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-950">{value}</p>
-          </div>
+        {segments.slice(0, 3).map((segment) => (
+          <div
+            key={segment.label}
+            className={`h-full transition-[width] duration-700 ease-out ${segment.bar}`}
+            style={{ width: mounted ? `${(segment.value / total) * 100}%` : "0%" }}
+          />
         ))}
       </div>
+
+      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+        {segments.map((segment) => (
+          <div key={segment.label} className="border-l-2 border-slate-100 pl-3">
+            <dt className="flex items-center gap-2 text-[13px] font-medium text-ink-muted">
+              <span className={`h-2 w-2 rounded-full ${segment.bar === "bg-transparent" ? "ring-1 ring-inset ring-slate-300" : segment.bar}`} aria-hidden="true" />
+              {segment.label}
+            </dt>
+            <dd className="mt-1 text-xl font-semibold text-ink">
+              <Roll value={String(segment.value)} />
+            </dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

@@ -43,7 +43,7 @@ export function InstallmentCoverageExplanation({ input, result }: Props) {
         <span className="flex items-start gap-3">
           <CircleDollarSign className="mt-0.5 h-5 w-5 shrink-0 text-goodblue-700" />
           <span>
-            <span className="block text-base font-bold text-slate-950">Como esse cálculo foi feito?</span>
+            <span className="block text-base font-bold text-ink">Como esse cálculo foi feito?</span>
             <span className="mt-1 block text-sm font-normal leading-6 text-slate-600">
               Veja as etapas utilizadas para calcular a participação do FGTS e o valor restante das prestações.
             </span>
@@ -98,7 +98,7 @@ export function InstallmentCoverageExplanation({ input, result }: Props) {
           </div>
 
           <div className="mt-5 rounded-lg border border-goodgreen-200 bg-white p-5">
-            <h3 className="font-bold text-slate-950">Resumo da simulação</h3>
+            <h3 className="font-bold text-ink">Resumo da simulação</h3>
             <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
               <SummaryItem label="Total das prestações" value={formatCurrencyBRL(result.totalInstallments)} />
               <SummaryItem label="Cobertura selecionada" value={formatPercent(coverageDecimal)} />
@@ -121,7 +121,7 @@ function CalculationStep({ number, title, children }: { number: string; title: s
     <article className="rounded-lg border border-slate-200 bg-white p-5">
       <div className="flex items-center gap-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-goodblue-600 text-sm font-bold text-white">{number}</span>
-        <h3 className="font-bold text-slate-950">{title}</h3>
+        <h3 className="font-bold text-ink">{title}</h3>
       </div>
       <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">{children}</div>
     </article>
@@ -129,9 +129,9 @@ function CalculationStep({ number, title, children }: { number: string; title: s
 }
 
 function FormulaBox({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 [&_strong]:break-words [&_strong]:text-slate-950">{children}</div>;
+  return <div className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 [&_strong]:break-words [&_strong]:text-ink">{children}</div>;
 }
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-2"><dt className="text-slate-600">{label}</dt><dd className="text-right font-bold text-slate-950">{value}</dd></div>;
+  return <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-2"><dt className="text-slate-600">{label}</dt><dd className="text-right font-bold text-ink">{value}</dd></div>;
 }

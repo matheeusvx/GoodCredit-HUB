@@ -16,7 +16,7 @@ export function ComplianceChecklistEmptyState({
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
         {filtered ? <FilterX className="h-5 w-5" /> : <ClipboardCheck className="h-5 w-5" />}
       </div>
-      <h2 className="mt-4 text-lg font-bold text-slate-900">
+      <h2 className="mt-4 text-lg font-bold text-ink">
         {filtered
           ? "Nenhum checklist encontrado com os filtros selecionados."
           : "Nenhum checklist criado"}

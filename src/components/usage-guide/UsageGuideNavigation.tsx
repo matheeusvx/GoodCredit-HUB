@@ -21,7 +21,7 @@ function NavigationItems({ guides, selectedId, onSelect }: Props) {
             type="button"
             onClick={() => onSelect(guide)}
             aria-current={selected ? "page" : undefined}
-            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-400 ${selected ? "bg-goodgreen-50 text-goodgreen-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-400 ${selected ? "bg-goodgreen-50 text-goodgreen-700" : "text-slate-600 hover:bg-slate-50 hover:text-ink"}`}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{guide.title}</span>
@@ -48,7 +48,7 @@ export function UsageGuideNavigation(props: Props) {
           aria-expanded={mobileOpen}
           aria-controls="usage-guide-mobile-navigation"
           onClick={() => setMobileOpen((current) => !current)}
-          className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-400"
+          className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left font-bold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-400"
         >
           <span>Índice: {selected?.title}</span>
           <ChevronDown className={`h-5 w-5 transition-transform ${mobileOpen ? "rotate-180" : ""}`} aria-hidden="true" />

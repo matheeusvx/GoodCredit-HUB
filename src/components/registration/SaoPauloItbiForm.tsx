@@ -1,4 +1,5 @@
 import { Calculator, RotateCcw } from "lucide-react";
+import { SegmentedControl } from "../ui/SegmentedControl";
 import type { SaoPauloOperationType } from "../../lib/registration/itbi/saoPauloItbi.types";
 
 export type YesNoInput = "" | "YES" | "NO";
@@ -40,19 +41,21 @@ function YesNoField({
   onChange: (value: YesNoInput) => void;
 }) {
   return (
-    <label htmlFor={id} className="flex h-full flex-col text-sm font-semibold text-slate-700">
-      <span className="md:min-h-[3.75rem]">{label}</span>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value as YesNoInput)}
-        className="input-field mt-2 h-12"
-      >
-        <option value="">Selecione</option>
-        <option value="YES">Sim</option>
-        <option value="NO">Não</option>
-      </select>
-    </label>
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <span id={id} className="text-sm leading-5 text-ink-soft">{label}</span>
+      <div className="shrink-0">
+        <SegmentedControl<YesNoInput>
+          size="sm"
+          label={label}
+          value={value}
+          onChange={onChange}
+          options={[
+            { value: "YES", label: "Sim" },
+            { value: "NO", label: "Não" }
+          ]}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -118,10 +121,10 @@ export function SaoPauloItbiForm({
 }) {
   const requiresFinancing = values.operationType !== "CASH_PURCHASE";
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sp-itbi-form-title">
+    <section className="surface p-5 sm:p-6" aria-labelledby="sp-itbi-form-title">
       <div className="border-b border-slate-100 pb-4">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-goodgreen-600">São Paulo/SP · regra 2026</p>
-        <h3 id="sp-itbi-form-title" className="mt-1 text-lg font-bold text-slate-950">Dados da operação</h3>
+        <h3 id="sp-itbi-form-title" className="mt-1 text-lg font-bold text-ink">Dados da operação</h3>
         <p className="mt-1 text-sm leading-6 text-slate-500">A base será o maior valor entre a transação e o Valor Venal de Referência.</p>
       </div>
 
@@ -172,13 +175,13 @@ export function SaoPauloItbiForm({
         )}
       </div>
 
-      <fieldset className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <legend className="px-1 text-sm font-bold text-slate-900">Possível isenção para primeiro imóvel</legend>
-        <p className="mt-1 text-xs leading-5 text-slate-500">As respostas permitem apenas verificar um possível enquadramento inicial.</p>
-        <div className="mt-4 grid items-stretch gap-4 md:grid-cols-2">
+      <fieldset className="mt-6">
+        <legend className="text-sm font-semibold text-ink">Possível isenção para primeiro imóvel</legend>
+        <p className="mt-0.5 text-[13px] text-ink-muted">Responda para verificar o enquadramento inicial.</p>
+        <div className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200/80 bg-white">
           <YesNoField id="sp-individual" label="O adquirente é pessoa física?" value={values.isIndividualPerson} onChange={(value) => onChange("isIndividualPerson", value)} />
-          <YesNoField id="sp-residential" label="O imóvel será de uso exclusivamente residencial?" value={values.isExclusivelyResidential} onChange={(value) => onChange("isExclusivelyResidential", value)} />
-          <YesNoField id="sp-first-property" label="Esta é a primeira aquisição imobiliária do beneficiário?" value={values.isFirstPropertyAcquisition} onChange={(value) => onChange("isFirstPropertyAcquisition", value)} />
+          <YesNoField id="sp-residential" label="O imóvel será exclusivamente residencial?" value={values.isExclusivelyResidential} onChange={(value) => onChange("isExclusivelyResidential", value)} />
+          <YesNoField id="sp-first-property" label="É a primeira aquisição imobiliária do beneficiário?" value={values.isFirstPropertyAcquisition} onChange={(value) => onChange("isFirstPropertyAcquisition", value)} />
           <YesNoField id="sp-mcmv" label="A operação está enquadrada no Minha Casa, Minha Vida?" value={values.isMinhaCasaMinhaVida} onChange={(value) => onChange("isMinhaCasaMinhaVida", value)} />
         </div>
       </fieldset>

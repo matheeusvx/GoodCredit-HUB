@@ -6,13 +6,13 @@ import { AppAuthGate } from "./auth/AppAuthGate";
 import { replaceAppPath } from "./auth/authNavigation";
 import { AmortizationTable } from "./components/AmortizationTable";
 import { AmortizationImpact } from "./components/AmortizationImpact";
+import { AmortizationSummaryPanel } from "./components/AmortizationSummaryPanel";
 import { EvolutionChart } from "./components/EvolutionChart";
 import { FgtsContributionModal } from "./components/FgtsContributionModal";
 import { Header } from "./components/Header";
 import { InputCard } from "./components/InputCard";
 import { ManualContributionModal } from "./components/ManualContributionModal";
 import { Sidebar, HubView } from "./components/Sidebar";
-import { SummaryCard } from "./components/SummaryCard";
 import { ChecklistPage } from "./components/checklist/ChecklistPage";
 import { HomePage } from "./components/home/HomePage";
 import { SimulationPage } from "./components/simulation/SimulationPage";
@@ -531,21 +531,9 @@ function AuthenticatedHub() {
     }
   }
 
-  const summaryCards = [
-    { label: "Prazo e sistema", value: `${summary.prazoAtual}/${summary.prazoOriginal} meses`, detail: summary.sistema, tone: "blue" as const },
-    { label: "Valor financiado", value: formatCurrencyBR(summary.valorFinanciado), tone: "slate" as const },
-    { label: "Juros do contrato", value: formatCurrencyBR(summary.jurosContrato), tone: "slate" as const },
-    { label: "Total original", value: formatCurrencyBR(summary.totalOriginal), tone: "slate" as const },
-    { label: "Juros com amortizações", value: formatCurrencyBR(summary.jurosPago), tone: "green" as const },
-    { label: "Total com amortizações", value: formatCurrencyBR(summary.totalPago), tone: "green" as const },
-    { label: "Economia de juros", value: formatCurrencyBR(summary.economiaJuros), tone: "green" as const },
-    { label: "Redução de parcelas", value: `${summary.reducaoParcelas} parcelas`, tone: "blue" as const },
-    { label: "Redução de juros", value: formatPercentBR(summary.percentualReducaoJuros), tone: "green" as const },
-    { label: "Redução de parcelas", value: formatPercentBR(summary.percentualReducaoParcelas), tone: "blue" as const }
-  ];
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-canvas text-ink">
       <Sidebar
         activeView={activeView === "not-found" ? null : activeView}
         onNavigate={navigateTo}
@@ -657,6 +645,7 @@ function AuthenticatedHub() {
           </div>
         </div>
 
+        <div key={activeView} className="view-enter">
         {activeView === "home" ? (
           <HomePage onNavigate={navigateTo} />
         ) : activeView === "checklist" ? (
@@ -682,10 +671,6 @@ function AuthenticatedHub() {
         ) : (
           <>
             <Header
-              nomeCliente={inputs.nomeCliente}
-              sistema={inputs.sistema}
-              onClientNameChange={(nomeCliente) => setInputs({ ...inputs, nomeCliente })}
-              onSystemChange={(sistema) => setInputs({ ...inputs, sistema })}
               onManualConfig={() => setManualModalOpen(true)}
               onFgtsConfig={() => setFgtsModalOpen(true)}
               onGeneratePdf={generatePdf}
@@ -700,6 +685,8 @@ function AuthenticatedHub() {
                 valorFinanciadoInput={valorFinanciadoInput}
                 prazoMesesInput={prazoMesesInput}
                 taxaAnualInput={taxaAnualInput}
+                onClientNameChange={(nomeCliente) => setInputs((current) => ({ ...current, nomeCliente }))}
+                onSystemChange={(sistema) => setInputs((current) => ({ ...current, sistema }))}
                 onValorFinanciadoInputChange={handleValorFinanciadoInputChange}
                 onValorFinanciadoBlur={handleValorFinanciadoBlur}
                 onPrazoMesesInputChange={handlePrazoMesesInputChange}
@@ -708,6 +695,8 @@ function AuthenticatedHub() {
                 onTaxaAnualBlur={handleTaxaAnualBlur}
                 errors={validation}
               />
+
+              <AmortizationSummaryPanel summary={summary} />
 
               {(hasActiveManualContributions || hasActiveFgts) && (
                 <AmortizationImpact
@@ -720,11 +709,6 @@ function AuthenticatedHub() {
                 />
               )}
 
-              <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {summaryCards.map((card) => (
-                  <SummaryCard key={`${card.label}-${card.value}`} {...card} />
-                ))}
-              </section>
 
               <EvolutionChart rows={rows} />
 
@@ -740,6 +724,7 @@ function AuthenticatedHub() {
             </main>
           </>
         )}
+        </div>
       </div>
 
       <ManualContributionModal

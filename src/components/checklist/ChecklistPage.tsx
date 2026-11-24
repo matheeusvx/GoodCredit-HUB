@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageHeader } from "../ui/PageHeader";
 import { generateChecklist } from "../../lib/checklist/generateChecklist";
 import { ChecklistFormData, GeneratedChecklist } from "../../types/checklist";
 import { ChecklistActions } from "./ChecklistActions";
@@ -79,18 +80,11 @@ export function ChecklistPage() {
 
   return (
     <div>
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 sm:px-6 xl:px-8">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">GoodCredit Hub</p>
-              <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Checklist Documental</h1>
-              <p className="mt-1 text-sm text-slate-600">Gere a lista de documentos conforme o perfil da operação</p>
-            </div>
-            <ChecklistActions checklist={checklist} onGenerate={handleGenerate} onClear={handleClear} />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Checklist Documental"
+        description="Gere a lista de documentos conforme o perfil da operação."
+        actions={<ChecklistActions checklist={checklist} onGenerate={handleGenerate} onClear={handleClear} />}
+      />
 
       <main className="mx-auto grid max-w-[1700px] gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[minmax(360px,0.92fr)_1.08fr] xl:px-8">
         <ChecklistConfigForm form={form} onChange={patchForm} errors={submitted ? errors : []} />
@@ -99,7 +93,7 @@ export function ChecklistPage() {
             <ChecklistResult checklist={checklist} checkedItems={checkedItems} onToggleItem={toggleItem} />
           ) : (
             <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center shadow-panel">
-              <p className="text-lg font-bold text-slate-950">Configure e gere o checklist</p>
+              <p className="text-lg font-bold text-ink">Configure e gere o checklist</p>
               <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">
                 O resultado aparecerá aqui com documentos agrupados por categoria, alertas aplicáveis e regras de envio.
               </p>

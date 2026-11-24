@@ -12,7 +12,7 @@ const percentFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2
 });
 
-const inputClass = "mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100";
+const inputClass = "mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-goodblue-500 focus:ring-4 focus:ring-goodblue-100";
 
 export function FgtsInstallmentPaymentInfo() {
   const [installmentInput, setInstallmentInput] = useState("");
@@ -54,8 +54,8 @@ export function FgtsInstallmentPaymentInfo() {
   ] as const;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-xl font-bold text-slate-950">Pagamento de Parte das Prestações</h2>
+    <section className="surface p-5 sm:p-6">
+      <h2 className="text-xl font-bold text-ink">Pagamento de Parte das Prestações</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         Esta modalidade é diferente da amortização do saldo devedor e não será enviada à planilha como redução direta. A cobertura teórica é limitada a 80% e depende do agente financeiro.
       </p>
@@ -120,7 +120,7 @@ export function FgtsInstallmentPaymentInfo() {
             {cards.map(([label, value], index) => (
               <article key={label} className={`rounded-lg border p-4 ${index === 2 ? "border-goodgreen-200 bg-goodgreen-50" : "border-slate-200 bg-slate-50"}`}>
                 <p className="text-xs font-semibold leading-5 text-slate-500">{label}</p>
-                <p className={`mt-1 break-words font-bold ${index === 2 ? "text-goodgreen-700" : "text-slate-950"}`}>{formatCurrencyBRL(value)}</p>
+                <p className={`mt-1 break-words font-bold ${index === 2 ? "text-goodgreen-700" : "text-ink"}`}>{formatCurrencyBRL(value)}</p>
               </article>
             ))}
           </div>
@@ -137,10 +137,6 @@ export function FgtsInstallmentPaymentInfo() {
           Preencha os campos corretamente para visualizar o cálculo.
         </div>
       )}
-
-      <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
-        Este cálculo é meramente orientativo e não representa autorização para utilização do FGTS. A aplicação efetiva depende das regras vigentes, do enquadramento do contrato e da análise do agente financeiro.
-      </p>
     </section>
   );
 }

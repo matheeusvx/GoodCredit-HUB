@@ -1,4 +1,5 @@
 import { Calculator, Eraser } from "lucide-react";
+import { PageHeader } from "../ui/PageHeader";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrencyBRL, parseNumberBR } from "../../lib/simulation/formatters";
 import { runSimulation } from "../../lib/simulation/simulationEngine";
@@ -100,17 +101,11 @@ export function SimulationPage({ onSendToAmortization }: Props) {
 
   return (
     <div>
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 sm:px-6 xl:px-8">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">GoodCredit Hub</p>
-              <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Simulação de Financiamento</h1>
-              <p className="mt-1 text-sm text-slate-600">
-                Preencha os dados da operação para gerar uma simulação inicial aproximada
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title="Simulação de Financiamento"
+        description="Calcule parcela, enquadramento e banco para a operação."
+        actions={
+          <>
               <button type="button" onClick={calculate} className="btn-primary">
                 <Calculator className="h-4 w-4" />
                 Calcular Simulação
@@ -120,10 +115,9 @@ export function SimulationPage({ onSendToAmortization }: Props) {
                 Limpar
               </button>
               <SendToAmortizationButton result={result} onSend={onSendToAmortization} />
-            </div>
-          </div>
-        </div>
-      </header>
+            </>
+        }
+      />
 
       <main className="mx-auto flex max-w-[1700px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
         {submitted && errors.length > 0 && (
@@ -136,22 +130,14 @@ export function SimulationPage({ onSendToAmortization }: Props) {
         <OperationDataCard form={form} onChange={patchForm} />
         <BankSystemCard form={form} onChange={patchForm} />
         <EntryFgtsCard form={form} onChange={patchForm} />
-        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 px-4 py-3 text-sm leading-6 text-goodblue-800">
-          Esta versão pública da simulação não solicita CPF, telefone ou e-mail. Os dados informados são utilizados apenas
-          para cálculo estimativo no navegador.
-        </section>
 
         {result && (
           <>
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-              <h2 className="text-lg font-bold text-slate-950">Resultado da Simulação</h2>
+            <section className="surface p-5 sm:p-6">
+              <h2 className="text-lg font-bold text-ink">Resultado da Simulação</h2>
               <div className="mt-4">
                 <SimulationResultCards result={result} />
               </div>
-            </section>
-            <section className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-              Esta é uma simulação estimativa e não representa aprovação de crédito. A aprovação final depende da análise
-              bancária, validação documental, regras vigentes, avaliação do imóvel e perfil do cliente.
             </section>
             <SimulationSummaryBox text={result.textoSimulacao} />
           </>

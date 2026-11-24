@@ -33,7 +33,7 @@ export function CrmDashboardHeader(props: {
   const visual = visuals[visualStatus.key];
   return (
     <header className="min-w-0 py-1">
-      <h1 id="crm-dashboard-title" className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+      <h1 id="crm-dashboard-title" className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
         Olá, {props.name}
       </h1>
       <p className="mt-1 text-sm text-slate-500">{props.greeting}</p>

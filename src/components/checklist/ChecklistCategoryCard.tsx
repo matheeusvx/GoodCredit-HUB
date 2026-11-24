@@ -26,13 +26,13 @@ export function ChecklistCategoryCard({ category, checkedItems, onToggle }: Prop
   const Icon = icons[(category.icon ?? "file") as keyof typeof icons] ?? FileText;
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="surface p-5">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-goodgreen-50 text-goodgreen-700">
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-slate-950">{category.title}</h3>
+          <h3 className="text-base font-bold text-ink">{category.title}</h3>
           {category.note && <p className="mt-1 text-sm text-slate-500">{category.note}</p>}
         </div>
       </div>

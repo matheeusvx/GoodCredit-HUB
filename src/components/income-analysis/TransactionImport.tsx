@@ -54,7 +54,7 @@ export function TransactionImport({ existing, analysisBank, periodStart, periodE
     setPaste("");
   }
 
-  return <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  return <section className="surface p-5 sm:p-6">
     <h2 className="text-xl font-bold">Importar Movimentações</h2>
     <p className="mt-1 text-sm text-slate-500">CSV e PDF são processados localmente. O arquivo original não é armazenado.</p>
     <div className="mt-5 flex flex-wrap items-end gap-4">

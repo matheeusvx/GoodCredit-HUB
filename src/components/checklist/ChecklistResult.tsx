@@ -36,11 +36,11 @@ const labels = {
 export function ChecklistResult({ checklist, checkedItems, onToggleItem }: Props) {
   return (
     <section className="space-y-5">
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
+      <div className="surface p-5 sm:p-6">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-goodgreen-600">Resultado do checklist</p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-950">{checklist.title}</h2>
+            <h2 className="mt-2 text-2xl font-bold text-ink">{checklist.title}</h2>
           </div>
           <span className="rounded-lg bg-goodblue-50 px-3 py-2 text-sm font-bold text-goodblue-700">
             {checklist.profileLabel}
@@ -86,7 +86,7 @@ function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-bold text-slate-900">{value}</p>
+      <p className="mt-1 text-sm font-bold text-ink">{value}</p>
     </div>
   );
 }

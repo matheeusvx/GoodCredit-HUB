@@ -1,5 +1,5 @@
 import { BadgeDollarSign, BarChart3, BookOpen, CheckSquare, CircleHelp, FileClock, Home, Landmark, Lock, LogOut, PiggyBank, ShieldCheck, WalletCards } from "lucide-react";
-import { Fragment, type KeyboardEvent, useState } from "react";
+import { Fragment, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { replaceAppPath } from "../auth/authNavigation";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -27,7 +27,7 @@ interface SidebarProps {
 function SidebarSectionLabel({ label }: { label: string }) {
   return (
     <div className="mt-4 border-t border-slate-200 px-2.5 pt-4" aria-label={label}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">{label}</p>
     </div>
   );
 }
@@ -36,6 +36,14 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
   const { signOut, user } = useAuth();
   const [logoFailed, setLogoFailed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const [indicator, setIndicator] = useState<{ top: number; height: number } | null>(null);
+
+  // The active pill slides from the previous item to the new one, so the change has a direction.
+  useLayoutEffect(() => {
+    const active = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    setIndicator(active ? { top: active.offsetTop, height: active.offsetHeight } : null);
+  }, [activeView]);
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -88,7 +96,14 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
         onKeyDown={handleScrollKeyDown}
       >
         <div className="flex min-h-full flex-col">
-          <nav className="space-y-1.5">
+          <nav ref={navRef} className="relative space-y-1">
+            {indicator && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 rounded-lg bg-goodgreen-50 ring-1 ring-inset ring-goodgreen-100 transition-[transform,height] duration-300 ease-out before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-goodgreen-600"
+                style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }}
+              />
+            )}
             {SIDEBAR_MODULES.map((module) => {
               const Icon = module.icon;
               const isActive = module.enabled && module.view === activeView;
@@ -100,16 +115,14 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
                     aria-label={module.label}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => module.enabled && module.view && onNavigate(module.view)}
-                    className={`group flex min-h-10 w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold leading-4 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-300 focus-visible:ring-offset-1 ${
-                      isActive
-                        ? "bg-goodgreen-50 text-goodgreen-700 ring-1 ring-goodgreen-100"
-                        : "text-slate-500 hover:bg-slate-50"
+                    className={`group relative flex min-h-10 w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] font-medium leading-4 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-goodgreen-300 focus-visible:ring-offset-1 ${
+                      isActive ? "text-goodgreen-800" : "text-ink-muted hover:bg-slate-50 hover:text-ink"
                     }`}
                     disabled={!module.enabled}
                     title={module.enabled ? module.label : "Em breve"}
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <Icon className="h-[17px] w-[17px] shrink-0" />
+                      <Icon className={`h-[17px] w-[17px] shrink-0 transition-colors ${isActive ? "text-goodgreen-600" : "text-slate-400 group-hover:text-ink-soft"}`} strokeWidth={1.75} />
                       {module.label}
                     </span>
                     {!module.enabled && <Lock className="h-4 w-4 text-slate-300" />}

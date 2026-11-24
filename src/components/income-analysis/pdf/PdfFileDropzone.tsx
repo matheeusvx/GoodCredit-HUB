@@ -11,7 +11,7 @@ export function PdfFileDropzone({ disabled, onFile }: { disabled: boolean; onFil
     onDrop={(event) => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files[0]; if (file && !disabled) onFile(file); }}
   >
     <FileUp className="mx-auto h-9 w-9 text-emerald-600" />
-    <p className="mt-3 font-semibold text-slate-900">Arraste um extrato em PDF para esta área</p>
+    <p className="mt-3 font-semibold text-ink">Arraste um extrato em PDF para esta área</p>
     <p className="mt-1 text-sm text-slate-500">Um arquivo por processamento, com até 20 MB.</p>
     <button type="button" className="btn-primary mt-4" disabled={disabled} onClick={() => inputRef.current?.click()}>Escolher arquivo</button>
     <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onFile(file); event.currentTarget.value = ""; }} />

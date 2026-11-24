@@ -1,4 +1,4 @@
-import { ChevronsDown, ChevronsUp, Info } from "lucide-react";
+import { ChevronsDown, ChevronsUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FAQ_CONTENT_VERSION, FAQ_ITEMS, FAQ_LAST_REVIEWED_AT } from "../../data/faqData";
 import { filterFaqItems } from "../../lib/faqSearch";
@@ -98,27 +98,17 @@ export function FaqPage() {
       <FaqHeader />
 
       <main className="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-6 xl:px-8">
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-label="Pesquisa e filtros do FAQ">
+        <section className="surface p-4 sm:p-6" aria-label="Pesquisa e filtros do FAQ">
           <FaqSearch value={query} onChange={setQuery} />
           <div className="mt-5">
             <FaqCategoryFilters selected={category} onChange={setCategory} />
           </div>
         </section>
 
-        <section className="rounded-lg border border-goodblue-100 bg-goodblue-50 p-4 text-sm leading-6 text-goodblue-800">
-          <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <p>
-              Material interno de apoio. As condições podem variar conforme a operação, o produto, as regras vigentes e
-              a análise da instituição financeira.
-            </p>
-          </div>
-        </section>
-
         <section aria-labelledby="faq-results-heading">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 id="faq-results-heading" className="text-lg font-bold text-slate-950">
+              <h2 id="faq-results-heading" className="text-lg font-bold text-ink">
                 Perguntas e respostas
               </h2>
               <p className="mt-1 text-sm font-medium text-slate-500" aria-live="polite">
@@ -159,20 +149,6 @@ export function FaqPage() {
           ) : (
             <FaqEmptyState onClear={clearFilters} />
           )}
-        </section>
-
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-goodgreen-700" aria-hidden="true" />
-            <div>
-              <h2 className="font-bold text-slate-950">Orientação institucional</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                As respostas deste FAQ possuem caráter orientativo e refletem procedimentos internos e condições gerais.
-                A aplicação de cada regra depende do perfil do cliente, da modalidade, da documentação, das normas
-                vigentes e da validação da instituição financeira.
-              </p>
-            </div>
-          </div>
         </section>
 
         <footer className="pb-4 text-center text-xs leading-5 text-slate-500">
