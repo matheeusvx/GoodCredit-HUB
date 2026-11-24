@@ -66,6 +66,7 @@ const PARSER_LABELS: Record<string, string> = {
   nubank: "Nubank", bradesco: "Bradesco", caixa: "Caixa", inter: "Banco Inter", itau: "Itaú",
   santander: "Santander", "mercado-pago": "Mercado Pago", generic: "Formato bancário genérico",
   "shopee-pay": "ShopeePay",
+  "uber-income-v1": "Comprovante de rendimentos Uber",
   "spreadsheet-auto": "Mapeamento automático de planilha", mixed: "Leitura combinada",
 };
 

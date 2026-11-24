@@ -2,7 +2,7 @@ const statuses = [
   ["Simulação de Financiamento", "Ativo"],
   ["Planilha de Amortização", "Ativo"],
   ["Checklist Documental", "Ativo"],
-  ["Apuração de Renda", "Ativo"],
+  ["Análise de Perfil", "Ativo"],
   ["Uso de FGTS", "Ativo"],
   ["Cálculo de Pró-Soluto", "Ativo"]
 ] as const;

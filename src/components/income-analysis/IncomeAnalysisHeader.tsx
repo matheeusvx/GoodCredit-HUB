@@ -1,2 +1,12 @@
-import { Eraser, ShieldCheck } from "lucide-react";
-export function IncomeAnalysisHeader({ onClear }: { onClear: () => void }) { return <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1700px] flex-wrap items-start justify-between gap-4 px-4 py-5 sm:px-6 xl:px-8"><div><h1 className="text-3xl font-bold text-ink">Apuração de Renda</h1><p className="mt-2 max-w-3xl text-sm text-slate-600">Analise movimentações bancárias, classifique entradas e calcule a renda média considerada.</p></div><button type="button" className="btn-muted" onClick={onClear}><Eraser className="h-4 w-4" /> Limpar Análise</button></div><div className="mx-auto max-w-[1700px] px-4 pb-5 sm:px-6 xl:px-8"><div className="flex gap-3 rounded-lg border border-goodblue-100 bg-goodblue-50 p-4 text-sm leading-6 text-goodblue-800"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />A apuração é uma ferramenta de apoio. O valor final aceito depende da análise documental, da coerência das movimentações e das regras da instituição financeira.</div></div></header>; }
+import { Eraser } from "lucide-react";
+import { PageHeader } from "../ui/PageHeader";
+
+export function IncomeAnalysisHeader({ onClear }: { onClear: () => void }) {
+  return (
+    <PageHeader
+      title="Extratos Bancários"
+      description="Analise extratos e calcule a renda média considerada."
+      actions={<button type="button" className="btn-muted" onClick={onClear}><Eraser className="h-4 w-4" /> Limpar análise</button>}
+    />
+  );
+}

@@ -347,14 +347,14 @@ export const USAGE_GUIDES: UsageGuide[] = [
   },
   {
     id: "income-analysis",
-    anchor: "apuracao-renda",
-    title: "Apuração de Renda",
-    shortDescription: "Analise extratos localmente, revise entradas e consolide a renda confirmada.",
+    anchor: "analise-perfil",
+    title: "Análise de Perfil",
+    shortDescription: "Analise renda e documentos para consolidar o perfil do cliente.",
     destination: "income-analysis",
     icon: "income",
-    keywords: ["apuração", "renda", "extrato", "PDF", "CSV", "Excel", "OCR", "banco", "conciliação", "mediana", "pagador"],
+    keywords: ["análise de perfil", "renda", "documentos", "extrato", "PDF", "CSV", "Excel", "OCR", "banco", "conciliação", "mediana", "pagador"],
     keyFeatures: ["PDF, CSV e Excel", "Revisão de movimentações", "Relatório e envio à simulação"],
-    purpose: "A Apuração de Renda processa extratos bancários no navegador, classifica movimentações e consolida indicadores para apoiar a conferência de renda.",
+    purpose: "A Análise de Perfil reúne ferramentas documentais do cliente. A análise de extratos processa arquivos no navegador, classifica movimentações e consolida indicadores para apoiar a conferência de renda.",
     whenToUse: [
       "Para analisar um ou vários extratos de bancos, contas ou participantes.",
       "Para revisar quais créditos podem compor renda.",
@@ -385,7 +385,7 @@ export const USAGE_GUIDES: UsageGuide[] = [
     actions: [
       { title: "Iniciar análise", description: "Processa os arquivos adicionados no navegador." },
       { title: "Revisar movimentações", description: "Abre a revisão avançada para ajustar classificações, motivos e pendências." },
-      { title: "Gerar relatório", description: "Gera o relatório da apuração atual." },
+      { title: "Gerar relatório", description: "Gera o relatório da análise atual." },
       { title: "Enviar renda para Simulação", description: "Preenche a renda bruta familiar na Simulação de Financiamento quando existe renda confirmada." },
       { title: "Nova análise", description: "Limpa arquivos e resultados para iniciar outro processo." }
     ],

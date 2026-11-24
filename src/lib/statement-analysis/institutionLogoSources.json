@@ -1,0 +1,156 @@
+[
+  {
+    "id": "BANCO_DO_BRASIL",
+    "homepage": "https://www.bb.com.br",
+    "logo": "/institutions/banco_do_brasil.svg",
+    "source": "https://www.bb.com.br/docs/pub/inst/img/LogoBB.svg",
+    "sha256": "fb28ded7a06c536f9881c3b1978ca4b8ca84d744a9e134018f02a971dc7f7d76",
+    "referencePage": "https://www.bb.com.br/docs/pub/inst/img/LogoBB.svg",
+    "usageNote": "Identificação da instituição; proporções, cores e desenho preservados. Marca pertence ao titular; publicação oficial para identificação/Open Finance ou imprensa."
+  },
+  {
+    "id": "BANRISUL",
+    "homepage": "https://www.banrisul.com.br",
+    "logo": "/institutions/banrisul.svg",
+    "source": "https://banrisul.com.br/bob/data/Simbolo-Banrisul.svg",
+    "sha256": "ab02e8189a63e055c0afb8bab24dd50d6c57d8363f06a0705ea18950eb27efbd",
+    "referencePage": "https://banrisul.com.br/bob/data/Simbolo-Banrisul.svg",
+    "usageNote": "Identificação da instituição; proporções, cores e desenho preservados. Marca pertence ao titular; publicação oficial para identificação/Open Finance ou imprensa."
+  },
+  {
+    "id": "BMG",
+    "homepage": "https://www.bancobmg.com.br",
+    "logo": "/institutions/bmg.svg",
+    "source": "https://www.bancobmg.com.br/data/files/8C/A2/7F/0A/FBA318104A94D208970BE9C2/bmg_open_finance.svg",
+    "sha256": "903c2f3474099d521da8d47e86c83a09927e9e35dd7f5b89397328747e604400",
+    "referencePage": "https://www.bancobmg.com.br/data/files/8C/A2/7F/0A/FBA318104A94D208970BE9C2/bmg_open_finance.svg",
+    "usageNote": "Identificação da instituição; proporções, cores e desenho preservados. Marca pertence ao titular; publicação oficial para identificação/Open Finance ou imprensa."
+  },
+  {
+    "id": "BRADESCO",
+    "homepage": "https://banco.bradesco",
+    "logo": "/institutions/bradesco.png",
+    "source": "https://banco.bradesco/favicon.ico",
+    "sha256": "b9e707df545ed0914dadc3eff6fb4282b4c9ac8b427eb60eebc51f053029eaf4"
+  },
+  {
+    "id": "CAIXA",
+    "homepage": "https://www.caixa.gov.br",
+    "logo": "/institutions/caixa.svg",
+    "source": "https://consentimento.openbanking.caixa.gov.br/assets/images/logomarca_caixa.svg",
+    "sha256": "5c61ecd3495270dfdcdfb8d3d333e7e674e4a31daceaa14cfdcf701b2379639b",
+    "referencePage": "https://consentimento.openbanking.caixa.gov.br/assets/images/logomarca_caixa.svg",
+    "usageNote": "Identificação da instituição; proporções, cores e desenho preservados. Marca pertence ao titular; publicação oficial para identificação/Open Finance ou imprensa."
+  },
+  {
+    "id": "C6",
+    "homepage": "https://www.c6bank.com.br",
+    "logo": "/institutions/c6.svg",
+    "source": "https://cdn.c6bank.com.br/open-banking/c6bank-logo.svg",
+    "sha256": "f44eaf603c22caa21c5e92c4e56c7f044b6ef8a47e4511b4b459881a670c0553",
+    "referencePage": "https://cdn.c6bank.com.br/open-banking/c6bank-logo.svg",
+    "usageNote": "Identificação da instituição; proporções, cores e desenho preservados. Marca pertence ao titular; publicação oficial para identificação/Open Finance ou imprensa."
+  },
+  {
+    "id": "INTER",
+    "homepage": "https://inter.co",
+    "logo": "/institutions/inter.svg",
+    "source": "https://inter.co/favicon.svg",
+    "sha256": "1bd8b76a80ad4d9a0bf757d90ad828fd4e9421d7a680d82857c3c415bb4e0d89"
+  },
+  {
+    "id": "ITAU",
+    "homepage": "https://www.itau.com.br",
+    "logo": "/institutions/itau.png",
+    "source": "https://bankline.itau.com.br/favicon.ico",
+    "sha256": "27b7d18a785759561e7b5d482991404800d5728623a7ec62fe6bf13ee2c15515",
+    "usageNote": "Favicon oficial do canal Bankline, preservado sem redesenho. Reutilizado por Itaú Poupança.",
+    "referencePage": "https://bankline.itau.com.br/"
+  },
+  {
+    "id": "SHOPEE_PAY",
+    "homepage": "https://shopeepay.com.br",
+    "logo": "/institutions/shopee_pay.png",
+    "source": "https://shopeepay.com.br/favicon.ico?favicon.c195603a.ico",
+    "sha256": "94edb7a4c7909c5ece520f666a7fea537acbcea405343cc2fd5aa7ec0c8349fd"
+  },
+  {
+    "id": "MERCADO_PAGO",
+    "homepage": "https://www.mercadopago.com.br",
+    "logo": "/institutions/mercado_pago.svg",
+    "source": "https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/7.7.2/mercadopago/favicon.svg",
+    "sha256": "802c1e56b7d76e051c06e1310ae61257480e40918221d61f06d50e43667afe0a"
+  },
+  {
+    "id": "NEON",
+    "homepage": "https://neon.com.br",
+    "logo": "/institutions/neon.png",
+    "source": "https://static-portal.neon.com.br/assets/logos/neon/favicon.png",
+    "sha256": "f50ad672ac64c52f7a82e16ae0ddc2f712b74148de5fc0554ab8113029cef6fb"
+  },
+  {
+    "id": "NUBANK",
+    "homepage": "https://nubank.com.br",
+    "logo": "/institutions/nubank.png",
+    "source": "https://nubank.com.br/favicon.ico",
+    "sha256": "640f78e28b39397f13b1fffe6f8805f44da8e62a5fe6b28706d9ded9c3a58d9d"
+  },
+  {
+    "id": "SANTANDER",
+    "homepage": "https://www.santander.com.br",
+    "logo": "/institutions/santander.png",
+    "source": "https://www.santander.com.br/favicon.ico",
+    "sha256": "f693918813c4b2024ffea8b1af1dd81c786a275c55d4a40dee2620161a05b54d"
+  },
+  {
+    "id": "INSS",
+    "homepage": "https://www.gov.br/inss/pt-br",
+    "logo": "/institutions/inss.png",
+    "source": "https://www.gov.br/previdencia/pt-br/media/logo-inss.png",
+    "sha256": "2be34d2cb466b36fbca42c93093d2d11a47447bb92601c457f8f4c80b34f6dcb",
+    "referencePage": "https://www.gov.br/previdencia/pt-br/media/logo-inss.png",
+    "usageNote": "Arte oficial preservada, com compressão PNG sem redesenho. Fonte e atribuição mantidas neste manifesto.",
+    "attribution": "Ministério da Previdência Social / INSS — Logo INSS.png",
+    "license": "CC BY-ND 3.0",
+    "licenseReference": "https://www.gov.br/previdencia/pt-br/media/logo-inss.png/view"
+  },
+  {
+    "id": "UBER",
+    "homepage": "https://www.uber.com/br/pt-br",
+    "logo": "/institutions/uber.png",
+    "source": "https://www.uber.com/favicon.ico",
+    "sha256": "290e0068b5a69dae1fa4efc32c4a7a365e84b409d34a3724b4c7f7cc5d588c17"
+  },
+  {
+    "id": "99",
+    "homepage": "https://99app.com",
+    "logo": null,
+    "source": null,
+    "fallbackReason": "Pacotes oficiais de marca retornaram HTTP 429; fallback neutro mantido.",
+    "referencePage": "https://99app.com/imprensa/"
+  },
+  {
+    "id": "LALAMOVE",
+    "homepage": "https://www.lalamove.com/pt-br",
+    "logo": "/institutions/lalamove.png",
+    "source": "https://www.lalamove.com/hubfs/template/favicon.ico",
+    "sha256": "0ad4d7e8075f930767aa531da93980ca2aa160b1efefe835e97980723de86425"
+  },
+  {
+    "id": "RAPPI",
+    "homepage": "https://www.rappi.com.br",
+    "logo": "/institutions/rappi.png",
+    "source": "https://www.rappi.com.br/pwa-icons/192x192.png",
+    "sha256": "fe93629ea7507927f4ad4eecfcb0c77ba4736c6cdf621322e4bd50ebe65ace54"
+  },
+  {
+    "id": "IFOOD",
+    "homepage": "https://www.ifood.com.br",
+    "logo": "/institutions/ifood.png",
+    "source": "https://institucional.ifood.com.br/wp-content/uploads/2023/09/cropped-logoifoodbrancoAtivo-1.png",
+    "sha256": "603592b6b45770fa5c9ed85343770ff5e98e7e3bdb2848cafd960ce712f71a77",
+    "referencePage": "https://institucional.ifood.com.br/",
+    "usageNote": "Logo branco publicado no site institucional. Arte preservada; fundo neutro aplicado somente na interface para contraste.",
+    "displayBackground": "#334155"
+  }
+]

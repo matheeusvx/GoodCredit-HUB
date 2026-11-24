@@ -36,6 +36,8 @@ export interface ReconstructedPdfLine {
 }
 
 export interface ParsedPdfTransaction {
+  sourceRow?: number | null;
+  documentId?: string;
   id: string;
   selected: boolean;
   date: string | null;

@@ -19,7 +19,7 @@ export function classifyTransaction(transaction: NormalizedBankTransaction): Dec
       0.99
     );
   }
-  if (/rendimento|rend pago aplic|juros|correcao monetaria|rentabilidade/.test(text)) return decision("EXCLUDED_FINANCIAL_YIELD", "Rendimento financeiro não operacional.", 0.96);
+  if (/rendimento|rend pago aplic|remuneracao aplicacao|juros|correcao monetaria|rentabilidade/.test(text)) return decision("EXCLUDED_FINANCIAL_YIELD", "Rendimento financeiro não operacional.", 0.96);
   if (/resgate|aplicacao|investimento|baixa de investimento/.test(text)) return decision("EXCLUDED_INVESTMENT_REDEMPTION", "Resgate ou baixa de investimento.", 0.94);
   if (/reembolso/.test(text)) return decision("EXCLUDED_REFUND", "Reembolso identificado.", 0.95);
   if (/estorno|devolucao|pix enviado devolvido/.test(text)) return decision("EXCLUDED_REVERSAL", "Estorno ou devolução identificada.", 0.96);
@@ -51,6 +51,7 @@ function effectiveParties(transactions: NormalizedBankTransaction[], parties?: I
 export function classifyTransactions(transactions: NormalizedBankTransaction[], parties?: IncomeAnalysisParties): NormalizedBankTransaction[] {
   const analysisParties = effectiveParties(transactions, parties);
   const initially = transactions.map((item) => {
+    if (item.manuallyReviewed || item.classification === "EXCLUDED_DUPLICATE") return item;
     if (item.parserId === "shopee-pay" && item.direction === "DEBIT") {
       if (item.classification !== "PENDING_REVIEW") return item;
       return { ...item, ...classifyTransaction(item) };
@@ -64,7 +65,17 @@ export function classifyTransactions(transactions: NormalizedBankTransaction[], 
     const key = normalizeText(item.counterparty); const months = recurrence.get(key) || new Set<string>(); months.add(item.competence!); recurrence.set(key, months);
   });
   return initially.map((item) => {
-    if (item.classification !== "PENDING_REVIEW" || !item.counterparty || item.relatedPartyClassification?.decision === "REVIEW_REQUIRED") return item;
+    if (item.manuallyReviewed || item.classification !== "PENDING_REVIEW" || !item.counterparty || item.relatedPartyClassification?.decision === "REVIEW_REQUIRED") return item;
+    if (item.parserId === "santander") {
+      const peers = initially.filter((peer) => peer.parserId === "santander" && peer.direction === "CREDIT" && peer.id !== item.id && peer.classification !== "EXCLUDED_FINANCIAL_YIELD" && peer.classification !== "EXCLUDED_SAME_OWNER");
+      const amounts = peers.map((peer) => peer.amount).sort((a, b) => a - b);
+      const typical = amounts.length ? amounts[Math.floor(amounts.length / 2)] : 0;
+      const exceptional = typical > 0 && item.amount > typical * 5;
+      return { ...item, classificationReason: exceptional
+        ? "Crédito excepcional em relação aos demais recebimentos; comprovar origem e decidir inclusão ou exclusão."
+        : "PIX/transferência recebida: movimentação bancária não comprova renda. Confirmar origem e justificar classificação.",
+        warnings: exceptional ? [...new Set([...item.warnings, "Crédito excepcional exige revisão; valor alto não determina exclusão."])] : item.warnings };
+    }
     const months = recurrence.get(normalizeText(item.counterparty))?.size || 0;
     if (months >= 3) return { ...item, classification: "INCLUDED_INCOME" as const, classificationReason: `Recebimento externo recorrente em ${months} competências.`, classificationConfidence: 0.82 };
     return item;

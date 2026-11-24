@@ -8,6 +8,7 @@ describe("rotas internas do GoodCredit Hub", () => {
     ["/simulacao-financiamento", "simulation"],
     ["/pro-soluto", "pro-soluto"],
     ["/registro", "registration"],
+    ["/analise-perfil", "income-analysis"],
     ["/apuracao-renda", "income-analysis"],
     ["/checklist-documental", "checklist"],
     ["/checklist-conformidade", "compliance-checklist"],

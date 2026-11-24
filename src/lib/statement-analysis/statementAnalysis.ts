@@ -280,7 +280,8 @@ export function calculateAutomatedIncome(
   files: StatementFileRecord[],
   transactions: NormalizedBankTransaction[],
   platformResult: PlatformIncomeResult | null = null,
-  parties: IncomeAnalysisParties = EMPTY_PARTIES
+  parties: IncomeAnalysisParties = EMPTY_PARTIES,
+  managerReferences: Record<string, number> = {}
 ): AutomatedIncomeResult {
   if (platformResult) {
     return calculatePlatformAutomatedIncome(clientName, files, platformResult);
@@ -291,22 +292,29 @@ export function calculateAutomatedIncome(
   ) {
     return calculateShopeePayAutomatedIncome(clientName, files, transactions);
   }
-  const months = buildMonthlyAnalysis(transactions, files);
+  const months = buildMonthlyAnalysis(transactions, files).map((month) => ({
+    ...month,
+    ...(Number.isFinite(managerReferences[month.competence]) ? {
+      managerReference: managerReferences[month.competence],
+      managerDifference: Math.round((managerReferences[month.competence] - month.confirmedIncome) * 100) / 100,
+    } : {}),
+  }));
   const complete = months.filter((month) => month.complete);
-  const divisor = Math.max(1, complete.length || months.length);
-  const confirmedIncomeTotal = complete.reduce((sum, item) => sum + item.confirmedIncome, 0);
+  const valid = complete.filter((month) => month.pendingAmount === 0 && month.reconciliationStatus !== "DIVERGENCE");
+  const divisor = Math.max(1, valid.length);
+  const confirmedIncomeTotal = valid.reduce((sum, item) => sum + item.confirmedIncome, 0);
   const potentialIncomeTotal = complete.reduce((sum, item) => sum + item.potentialIncome, 0);
   const concentration = analyzePayerConcentration(transactions);
   const stability = analyzeStability(months, concentration);
   const extractionConfidence = transactions.length ? transactions.reduce((sum, item) => sum + item.extractionConfidence, 0) / transactions.length : 0;
   const classificationConfidence = transactions.length ? transactions.reduce((sum, item) => sum + item.classificationConfidence, 0) / transactions.length : 0;
   const reconciliationStatus = !transactions.length ? "NO_SUMMARY" : files.some((file) => file.reconciliation.status === "DIVERGENCE") ? "DIVERGENCE" : files.some((file) => file.reconciliation.status === "SMALL_DIFFERENCE") ? "SMALL_DIFFERENCE" : files.length && files.every((file) => file.reconciliation.status === "RECONCILED") ? "RECONCILED" : "NO_SUMMARY";
-  const credits = transactions.filter((item) => item.direction === "CREDIT");
+  const credits = transactions.filter((item) => item.direction === "CREDIT" && item.classification !== "EXCLUDED_DUPLICATE");
   const included = credits.filter((item) => item.classification === "INCLUDED_INCOME");
   const pending = credits.filter((item) => item.classification === "PENDING_REVIEW");
   const excludedGroups = new Map<NormalizedTransactionClassification, number>();
   credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).forEach((item) => excludedGroups.set(item.classification, (excludedGroups.get(item.classification) || 0) + 1));
-  const analyzedMonths = complete.length || months.length;
+  const analyzedMonths = valid.length;
   const relatedPartySummary = calculateRelatedPartyExclusions(transactions, parties);
   const explanation = [
     ...(!transactions.length ? ["Análise incompleta: nenhuma movimentação foi extraída."] : []),
@@ -318,7 +326,8 @@ export function calculateAutomatedIncome(
     ...(parties.spouses.length > 0 ? ["Transferências recebidas do cônjuge informado também foram desconsideradas.", `Transferências de cônjuge excluídas: ${formatCurrencyBR(relatedPartySummary.spouseAmount)}.`] : ["Não houve validação de transferências conjugais porque nenhum cônjuge foi informado."]),
     ...(relatedPartySummary.homonymousCompanyAmount > 0 ? ["Créditos originados de pessoa jurídica não foram excluídos apenas pela semelhança entre o nome empresarial e o nome do titular ou do cônjuge.", `Empresas homônimas encaminhadas ao classificador: ${formatCurrencyBR(relatedPartySummary.homonymousCompanyAmount)}.`] : []),
     ...(relatedPartySummary.reviewAmount > 0 ? [`Partes relacionadas com revisão pendente: ${formatCurrencyBR(relatedPartySummary.reviewAmount)}.`] : []),
-    `A média utiliza ${analyzedMonths} ${analyzedMonths === 1 ? "competência" : "competências"} ${complete.length ? (analyzedMonths === 1 ? "completa" : "completas") : (analyzedMonths === 1 ? "disponível" : "disponíveis")}.`,
+    ...months.filter((month) => month.managerDifference !== undefined && month.managerDifference !== 0).map((month) => `${formatCompetence(month.competence)}: divergência de ${formatCurrencyBR(month.managerDifference!)} entre referência manual e renda classificada. Créditos pendentes ou valores da referência precisam de decisão humana; o extrato não foi ajustado para igualar a referência.`),
+    `A média confirmada utiliza ${analyzedMonths} competências completas, sem créditos pendentes e sem divergência bancária.`,
   ];
-  return { clientName, transactions, files, months, confirmedIncomeTotal, potentialIncomeTotal, confirmedMonthlyIncome: confirmedIncomeTotal / divisor, potentialMonthlyIncome: potentialIncomeTotal / divisor, medianIncome: median(complete.map((item) => item.confirmedIncome)), totalCredits: credits.reduce((sum, item) => sum + item.amount, 0), totalDebits: transactions.filter((item) => item.direction === "DEBIT").reduce((sum, item) => sum + item.amount, 0), totalExcluded: credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).reduce((sum, item) => sum + item.amount, 0), totalPending: pending.reduce((sum, item) => sum + item.amount, 0), completeMonths: complete.length, incompleteMonths: months.length - complete.length, ...stability, payerConcentration: concentration, topPayerShare: concentration[0]?.share || 0, topThreePayerShare: concentration.slice(0, 3).reduce((sum, item) => sum + item.share, 0), extractionConfidence, classificationConfidence, reconciliationStatus, explanation, generatedAt: new Date().toISOString(), analysisType: "BANK_STATEMENT", platformIncomeResult: null, canSendToSimulation: confirmedIncomeTotal > 0, relatedPartySummary };
+  return { clientName, transactions, files, months, confirmedIncomeTotal, potentialIncomeTotal, confirmedMonthlyIncome: confirmedIncomeTotal / divisor, potentialMonthlyIncome: potentialIncomeTotal / Math.max(1, complete.length), medianIncome: median(valid.map((item) => item.confirmedIncome)), totalCredits: credits.reduce((sum, item) => sum + item.amount, 0), totalDebits: transactions.filter((item) => item.direction === "DEBIT" && item.classification !== "EXCLUDED_DUPLICATE").reduce((sum, item) => sum + item.amount, 0), totalExcluded: credits.filter((item) => !["INCLUDED_INCOME", "PENDING_REVIEW"].includes(item.classification)).reduce((sum, item) => sum + item.amount, 0), totalPending: pending.reduce((sum, item) => sum + item.amount, 0), completeMonths: complete.length, incompleteMonths: months.length - complete.length, ...stability, payerConcentration: concentration, topPayerShare: concentration[0]?.share || 0, topThreePayerShare: concentration.slice(0, 3).reduce((sum, item) => sum + item.share, 0), extractionConfidence, classificationConfidence, reconciliationStatus, explanation, generatedAt: new Date().toISOString(), analysisType: "BANK_STATEMENT", platformIncomeResult: null, canSendToSimulation: confirmedIncomeTotal > 0, relatedPartySummary };
 }
