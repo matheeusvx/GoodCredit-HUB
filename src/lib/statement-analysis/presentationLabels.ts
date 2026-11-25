@@ -59,13 +59,14 @@ export const EXTRACTION_METHOD_LABELS: Record<ExtractionMethod, string> = {
 const FILE_FORMAT_LABELS: Record<StatementFileFormat, string> = { PDF: "Documento PDF", CSV: "Arquivo CSV", XLSX: "Planilha Excel", XLS: "Planilha Excel" };
 const BANK_LABELS: Record<SupportedBank | "AUTO", string> = {
   AUTO: "Banco identificado automaticamente", CAIXA: "Caixa", INTER: "Banco Inter", BRADESCO: "Bradesco",
-  ITAU: "Itaú", SANTANDER: "Santander", NUBANK: "Nubank", MERCADO_PAGO: "Mercado Pago", OTHER: "Outro banco",
+  ITAU: "Itaú", SANTANDER: "Santander", NUBANK: "Nubank", IFOOD: "iFood", MERCADO_PAGO: "Mercado Pago", OTHER: "Outro banco",
   SHOPEE_PAY: "ShopeePay",
 };
 const PARSER_LABELS: Record<string, string> = {
   nubank: "Nubank", bradesco: "Bradesco", caixa: "Caixa", inter: "Banco Inter", itau: "Itaú",
   santander: "Santander", "mercado-pago": "Mercado Pago", generic: "Formato bancário genérico",
   "shopee-pay": "ShopeePay",
+  ifood: "iFood",
   "uber-income-v1": "Comprovante de rendimentos Uber",
   "spreadsheet-auto": "Mapeamento automático de planilha", mixed: "Leitura combinada",
 };

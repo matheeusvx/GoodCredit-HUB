@@ -21,6 +21,7 @@ export const PDF_BANK_OPTIONS: Array<{ value: PdfBankCode; label: string }> = [
   { value: "SANTANDER", label: "Santander" },
   { value: "INTER", label: "Inter" },
   { value: "NUBANK", label: "Nubank" },
+  { value: "IFOOD", label: "iFood" },
   { value: "MERCADO_PAGO", label: "Mercado Pago" },
   { value: "SHOPEE_PAY", label: "ShopeePay" },
   { value: "C6", label: "C6" },
@@ -67,7 +68,7 @@ export const PDF_DEBIT_KEYWORDS = [
   "boleto pago",
 ] as const;
 
-export const PDF_BANK_MARKERS: Record<Exclude<PdfBankCode, "AUTO" | "OTHER">, string[]> = {
+export const PDF_BANK_MARKERS: Record<Exclude<PdfBankCode, "AUTO" | "OTHER" | "IFOOD">, string[]> = {
   CAIXA: ["caixa economica", "caixa tem"],
   BANCO_DO_BRASIL: ["banco do brasil", "bb.com.br"],
   BRADESCO: ["bradesco"],

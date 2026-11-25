@@ -10,8 +10,10 @@ import { ItauStatementParser } from "./ItauStatementParser";
 import { MercadoPagoStatementParser } from "./MercadoPagoStatementParser";
 import { SantanderStatementParser } from "./SantanderStatementParser";
 import { ShopeePayStatementParser } from "./ShopeePayStatementParser";
+import { IFoodStatementParser, isIFoodStatement } from "./IFoodStatementParser";
 
 const PARSERS: BankStatementParser[] = [
+  IFoodStatementParser,
   ShopeePayStatementParser,
   NubankStatementParser,
   BradescoStatementParser,
@@ -93,6 +95,9 @@ export function detectPdfBankDetailed(
       ? input
       : input.map((line) => line.text).join(" ")
   );
+  if (isIFoodStatement(normalizedText)) {
+    return { bankCode: "IFOOD", confidence: 1, signals: ["IFOOD:Extrato da Conta Digital"], scores: { IFOOD: 1 } };
+  }
   const scores: Partial<Record<PdfBankCode, number>> = {};
   const signals = new Set<string>();
 

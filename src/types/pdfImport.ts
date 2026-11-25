@@ -69,6 +69,7 @@ export type PdfBankCode =
   | "SANTANDER"
   | "INTER"
   | "NUBANK"
+  | "IFOOD"
   | "MERCADO_PAGO"
   | "SHOPEE_PAY"
   | "C6"

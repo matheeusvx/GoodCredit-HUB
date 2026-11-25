@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { INSTITUTION_CATALOG, searchInstitutions, getInstitution } from "./institutionCatalog";
 import { changeFileInstitution, resolveInstitution } from "./institutionSelection";
 import { createStatementFileRecord, processStatementFile } from "./statementPipeline";
+import { classifyTransactions } from "./transactionClassifier";
 import { loadPdfFile } from "../income-analysis/pdf/pdfLoader";
 import { extractPdfText } from "../income-analysis/pdf/pdfTextExtractor";
 import { santanderSynthetic, syntheticLine } from "../income-analysis/pdf/parsers/__fixtures__/santanderSynthetic";
@@ -130,9 +131,64 @@ describe("catálogo e seleção individual", () => {
     expect(resolveInstitution(santander(), "UBER").selectionBlocked).toBe(true);
     expect(resolveInstitution(UBER_MONTHLY_FIXTURES[0], "SANTANDER").selectionBlocked).toBe(true);
   });
-  it.each(["INSS", "99", "LALAMOVE", "RAPPI", "IFOOD"] as const)("não extrai resultados de %s ainda não suportado", (id) => {
+  it.each(["INSS", "99", "LALAMOVE", "RAPPI"] as const)("não extrai resultados de %s ainda não suportado", (id) => {
     const doc = id === "INSS" ? lines(["INSS", "Extrato de pagamento de benefício", "Banco do Brasil", "Valor do benefício 1.000,00"]) : lines([id, "Resumo de ganhos", "Comprovante de repasse", "Total 1.000,00"]);
     expect(resolveInstitution(doc, id)).toMatchObject({ detectedInstitution: id, readingMethod: "UNSUPPORTED", selectionBlocked: true, parserId: null });
     expect(resolveInstitution(doc).selectionBlocked).toBe(true);
+  });
+
+  it("lê a conta digital iFood em modo automático e manual, preservando sinais e período", async () => {
+    const document = lines([
+      "Extrato da Conta Digital iFood",
+      "Período selecionado 01/07/2026 a 31/07/2026",
+      "Data Movimentação Descrição da movimentação Valor",
+      "30/07/2026 Pix Pix enviado -R$ 980,00",
+      "30/07/2026 Antecipação Taxa de antecipação -R$ 20,00",
+      "30/07/2026 Repasse iFood Antecipação semanal R$ 1.000,00",
+      "Saldo do dia 30/07/2026 R$ 0,00",
+    ]);
+    const auto = await process(document);
+    const manual = await process(document, "IFOOD");
+    for (const result of [auto, manual]) {
+      expect(result).toMatchObject({
+        detectedInstitution: "IFOOD", bank: "IFOOD", parserId: "ifood", selectionBlocked: false,
+        periodStart: "2026-07-01", periodEnd: "2026-07-31",
+      });
+      expect(result.transactions.map(({ amount, direction }) => [amount, direction])).toEqual([
+        [980, "DEBIT"], [20, "DEBIT"], [1000, "CREDIT"],
+      ]);
+      expect(classifyTransactions(result.transactions).map((item) => item.classification)).toEqual([
+        "EXCLUDED_OTHER", "EXCLUDED_OTHER", "INCLUDED_INCOME",
+      ]);
+    }
+    expect(resolveInstitution(lines(["iFood", "Resumo de ganhos"]), "IFOOD").selectionBlocked).toBe(true);
+  });
+
+  it("confirma o Nubank pelo aviso legal quando não há marca no cabeçalho", async () => {
+    const document = lines([
+      "Saldo final do período 50,00", "Rendimento líquido 0,00",
+      "Total de entradas 100,00", "Total de saídas 50,00", "Movimentações",
+      "01 JUN 2026 Total de entradas 100,00",
+      "Valor adicionado na conta por cartão de crédito 100,00",
+      "Total de saídas 50,00",
+      "Valor enviado como crédito na   Valor referente ao reembolso de Pix no Crédito   50,00",
+    ]);
+    document.push({ ...syntheticLine("Nu Financeira S.A. - Sociedade de Crédito, Financiamento"), pageNumber: 2, y: 178 });
+    const result = await process(document, "NUBANK");
+    expect(result).toMatchObject({
+      detectedInstitution: "NUBANK", parserId: "nubank", selectionBlocked: false,
+      reconciliation: { status: "RECONCILED", creditTotal: 100, debitTotal: 50 },
+    });
+  });
+
+  it("concilia o formato de resumo do Mercado Pago e preserva a página de origem", async () => {
+    const document = lines(["Mercado Pago", "Extrato de conta", "Entradas: R$ 150,00", "Saídas: R$ -50,00"]);
+    document.push(
+      { ...syntheticLine("01-04-2026 Pagamento recebido R$ 150,00 R$ 150,00"), pageNumber: 2 },
+      { ...syntheticLine("02-04-2026 Pix enviado R$ -50,00 R$ 100,00"), pageNumber: 3 },
+    );
+    const result = await process(document, "MERCADO_PAGO");
+    expect(result.reconciliation).toMatchObject({ status: "RECONCILED", creditTotal: 150, debitTotal: 50 });
+    expect(result.transactions.map((item) => item.sourcePage)).toEqual([2, 3]);
   });
 });

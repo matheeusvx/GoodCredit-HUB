@@ -4,7 +4,7 @@ import { normalizeText } from "../income-analysis/formatters";
 import { extractCounterpartyName } from "./relatedPartyClassifier";
 
 export function supportedBank(bank: PdfBankCode): SupportedBank {
-  return ["CAIXA", "BRADESCO", "ITAU", "SANTANDER", "INTER", "NUBANK", "MERCADO_PAGO", "SHOPEE_PAY"].includes(bank) ? bank as SupportedBank : "OTHER";
+  return bank === "AUTO" || bank === "BANCO_DO_BRASIL" || bank === "C6" ? "OTHER" : bank;
 }
 
 export function transactionFingerprint(transaction: Pick<NormalizedBankTransaction, "date" | "time" | "amount" | "direction" | "description" | "documentId">): string {

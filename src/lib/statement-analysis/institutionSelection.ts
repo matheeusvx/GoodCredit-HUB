@@ -38,7 +38,12 @@ export function resolveInstitution(lines: ReconstructedPdfLine[], selected: Inst
   let detected = platform.platform ? INSTITUTION_CATALOG.find((entry) => entry.provider === platform.platform) : undefined;
   if (!detected && /extrato de pagamento|historico de creditos|beneficio/.test(text) && getInstitution("INSS")!.aliases.some((alias) => matchesAlias(headers, alias))) detected = getInstitution("INSS");
   const bankCandidate = getInstitution(bank.bankCode as InstitutionId);
-  if (!detected && bank.confidence >= 0.65 && bankCandidate?.aliases.some((alias) => matchesAlias(headers, alias))) detected = bankCandidate;
+  // Some Nubank statements identify the issuer only on the legal notices page.
+  const nubankLegalNotice = bank.bankCode === "NUBANK"
+    && bank.signals.includes("NUBANK:estrutura de movimentações")
+    && lines.some((line) => /^nu financeira s\.?a\.?\s*-\s*sociedade de credito/.test(normalizeInstitutionQuery(line.text)));
+  if (!detected && (bank.bankCode === "IFOOD" || nubankLegalNotice
+    || (bank.confidence >= 0.65 && bankCandidate?.aliases.some((alias) => matchesAlias(headers, alias))))) detected = bankCandidate;
   if (!detected) {
     const candidates = INSTITUTION_CATALOG.filter((entry) => entry.id !== "OTHER" && entry.aliases.some((alias) => matchesAlias(headers, alias))
       && (entry.category === "BANK" ? bankStructure : /comprovante|resumo de ganhos|extrato de pagamento|beneficio|historico de creditos|resumo fiscal/.test(text)));
@@ -63,7 +68,8 @@ export function resolveInstitution(lines: ReconstructedPdfLine[], selected: Inst
   if (choice?.capability === "SPECIFIC_BANK") {
     if (!detected) return block(`Não foi possível confirmar ${choice.label} de forma independente. Revise a seleção; detecção automática ou leitura genérica podem ser utilizadas quando compatíveis.`);
     const parser = getStatementParser(choice.parserId!);
-    if (!parser || parser.canHandle({ bankCode: "AUTO", source: "PDF_TEXT", account: "" }, text) < 0.75) {
+    const compatibleNubankLayout = choice.id === "NUBANK" && nubankLegalNotice;
+    if (!parser || (!compatibleNubankLayout && parser.canHandle({ bankCode: "AUTO", source: "PDF_TEXT", account: "" }, text) < 0.75)) {
       if (!bankStructure) return block(`Layout incompatível com o parser ${choice.label}. Revise o documento antes de prosseguir.`);
       return { ...result, parserId: "generic", readingMethod: "GENERIC_BANK", warnings: [`Instituição ${choice.label} identificada, mas este layout não é compatível com seu parser específico. Leitura genérica com confiança reduzida e revisão necessária.`] };
     }

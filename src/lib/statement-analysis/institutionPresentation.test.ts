@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import { getInstitution, getInstitutionPresentation, INSTITUTION_CATALOG } from "./institutionCatalog";
 import sources from "./institutionLogoSources.json";
 
-describe("apresentação do catálogo sem mudança de capacidades", () => {
+describe("apresentação do catálogo de instituições", () => {
   it("nenhum leitor específico recebe asterisco ou tooltip de limitação", () => {
     const specific = INSTITUTION_CATALOG.filter((entry) => entry.capability.startsWith("SPECIFIC_"));
-    expect(specific).toHaveLength(9);
+    expect(specific).toHaveLength(10);
     specific.forEach((entry) => expect(getInstitutionPresentation(entry)).toEqual({ asterisk: false, tooltip: null, accessibleStatus: "Leitura específica disponível." }));
     expect(getInstitutionPresentation()).toMatchObject({ asterisk: false, tooltip: null });
   });
   it("leitura genérica e documento não suportado têm avisos distintos e acessíveis", () => {
     const generic = INSTITUTION_CATALOG.filter((entry) => entry.capability === "GENERIC_BANK");
     const unsupported = INSTITUTION_CATALOG.filter((entry) => entry.capability === "UNSUPPORTED");
-    expect(generic).toHaveLength(7); expect(unsupported).toHaveLength(5);
+    expect(generic).toHaveLength(7); expect(unsupported).toHaveLength(4);
     generic.forEach((entry) => expect(getInstitutionPresentation(entry)).toEqual({ asterisk: true, tooltip: "Leitura genérica. Confira os lançamentos antes de concluir.", accessibleStatus: "Leitura genérica. Confira os lançamentos antes de concluir." }));
     unsupported.forEach((entry) => expect(getInstitutionPresentation(entry)).toEqual({ asterisk: true, tooltip: "Leitura ainda não disponível para este documento.", accessibleStatus: "Leitura ainda não disponível para este documento." }));
   });

@@ -73,6 +73,7 @@ function bankCodeFromParserId(
 ): PdfParsingContext["bankCode"] {
   const parserBanks: Record<string, PdfParsingContext["bankCode"]> = {
     nubank: "NUBANK",
+    ifood: "IFOOD",
     bradesco: "BRADESCO",
     caixa: "CAIXA",
     inter: "INTER",

@@ -28,6 +28,9 @@ export function classifyTransaction(transaction: NormalizedBankTransaction): Dec
   if (/aporte|capital proprio/.test(text)) return decision("EXCLUDED_TRANSITORY_MOVEMENT", "Possível aporte de capital próprio.", 0.8);
   if (/salario|remuneracao|pro[- ]?labore|benef inss|comissao|honorarios|receita profissional/.test(text)) return decision("INCLUDED_INCOME", "Renda profissional ou remuneração identificada.", 0.94);
   if (/pagamento recebido|cobranca recebida|recebimento de cliente/.test(text)) return decision("INCLUDED_INCOME", "Recebimento profissional identificado.", 0.87);
+  if (transaction.parserId === "ifood" && /^repasse ifood\b/.test(normalizeText(transaction.description))) {
+    return decision("INCLUDED_INCOME", "Repasse identificado no extrato da conta digital iFood.", 0.95);
+  }
   if (
     transaction.parserId === "nubank"
     && /^(credito em conta|transferencia recebida)/.test(normalizeText(transaction.description))

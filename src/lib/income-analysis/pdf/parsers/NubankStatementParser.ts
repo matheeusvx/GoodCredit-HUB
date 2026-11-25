@@ -40,6 +40,8 @@ const NUBANK_TRANSACTION_START_PATTERNS = [
   /^transferencia\s+recebida\s+pelo\s+pix\b/i,
   /^transferencia\s+enviada\s+pelo\s+pix\b/i,
   /^credito\s+em\s+conta\b/i,
+  /^valor\s+adicionado\s+na\s+conta\b/i,
+  /^valor\s+enviado\s+como\s+credito\s+na\b/i,
   /^resgate\s+rdb\b/i,
   /^aplicacao\s+rdb\b/i,
   /^reembolso\s+recebido\s+pelo\s+pix\b/i,
